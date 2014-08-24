@@ -5,6 +5,7 @@
 Based on the [tutum/lamp](https://registry.hub.docker.com/u/tutum/lamp/) docker image, with prestashop-specific additions. The image has Mysql, Apache and PHP installed with all modules and configuration required by Prestashop. The only site enabled in Apache is the Prestashop installation.
 
 Dockerfile and other files can be found at the github repo: [amatriain/docker-prestashop](https://github.com/amatriain/docker-prestashop). 
+
 Docker image can be found at the docker-hub repo: [amatriain/prestashop](https://registry.hub.docker.com/u/amatriain/prestashop/). This is not an automated docker-hub build, because automated builds are always tagged as "latest"; this would keep this image from being tagged with the prestashop version.
 
 Tagging both in Github and Docker-hub follows the Prestashop version: i.e. version 1.6.0.9 of this image contains Prestashop 1.6.0.9
@@ -45,6 +46,7 @@ Be aware that Prestashop 1.6.0.9 is affected by [this bug](http://www.prestashop
 ## Licensing
 
 Licensed under the [Open Software License (OSL) v3.0](http://www.prestashop.com/en/osl-license) for compliance with the Prestashop license.
+
 For more details see LICENSE.txt file in this folder.
 
 ## About Prestashop
@@ -54,4 +56,5 @@ For more details see LICENSE.txt file in this folder.
 ## About Docker
 
 [Docker](http://www.docker.com/) is an open platform that automates the deployment of applications inside software containers, providing that way an additional layer of abstraction and automatization of operating system–level virtualization on Linux. Docker uses resource isolation features of the Linux kernel such as cgroups and kernel namespaces to allow independent "containers" to run within a single Linux instance, avoiding the overhead of starting virtual machines.
+
 Licensed under the Apache 2.0 license.
