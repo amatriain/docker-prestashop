@@ -1,10 +1,19 @@
 # Docker Prestashop image
 
+## About
+
 Based on the [tutum/lamp](https://registry.hub.docker.com/u/tutum/lamp/) docker image, with prestashop-specific additions. The image has Mysql, Apache and PHP installed with all modules and configuration required by Prestashop. The only site enabled in Apache is the Prestashop installation.
 
-Dockerfile and other files can be found at the github repo: [amatriain/docker-prestashop](https://github.com/amatriain/docker-prestashop). This is not an automated docker-hub build, because automated builds are always tagged as "latest"; this would keep this image from being tagged with the prestashop version.
+Dockerfile and other files can be found at the github repo: [amatriain/docker-prestashop](https://github.com/amatriain/docker-prestashop). 
+Docker image can be found at the docker-hub repo: [amatriain/prestashop](https://registry.hub.docker.com/u/amatriain/prestashop/). This is not an automated docker-hub build, because automated builds are always tagged as "latest"; this would keep this image from being tagged with the prestashop version.
 
-After starting the container, access port 80 to run the Prestashop installation wizard.
+Tagging both in Github and Docker-hub follows the Prestashop version: i.e. version 1.6.0.9 of this image contains Prestashop 1.6.0.9
+
+## Using
+
+See [Docker docs](http://docs.docker.com/reference/run) about running a container from an image.
+
+After starting the container, access port 80 with a browser to run the Prestashop installation wizard.
 
 A database named **prestashop** is already created. There are three database users: 
 
