@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,100 +28,49 @@ class AdminLogsControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'log';
-	 	$this->className = 'PrestaShopLogger';
+	 	$this->className = 'Logger';
 	 	$this->lang = false;
 		$this->noLink = true;
 
+	 	$this->addRowAction('delete');
+	 	$this->bulk_actions = array('delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')));
+
 		$this->fields_list = array(
-			'id_log' => array(
-				'title' => $this->l('ID'), 
-				'align' => 'text-center', 
-				'class' => 'fixed-width-xs'
-			),
-			'employee' => array(
-				'title' => $this->l('Employee'),
-				'havingFilter' => true,
-				'callback' => 'displayEmployee',
-				'callback_object' => $this
-			),
-			'severity' => array(
-				'title' => $this->l('Severity (1-4)'), 
-				'align' => 'text-center', 
-				'class' => 'fixed-width-xs'
-			),
-			'message' => array(
-				'title' => $this->l('Message')
-			),
-			'object_type' => array(
-				'title' => $this->l('Object type'), 
-				'class' => 'fixed-width-sm'
-			),
-			'object_id' => array(
-				'title' => $this->l('Object ID'), 
-				'align' => 'center', 
-				'class' => 'fixed-width-xs'
-			),
-			'error_code' => array(
-				'title' => $this->l('Error code'), 
-				'align' => 'center', 
-				'prefix' => '0x', 
-				'class' => 'fixed-width-xs'
-			),
-			'date_add' => array(
-				'title' => $this->l('Date'),
-				'align' => 'right', 
-				'type' => 'datetime'
-			)
+			'id_log' => array('title' => $this->l('ID'), 'align' => 'center', 'width' => 25),
+			'severity' => array('title' => $this->l('Severity (1-4)'), 'align' => 'center', 'width' => 50),
+			'message' => array('title' => $this->l('Message')),
+			'object_type' => array('title' => $this->l('Object type'), 'width' => 75),
+			'object_id' => array('title' => $this->l('Object ID'), 'width' => 50),
+			'error_code' => array('title' => $this->l('Error code'), 'width' => 75, 'prefix' => '0x'),
+			'date_add' => array('title' => $this->l('Date'), 'width' => 150, 'align' => 'right', 'type' => 'datetime')
 		);
 
 		$this->fields_options = array(
 			'general' => array(
 				'title' =>	$this->l('Logs by email'),
-				'icon' => 'icon-envelope',
 				'fields' =>	array(
 					'PS_LOGS_BY_EMAIL' => array(
 						'title' => $this->l('Minimum severity level'),
-						'hint' => $this->l('Enter "5" if you do not want to receive any emails.').'<br />'.$this->l('Emails will be sent to the shop owner.'),
+						'desc' => $this->l('Enter "5" if you do not want to receive any emails.').'<br />'.$this->l('Emails will be sent to the shop owner.'),
 						'cast' => 'intval',
-						'type' => 'text'
+						'type' => 'text',
+						'size' => 5
 					)
 				),
-				'submit' => array('title' => $this->l('Save'))
+				'submit' => array()
 			)
 		);
 		$this->list_no_link = true;
-		$this->_select .= 'CONCAT(LEFT(e.firstname, 1), \'. \', e.lastname) employee';
-		$this->_join .= ' LEFT JOIN '._DB_PREFIX_.'employee e ON (a.id_employee = e.id_employee)';
 		parent::__construct();
-	}
-	
-	public function processDelete()
-	{
-		return PrestaShopLogger::eraseAllLogs();
 	}
 
 	public function initToolbar()
 	{
 		parent::initToolbar();
-		$this->toolbar_btn['delete'] = array(
-			'short' => 'Erase',
-			'desc' => $this->l('Erase all'),
-			'js' => 'if (confirm(\''.$this->l('Are you sure?').'\')) document.location = \''.Tools::safeOutput($this->context->link->getAdminLink('AdminLogs')).'&amp;token='.$this->token.'&amp;deletelog=1\';'
-		);
 		unset($this->toolbar_btn['new']);
 	}
-	
-	public function displayEmployee($value, $tr)
-	{
-		$template = $this->context->smarty->createTemplate('controllers/logs/employee_field.tpl', $this->context->smarty);		
-		$employee = new Employee((int)$tr['id_employee']);
-		$template->assign(array(
-			'employee_image' => $employee->getImage(),
-			'employee_name' => $value
-		));
-		return $template->fetch();
-	}
+
 }
 
+?>

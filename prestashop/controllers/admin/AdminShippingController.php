@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,7 +30,6 @@ class AdminShippingControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
 		parent::__construct();
 	 	$this->table = 'delivery';
 
@@ -38,17 +37,7 @@ class AdminShippingControllerCore extends AdminController
 		foreach ($carriers as $key => $carrier)
 			if ($carrier['is_free'])
 				unset($carriers[$key]);
-		
-		$carrier_default_sort = array(
-			array('value' => Carrier::SORT_BY_PRICE, 'name' => $this->l('Price')),
-			array('value' => Carrier::SORT_BY_POSITION, 'name' => $this->l('Position'))
-		);
 
-		$carrier_default_order = array(
-			array('value' => Carrier::SORT_BY_ASC, 'name' => $this->l('Ascending')),
-			array('value' => Carrier::SORT_BY_DESC, 'name' => $this->l('Descending'))
-		);
-		
 		$this->fields_options = array(
 			'handling' => array(
 				'title' =>	$this->l('Handling'),
@@ -76,46 +65,77 @@ class AdminShippingControllerCore extends AdminController
 				'description' =>
 					'<ul>
 						<li>'.$this->l('If you set these parameters to 0, they will be disabled.').'</li>
-						<li>'.$this->l('Coupons are not taken into account when calculating free shipping.').'</li>
+						<li>'.$this->l('Coupons are not taken into account when calculating free shipping').'</li>
 					</ul>',
-				'submit' => array('title' => $this->l('Save'))
+				'submit' => array()
 			),
-			'general' => array(
-				'title' => $this->l('Carrier options'),
-				'fields' => array(
-					'PS_CARRIER_DEFAULT' => array(
-						'title' => $this->l('Default carrier'),
-						'desc' => $this->l('Your shop\'s default carrier'),
+			'billing' => array(
+				'title' =>	$this->l('Billing'),
+				'icon' => 'money',
+				'fields' =>	array(
+					'PS_SHIPPING_METHOD' => array(
+						'title' => $this->l('Billing'),
 						'cast' => 'intval',
-						'type' => 'select',
-						'identifier' => 'id_carrier',
-						'list' => array_merge(
-							array(
-								-1 => array('id_carrier' => -1, 'name' => $this->l('Best price')),
-								-2 => array('id_carrier' => -2, 'name' => $this->l('Best grade'))
-							),
-							Carrier::getCarriers((int)Configuration::get('PS_LANG_DEFAULT'), true, false, false, null, Carrier::ALL_CARRIERS))
+						'type' => 'radio',
+						'choices' => array(
+							0 => $this->l('According to total price'),
+							1 => $this->l('According to total weight')
+						),
+						'validation' => 'isBool'
 					),
-					'PS_CARRIER_DEFAULT_SORT' => array(
-						'title' => $this->l('Sort by'),
-						'desc' => $this->l('This will only be visible in the Front Office.'),
-						'cast' => 'intval',
-						'type' => 'select',
-						'identifier' => 'value',
-						'list' => $carrier_default_sort
-					),
-					'PS_CARRIER_DEFAULT_ORDER' => array(
-						'title' => $this->l('Order by'),
-						'desc' => $this->l('This will only be visible in the Front Office.'),
-						'cast' => 'intval',
-						'type' => 'select',
-						'identifier' => 'value',
-						'list' => $carrier_default_order
-					),
-				),
-				'submit' => array('title' => $this->l('Save'))
-			)
-		);		
+				)
+			),
+		);
+	}
+
+	public function initContent()
+	{
+		$array_carrier = array();
+		$carriers = Carrier::getCarriers($this->context->language->id, true, false, false, null, Carrier::PS_CARRIERS_AND_CARRIER_MODULES_NEED_RANGE);
+		foreach ($carriers as $key => $carrier)
+			if ($carrier['is_free'])
+				unset($carriers[$key]);
+			else
+				$array_carrier[] = $carrier['id_carrier'];
+
+		$id_carrier = (int)Tools::getValue('id_carrier');
+
+		if (count($carriers) && isset($array_carrier[0]))
+		{
+			if (!$id_carrier)
+				$id_carrier = (int)$array_carrier[0];
+
+			$carrierSelected = new Carrier((int)$id_carrier);
+		}
+		else
+			$carrierSelected = new Carrier((int)$id_carrier);
+
+		$currency = $this->context->currency;
+		$rangeObj = $carrierSelected->getRangeObject();
+		$rangeTable = $carrierSelected->getRangeTable();
+		$suffix = $carrierSelected->getRangeSuffix();
+
+		$rangeIdentifier = 'id_'.$rangeTable;
+		$ranges = $rangeObj->getRanges($id_carrier);
+		$delivery = Carrier::getDeliveryPriceByRanges($rangeTable, $id_carrier);
+		$deliveryArray = array();
+		foreach ($delivery as $deliv)
+			$deliveryArray[$deliv['id_zone']][$deliv['id_carrier']][$deliv[$rangeIdentifier]] = $deliv['price'];
+
+		$this->context->smarty->assign(array(
+			'zones' => $carrierSelected->getZones(),
+			'carriers' => $carriers,
+			'ranges' => $ranges,
+			'currency' => $currency,
+			'deliveryArray' => $deliveryArray,
+			'carrierSelected' => $carrierSelected,
+			'id_carrier' => $id_carrier,
+			'suffix' => $suffix,
+			'rangeIdentifier' => $rangeIdentifier,
+			'action_fees' => self::$currentIndex.'&token='.$this->token
+		));
+
+		parent::initContent();
 	}
 
 	public function postProcess()

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -43,11 +43,7 @@ class AddressControllerCore extends FrontController
 	public function setMedia()
 	{
 		parent::setMedia();
-		$this->addJS(array(
-			_THEME_JS_DIR_.'tools/vatManagement.js',
-			_THEME_JS_DIR_.'tools/statesManagement.js',
-			_PS_JS_DIR_.'validate.js'
-		));
+		$this->addJS(_THEME_JS_DIR_.'tools/statesManagement.js');
 	}
 
 	/**
@@ -141,17 +137,23 @@ class AddressControllerCore extends FrontController
 			if ((int)$country->contains_states && !(int)$address->id_state)
 				$this->errors[] = Tools::displayError('This country requires you to chose a State.');
 
-			if (!$country->active)
-				$this->errors[] = Tools::displayError('This country is not active.');
-
+			// US customer: normalize the address
+			if ($address->id_country == Country::getByIso('US'))
+			{
+				include_once(_PS_TAASC_PATH_.'AddressStandardizationSolution.php');
+				$normalize = new AddressStandardizationSolution;
+				$address->address1 = $normalize->AddressLineStandardization($address->address1);
+				$address->address2 = $normalize->AddressLineStandardization($address->address2);
+			}
+			
 			$postcode = Tools::getValue('postcode');		
 			/* Check zip code format */
 			if ($country->zip_code_format && !$country->checkZipCode($postcode))
 				$this->errors[] = sprintf(Tools::displayError('The Zip/Postal code you\'ve entered is invalid. It must follow this format: %s'), str_replace('C', $country->iso_code, str_replace('N', '0', str_replace('L', 'A', $country->zip_code_format))));
 			elseif(empty($postcode) && $country->need_zip_code)
-				$this->errors[] = Tools::displayError('A Zip/Postal code is required.');
+				$this->errors[] = Tools::displayError('A Zip / Postal code is required.');
 			elseif ($postcode && !Validate::isPostCode($postcode))
-				$this->errors[] = Tools::displayError('The Zip/Postal code is invalid.');
+				$this->errors[] = Tools::displayError('The Zip / Postal code is invalid.');
 
 			// Check country DNI
 			if ($country->isNeedDni() && (!Tools::getValue('dni') || !Validate::isDniLite(Tools::getValue('dni'))))
@@ -165,9 +167,15 @@ class AddressControllerCore extends FrontController
 			$id_address = Tools::getValue('id_address');
 			if(Configuration::get('PS_ORDER_PROCESS_TYPE') && (int)Tools::getValue('opc_id_address_'.Tools::getValue('type')) > 0)
 				$id_address = Tools::getValue('opc_id_address_'.Tools::getValue('type'));
-
-			if (Address::aliasExist(Tools::getValue('alias'), (int)$id_address, (int)$this->context->customer->id))
-				$this->errors[] = sprintf(Tools::displayError('The alias "%s" has already been used. Please select another one.'), Tools::safeOutput(Tools::getValue('alias')));		
+ 	
+			if (Db::getInstance()->getValue('
+				SELECT count(*)
+				FROM '._DB_PREFIX_.'address
+				WHERE `alias` = \''.pSql($_POST['alias']).'\'
+				AND id_address != '.(int)$id_address.'
+				AND id_customer = '.(int)$this->context->customer->id.'
+				AND deleted = 0') > 0)
+				$this->errors[] = sprintf(Tools::displayError('The alias "%s" has already been used. Please select another one.'), Tools::safeOutput($_POST['alias']));
 		}
 
 		// Check the requires fields which are settings in the BO
@@ -217,19 +225,19 @@ class AddressControllerCore extends FrontController
 			else // Update cart address
 				$this->context->cart->autosetProductAddress();
 
-			if ((bool)(Tools::getValue('select_address', false)) == true OR (Tools::getValue('type') == 'invoice' && Configuration::get('PS_ORDER_PROCESS_TYPE')))
-				$this->context->cart->id_address_invoice = (int)$address->id;
-			elseif (Configuration::get('PS_ORDER_PROCESS_TYPE'))
-				$this->context->cart->id_address_invoice = (int)$this->context->cart->id_address_delivery;
-			$this->context->cart->update();
-
+            if ((bool)(Tools::getValue('select_address', false)) == true OR Tools::getValue('type') == 'invoice' && Configuration::get('PS_ORDER_PROCESS_TYPE'))
+            { 
+                $this->context->cart->id_address_invoice = (int)$address->id;
+                $this->context->cart->update();                
+            }
+            
 			if ($this->ajax)
 			{
 				$return = array(
 					'hasError' => (bool)$this->errors,
 					'errors' => $this->errors,
-					'id_address_delivery' => (int)$this->context->cart->id_address_delivery,
-					'id_address_invoice' => (int)$this->context->cart->id_address_invoice
+					'id_address_delivery' => $this->context->cart->id_address_delivery,
+					'id_address_invoice' => $this->context->cart->id_address_invoice
 				);
 				die(Tools::jsonEncode($return));
 			}
@@ -237,8 +245,6 @@ class AddressControllerCore extends FrontController
 			// Redirect to old page or current page
 			if ($back = Tools::getValue('back'))
 			{
-				if ($back == Tools::secureReferrer(Tools::getValue('back')))
-					Tools::redirect(html_entity_decode($back));
 				$mod = Tools::getValue('mod');
 				Tools::redirect('index.php?controller='.$back.($mod ? '&back='.$mod : ''));
 			}
@@ -262,7 +268,6 @@ class AddressControllerCore extends FrontController
 
 		// Assign common vars
 		$this->context->smarty->assign(array(
-			'address_validation' => Address::$definition['fields'],
 			'one_phone_at_least' => (int)Configuration::get('PS_ONE_PHONE_AT_LEAST'),
 			'onr_phone_at_least' => (int)Configuration::get('PS_ONE_PHONE_AT_LEAST'), //retro compat
 			'ajaxurl' => _MODULE_DIR_,
@@ -298,9 +303,7 @@ class AddressControllerCore extends FrontController
 			$selected_country = (int)$this->_address->id_country;
 		else if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']))
 		{
-			// get all countries as language (xy) or language-country (wz-XY)
-			$array = array();
-			preg_match("#(?<=-)\w\w|\w\w(?!-)#",$_SERVER['HTTP_ACCEPT_LANGUAGE'],$array);
+			$array = preg_split('/,|-/', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
 			if (!Validate::isLanguageIsoCode($array[0]) || !($selected_country = Country::getByIso($array[0])))
 				$selected_country = (int)Configuration::get('PS_COUNTRY_DEFAULT');
 		}
@@ -334,8 +337,8 @@ class AddressControllerCore extends FrontController
 	protected function assignAddressFormat()
 	{
 		$id_country = is_null($this->_address)? 0 : (int)$this->_address->id_country;
-		$ordered_adr_fields = AddressFormat::getOrderedAddressFields($id_country, true, true);
-		$this->context->smarty->assign('ordered_adr_fields', $ordered_adr_fields);
+		$dlv_adr_fields = AddressFormat::getOrderedAddressFields($id_country, true, true);
+		$this->context->smarty->assign('ordered_adr_fields', $dlv_adr_fields);
 	}
 
 	/**

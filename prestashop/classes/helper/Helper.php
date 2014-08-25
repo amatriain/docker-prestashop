@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -27,7 +27,7 @@
 class HelperCore
 {
 	public $currentIndex;
-	public $table = 'configuration';
+	public $table;
 	public $identifier;
 	public $token;
 	public $toolbar_btn;
@@ -36,7 +36,6 @@ class HelperCore
 	public $show_toolbar = true;
 	public $context;
 	public $toolbar_scroll = false;
-	public $bootstrap = false;
 
 	/**
 	 * @var Module
@@ -87,9 +86,9 @@ class HelperCore
 				$override_tpl_path = _PS_MODULE_DIR_.$this->module->name.'/views/templates/admin/_configure/'.$this->override_folder.$this->base_folder.$tpl_name;
 			else
 			{
-				if (file_exists($this->context->smarty->getTemplateDir(1).$this->override_folder.$this->base_folder.$tpl_name))
-					$override_tpl_path = $this->context->smarty->getTemplateDir(1).$this->override_folder.$this->base_folder.$tpl_name;
-				else if (file_exists($this->context->smarty->getTemplateDir(0).'controllers'.DIRECTORY_SEPARATOR.$this->override_folder.$this->base_folder.$tpl_name))
+				if (file_exists($this->context->smarty->getTemplateDir(1).DIRECTORY_SEPARATOR.$this->override_folder.$this->base_folder.$tpl_name))
+					$override_tpl_path = $this->context->smarty->getTemplateDir(1).DIRECTORY_SEPARATOR.$this->override_folder.$this->base_folder.$tpl_name;
+				else if (file_exists($this->context->smarty->getTemplateDir(0).DIRECTORY_SEPARATOR.'controllers'.DIRECTORY_SEPARATOR.$this->override_folder.$this->base_folder.$tpl_name))
 					$override_tpl_path = $this->context->smarty->getTemplateDir(0).'controllers'.DIRECTORY_SEPARATOR.$this->override_folder.$this->base_folder.$tpl_name;
 
 			}
@@ -106,7 +105,7 @@ class HelperCore
 	/**
 	 * default behaviour for helper is to return a tpl fetched
 	 *
-	 * @return string
+	 * @return void
 	 */
 	public function generate()
 	{
@@ -203,41 +202,54 @@ class HelperCore
 		if (!$use_radio)
 			$input_name = $input_name.'[]';
 
+		$this->context->controller->addCSS(_PS_JS_DIR_.'jquery/plugins/treeview-categories/jquery.treeview-categories.css');
+		$this->context->controller->addJs(array(
+			_PS_JS_DIR_.'jquery/plugins/treeview-categories/jquery.treeview-categories.js',
+			_PS_JS_DIR_.'jquery/plugins/treeview-categories/jquery.treeview-categories.async.js',
+			_PS_JS_DIR_.'jquery/plugins/treeview-categories/jquery.treeview-categories.edit.js',
+			_PS_JS_DIR_.'admin-categories-tree.js'));
 		if ($use_search)
 			$this->context->controller->addJs(_PS_JS_DIR_.'jquery/plugins/autocomplete/jquery.autocomplete.js');
 
 		$html = '
 		<script type="text/javascript">
-			var inputName = \''.addcslashes($input_name, '\'').'\';'."\n";
+			var inputName = "'.$input_name.'";
+		';
 		if (count($selected_cat) > 0)
 		{
 			if (isset($selected_cat[0]))
-				$html .= '			var selectedCat = "'.implode(',', array_map('intval', $selected_cat)).'";'."\n";
+				$html .= 'var selectedCat = "'.implode(',', $selected_cat).'";';
 			else
-				$html .= '			var selectedCat = "'.implode(',', array_map('intval', array_keys($selected_cat))).'";'."\n";
+				$html .= 'var selectedCat = "'.implode(',', array_keys($selected_cat)).'";';
 		}
 		else
-			$html .= '			var selectedCat = \'\';'."\n";
-		$html .= '			var selectedLabel = \''.$translations['selected'].'\';
-			var home = \''.addcslashes($root['name'], '\'').'\';
+			$html .= 'var selectedCat = "";';
+		$html .= '
+			var selectedLabel = \''.$translations['selected'].'\';
+			var home = \''.$root['name'].'\';
 			var use_radio = '.(int)$use_radio.';';
+		if (!$use_in_popup)
+			$html .= '
+			$(document).ready(function(){
+				buildTreeView('.$use_shop_context.');
+			});';
+		else
+			$html .= 'buildTreeView('.$use_shop_context.');';
 		$html .= '</script>';
 
 		$html .= '
 		<div class="category-filter">
-			<a class="btn btn-link" href="#" id="collapse_all"><i class="icon-collapse"></i> '.$translations['Collapse All'].'</a>
-			<a class="btn btn-link" href="#" id="expand_all"><i class="icon-expand"></i> '.$translations['Expand All'].'</a>
+			<span><a href="#" id="collapse_all" >'.$translations['Collapse All'].'</a>
+			| </span>
+			<span><a href="#" id="expand_all" >'.$translations['Expand All'].'</a>
 			'.(!$use_radio ? '
-				<a class="btn btn-link" href="#" id="check_all"><i class="icon-check"></i> '.$translations['Check All'].'</a>
-				<a class="btn btn-link" href="#" id="uncheck_all"><i class="icon-check-empty"></i> '.$translations['Uncheck All'].'</a>' : '')
-			.($use_search ? '
-				<div class="row">
-					<label class="control-label col-lg-6" for="search_cat">'.$translations['search'].' :</label>
-					<div class="col-lg-6">
-						<input type="text" name="search_cat" id="search_cat"/>
-					</div>
-				</div>' : '')
-		.'</div>';
+			 |</span>
+			 <span> <a href="#" id="check_all" >'.$translations['Check All'].'</a>
+			 |</span>
+			 <span><a href="#" id="uncheck_all" >'.$translations['Uncheck All'].'</a>|</span>
+			 ' : '').($use_search ? '<span>'.$translations['search'].' : <input type="text" name="search_cat" id="search_cat"></span>' : '').'
+		</div>
+		';
 
 		$home_is_selected = false;
 		foreach ($selected_cat as $cat)
@@ -260,28 +272,23 @@ class HelperCore
 			}
 		}
 
-		$root_input = '';
+		$root_input = '&nbsp;';
 		if ($root['id_category'] != $top_category->id || (Tools::isSubmit('ajax') && Tools::getValue('action') == 'getCategoriesFromRootCategory'))
-			$root_input = '
-				<p class="checkbox"><i class="icon-folder-open"></i><label>
-					<input type="'.(!$use_radio ? 'checkbox' : 'radio').'" name="'
-						.$input_name.'" value="'.$root['id_category'].'" '
-						.($home_is_selected ? 'checked' : '').' onclick="clickOnCategoryBox($(this));" />'
-					.$root['name'].
-				'</label></p>';
+			$root_input = '<input type="'.(!$use_radio ? 'checkbox' : 'radio').'" name="'
+									.$input_name.'" value="'.$root['id_category'].'" '
+									.($home_is_selected ? 'checked' : '').' onclick="clickOnCategoryBox($(this));" />
+							<span class="category_label">'
+								.$root['name'].
+							'</span>';
 		$html .= '
-			<div class="container">
-				<div class="well">
-					<ul id="categories-treeview">
-						<li id="'.$root['id_category'].'" class="hasChildren">
-							<span class="folder">'.$root_input.' </span>
-							<ul>
-								<li><span class="placeholder">&nbsp;</span></li>
-						  	</ul>
-						</li>
-					</ul>
-				</div>
-			</div>';
+			<ul id="categories-treeview" class="filetree">
+				<li id="'.$root['id_category'].'" class="hasChildren">
+					<span class="folder">'.$root_input.' </span>
+					<ul>
+						<li><span class="placeholder">&nbsp;</span></li>
+				  </ul>
+				</li>
+			</ul>';
 
 		if ($use_search)
 			$html .= '<script type="text/javascript">searchCategory();</script>';
@@ -346,19 +353,12 @@ class HelperCore
 	
 	public function renderModulesList($modules_list)
 	{
-		$this->tpl_vars = array(
-			'modules_list' => $modules_list,
-			'modules_uri' => __PS_BASE_URI__.basename(_PS_MODULE_DIR_)
-		);
-		// The translations for this are defined by AdminModules, so override the context for the translations
-		$override_controller_name_for_translations = Context::getContext()->override_controller_name_for_translations;
-		Context::getContext()->override_controller_name_for_translations = 'AdminModules';
+		$this->tpl_vars = array('modules_list' => $modules_list);
+		
 		$tpl = $this->createTemplate('helpers/modules_list/list.tpl');
 		$tpl->assign($this->tpl_vars);
-		$html = $tpl->fetch();
-		// Restore the previous context
-		Context::getContext()->override_controller_name_for_translations = $override_controller_name_for_translations;
-		return $html;
+
+		return $tpl->fetch();
 	}
 
 	public static function renderShopList()
@@ -380,22 +380,21 @@ class HelperCore
 
 		// Generate HTML
 		$url = $_SERVER['REQUEST_URI'].(($_SERVER['QUERY_STRING']) ? '&' : '?').'setShopContext=';
-		$shop = new Shop(Shop::getContextShopID());
+		$html = '<select class="shopList chosen" onchange="location.href = \''.$url.'\'+$(this).val();">';
 
-		// $html = '<a href="#"><i class="icon-home"></i> '.$shop->name.'</a>';
-		$html = '<select class="shopList" onchange="location.href = \''.htmlspecialchars($url).'\'+$(this).val();">';
 		$html .= '<option value="" class="first">'.Translate::getAdminTranslation('All shops').'</option>';
-
 		foreach ($tree as $gID => $group_data)
 		{
 			if ((!isset($context->controller->multishop_context) || $context->controller->multishop_context & Shop::CONTEXT_GROUP))
-				$html .= '<option class="group" value="g-'.$gID.'"'.(((empty($value) && $shop_context == Shop::CONTEXT_GROUP) || $value == 'g-'.$gID) ? ' selected="selected"' : '').($context->controller->multishop_context_group == false ? ' disabled="disabled"' : '').'>'.Translate::getAdminTranslation('Group:').' '.htmlspecialchars($group_data['name']).'</option>';
+				$html .= '<option class="group" value="g-'.$gID.'" '.(($value == 'g-'.$gID) ? 'selected="selected"' : '').' '.($context->controller->multishop_context_group == false ? 'disabled="disabled"' : '').'>'.Translate::getAdminTranslation('Group:').' '.htmlspecialchars($group_data['name']).'</option>';
 			else
-				$html .= '<optgroup class="group" label="'.Translate::getAdminTranslation('Group:').' '.htmlspecialchars($group_data['name']).'"'.($context->controller->multishop_context_group == false ? ' disabled="disabled"' : '').'>';
+				$html .= '<optgroup class="group" label="'.Translate::getAdminTranslation('Group:').' '.htmlspecialchars($group_data['name']).'" '.($context->controller->multishop_context_group == false ? 'disabled="disabled"' : '').'>';
+
 			if (!isset($context->controller->multishop_context) || $context->controller->multishop_context & Shop::CONTEXT_SHOP)
 				foreach ($group_data['shops'] as $sID => $shopData)
 					if ($shopData['active'])
-						$html .= '<option value="s-'.$sID.'" class="shop"'.(($value == 's-'.$sID) ? ' selected="selected"' : '').'>'.($context->controller->multishop_context_group == false ? htmlspecialchars($group_data['name']).' - ' : '').$shopData['name'].'</option>';
+						$html .= '<option value="s-'.$sID.'" class="shop" '.(($value == 's-'.$sID) ? 'selected="selected"' : '').'>&raquo; '.($context->controller->multishop_context_group == false ? htmlspecialchars($group_data['name']).' - ' : '').$shopData['name'].'</option>';
+
 			if (!(!isset($context->controller->multishop_context) || $context->controller->multishop_context & Shop::CONTEXT_GROUP))
 				$html .= '</optgroup>';
 		}
@@ -404,3 +403,4 @@ class HelperCore
 		return $html;
 	}
 }
+

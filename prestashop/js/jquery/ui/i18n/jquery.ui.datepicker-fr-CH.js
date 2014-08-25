@@ -3,8 +3,8 @@
 jQuery(function($){
 	$.datepicker.regional['fr-CH'] = {
 		closeText: 'Fermer',
-		prevText: '&#x3C;Préc',
-		nextText: 'Suiv&#x3E;',
+		prevText: '&#x3c;Préc',
+		nextText: 'Suiv&#x3e;',
 		currentText: 'Courant',
 		monthNames: ['Janvier','Février','Mars','Avril','Mai','Juin',
 		'Juillet','Août','Septembre','Octobre','Novembre','Décembre'],

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -36,13 +36,9 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 
 	public function initContent()
 	{
-		if ($this->ajax)
-			return;
-
 		$this->initTabModuleList();
 		$this->addToolBarModulesListButton();
 		$this->toolbar_title = $this->l('Stats', 'AdminStatsTab');
-		$this->initPageHeaderToolbar();
 		if ($this->display == 'view')
 		{
 			// Some controllers use the view action without an object
@@ -52,23 +48,15 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 		}
 		
 		$this->content .= $this->displayMenu();
+		$this->content .= $this->displayEngines();
 		$this->content .= $this->displayCalendar();
 		$this->content .= $this->displayStats();
 
 
 		$this->context->smarty->assign(array(
 			'content' => $this->content,
-			'url_post' => self::$currentIndex.'&token='.$this->token,			
-			'show_page_header_toolbar' => $this->show_page_header_toolbar,
-			'page_header_toolbar_title' => $this->page_header_toolbar_title,
-			'page_header_toolbar_btn' => $this->page_header_toolbar_btn
+			'url_post' => self::$currentIndex.'&token='.$this->token,
 		));
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		parent::initPageHeaderToolbar();
-		unset($this->page_header_toolbar_btn['back']);
 	}
 
 	public function displayCalendar()
@@ -87,23 +75,10 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 	public static function displayCalendarForm($translations, $token, $action = null, $table = null, $identifier = null, $id = null)
 	{
 		$context = Context::getContext();
-
 		$tpl = $context->controller->createTemplate('calendar.tpl');
 
 		$context->controller->addJqueryUI('ui.datepicker');
 
-		if ($identifier === null && Tools::getValue('module'))
-		{
-			$identifier = 'module';
-			$id = Tools::getValue('module');
-		}
-		
-		$action = Context::getContext()->link->getAdminLink('AdminStats');
-		$action .= ($action && $table ? '&'.Tools::safeOutput($action) : '');		
-		$action .= ($identifier && $id ? '&'.Tools::safeOutput($identifier).'='.(int)$id : '');
-		$module = Tools::getValue('module');
-		$action .= ($module ? '&module='.Tools::safeOutput($module) : '');
-		$action .= (($id_product = Tools::getValue('id_product')) ? '&id_product='.Tools::safeOutput($id_product) : '');
 		$tpl->assign(array(
 			'current' => self::$currentIndex,
 			'token' => $token,
@@ -119,7 +94,6 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 		return $tpl->fetch();
 	}
 
-	/* Not used anymore, but still work */
 	protected function displayEngines()
 	{
 		$tpl = $this->createTemplate('engines.tpl');
@@ -151,33 +125,17 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 
 		$modules = $this->getModules();
 		$module_instance = array();
-		foreach ($modules as $m => $module)
-		{
-			if ($module_instance[$module['name']] = Module::getInstanceByName($module['name']))
-				$modules[$m]['displayName'] = $module_instance[$module['name']]->displayName;
-			else
-			{
-				unset($module_instance[$module['name']]);
-				unset($modules[$m]);
-			}
-		}
-
-		uasort($modules, array($this, 'checkModulesNames'));
+		foreach ($modules as $module)
+			$module_instance[$module['name']] = Module::getInstanceByName($module['name']);
 
 		$tpl->assign(array(
 			'current' => self::$currentIndex,
-			'current_module_name' => Tools::getValue('module', 'statsforecast'),
 			'token' => $this->token,
 			'modules' => $modules,
 			'module_instance' => $module_instance
 		));
 
 		return $tpl->fetch();
-	}
-	
-	public function checkModulesNames($a, $b)
-	{
-		return (bool)($a['displayName'] > $b['displayName']);
 	}
 
 	protected function getModules()
@@ -223,28 +181,9 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 	public function postProcess()
 	{
 		$this->context = Context::getContext();
-		
-		$this->processDateRange();
-		
-		if (Tools::getValue('submitSettings'))
-		{
-		 	if ($this->tabAccess['edit'] === '1')
-			{
-				self::$currentIndex .= '&module='.Tools::getValue('module');
-				Configuration::updateValue('PS_STATS_RENDER', Tools::getValue('PS_STATS_RENDER', Configuration::get('PS_STATS_RENDER')));
-				Configuration::updateValue('PS_STATS_GRID_RENDER', Tools::getValue('PS_STATS_GRID_RENDER', Configuration::get('PS_STATS_GRID_RENDER')));
-				Configuration::updateValue('PS_STATS_OLD_CONNECT_AUTO_CLEAN', Tools::getValue('PS_STATS_OLD_CONNECT_AUTO_CLEAN', Configuration::get('PS_STATS_OLD_CONNECT_AUTO_CLEAN')));
-			}
-			else
-				$this->errors[] = Tools::displayError('You do not have permission to edit this.');
-		}
-	}
-	
-	public function processDateRange()
-	{
 		if (Tools::isSubmit('submitDatePicker'))
 		{
-			if ((!Validate::isDate($from = Tools::getValue('datepickerFrom')) || !Validate::isDate($to = Tools::getValue('datepickerTo'))) || (strtotime($from) > strtotime($to)))
+			if (!Validate::isDate($from = Tools::getValue('datepickerFrom')) || !Validate::isDate($to = Tools::getValue('datepickerTo')))
 				$this->errors[] = Tools::displayError('The specified date is invalid.');
 		}
 		if (Tools::isSubmit('submitDateDay'))
@@ -285,30 +224,19 @@ abstract class AdminStatsTabControllerCore extends AdminPreferencesControllerCor
 			$this->context->employee->stats_date_from = $from;
 			$this->context->employee->stats_date_to = $to;
 			$this->context->employee->update();
-			if (!$this->isXmlHttpRequest())
-				Tools::redirectAdmin($_SERVER['REQUEST_URI']);
+			Tools::redirectAdmin($_SERVER['REQUEST_URI']);
 		}
-	}
-	
-	public function ajaxProcessSetDashboardDateRange()
-	{
-		$this->processDateRange();
-		
-		if ($this->isXmlHttpRequest())
+		if (Tools::getValue('submitSettings'))
 		{
-			if (is_array($this->errors) && count($this->errors))
-				die(Tools::jsonEncode(array(
-					'has_errors' => true,
-					'errors' => array($this->errors),
-					'date_from' => $this->context->employee->stats_date_from,
-					'date_to' => $this->context->employee->stats_date_to)
-				));
+		 	if ($this->tabAccess['edit'] === '1')
+			{
+				self::$currentIndex .= '&module='.Tools::getValue('module');
+				Configuration::updateValue('PS_STATS_RENDER', Tools::getValue('PS_STATS_RENDER', Configuration::get('PS_STATS_RENDER')));
+				Configuration::updateValue('PS_STATS_GRID_RENDER', Tools::getValue('PS_STATS_GRID_RENDER', Configuration::get('PS_STATS_GRID_RENDER')));
+				Configuration::updateValue('PS_STATS_OLD_CONNECT_AUTO_CLEAN', Tools::getValue('PS_STATS_OLD_CONNECT_AUTO_CLEAN', Configuration::get('PS_STATS_OLD_CONNECT_AUTO_CLEAN')));
+			}
 			else
-				die(Tools::jsonEncode(array(
-					'has_errors' => false,
-					'date_from' => $this->context->employee->stats_date_from,
-					'date_to' => $this->context->employee->stats_date_to)
-					));
+				$this->errors[] = Tools::displayError('You do not have permission to edit this.');
 		}
 	}
 

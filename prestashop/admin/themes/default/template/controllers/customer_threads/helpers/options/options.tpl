@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,25 +18,23 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 {extends file="helpers/options/options.tpl"}
 {block name="after"}
 {if $use_sync}
-		<div class="panel">
-			<legend>{l s='Sync'}</legend>
+		<fieldset><legend>{l s='Sync'}</legend>
 			<label>{l s='Run sync:'}</label>
 			<div class="margin-form">
-				<button class="btn" id="run_sync" onclick="run_sync();">{l s='Run sync'}</button>
+				<button class="button" id="run_sync" onclick="run_sync();">{l s='Run sync'}</button>
 				<p>{l s='Click to synchronize mail automatically'}</p>
 				<div id="ajax_loader"></div>
 				<div class="error" style="display:none" id="ajax_error"></div>
-				<div class="alert" style="display:none" id="ajax_conf"></div>
+				<div class="conf" style="display:none" id="ajax_conf"></div>
 			</div>
-		</div>
-
+		</fieldset><br/>
 		<script type="text/javascript"> 
 			var ajaxQueries = new Array();
 			function run_sync()
@@ -54,7 +52,7 @@
 					url: "index.php",
 					data: {
 						ajax: "1",
-						token: "{$token|escape:'html':'UTF-8'}", 
+						token: "{$token}", 
 						syncImapMail: "1",
 						ajax:"1",
 						action:"syncImap",

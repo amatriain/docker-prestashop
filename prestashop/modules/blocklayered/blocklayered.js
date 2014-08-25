@@ -1,5 +1,5 @@
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registred Trademark & Property of PrestaShop SA
 */
@@ -37,7 +37,7 @@ $(document).ready(function()
 	$('#layered_form input[type=button], #layered_form label.layered_color').live('click', function()
 	{
 		if (!$('input[name='+$(this).attr('name')+'][type=hidden]').length)
-			$('<input />').attr('type', 'hidden').attr('name', $(this).attr('name')).val($(this).data('rel')).appendTo('#layered_form');
+			$('<input />').attr('type', 'hidden').attr('name', $(this).attr('name')).val($(this).attr('rel')).appendTo('#layered_form');
 		else
 			$('input[name='+$(this).attr('name')+'][type=hidden]').remove();
 		reloadContent();
@@ -123,7 +123,7 @@ $(document).ready(function()
 		hideFilterValueAction(this);
 	});
 
-	// To be sure there is no other events attached to the selectProductSort, change the ID
+	// To be sure there is no other events attached to the selectPrductSort, change the ID
 	var id = 1;
 	while ($('#selectPrductSort').length) { // Because ids are duplicated
 		// Unbind event change on #selectPrductSort
@@ -134,18 +134,8 @@ $(document).ready(function()
 		$('label[for=selectPrductSort]').attr('for', 'selectPrductSort'+id);
 		id++;
 	}
-
-	while ($('#selectProductSort').length) { // Because ids are duplicated
-		// Unbind event change on #selectProductSort
-		$('#selectProductSort').unbind('change');
-		$('#selectProductSort').attr('onchange', '');
-		$('#selectProductSort').addClass('selectProductSort');
-		$('#selectProductSort').attr('id', 'selectProductSort'+id);
-		$('label[for=selectProductSort]').attr('for', 'selectProductSort'+id);
-		id++;
-	}
 	
-	// Since 1.5, event is add to .selectProductSort and not to #selectProductSort
+	// Since 1.5, event is add to .selectProductSort and not to #selectPrductSort
 	setTimeout(function() {
 		$('.selectProductSort').unbind('change');
 	}, 100);
@@ -240,11 +230,12 @@ function initLayered()
 
 function paginationButton() {
 	$('#pagination a').not(':hidden').each(function () {
-		if ($(this).attr('href').search(/[&|\?]p=/) == -1)
-		    var page = 1;
-		else
-		    var page = $(this).attr('href').replace(/^.*[&|\?]p=(\d+).*$/, '$1');
-
+		if ($(this).attr('href').search('&p=') == -1) {
+			var page = 1;
+		}
+		else {
+			var page = $(this).attr('href').replace(/^.*&p=(\d+).*$/, '$1');
+		}
 		var location = window.location.href.replace(/#.*$/, '');
 		$(this).attr('href', location+current_friendly_url.replace(/\/page-(\d+)/, '')+'/page-'+page);
 	});
@@ -272,31 +263,31 @@ function cancelFilter()
 {
 	$('#enabled_filters a').live('click', function(e)
 	{
-		if ($(this).data('rel').search(/_slider$/) > 0)
+		if ($(this).attr('rel').search(/_slider$/) > 0)
 		{
-			if ($('#'+$(this).data('rel')).length)
+			if ($('#'+$(this).attr('rel')).length)
 			{
-				$('#'+$(this).data('rel')).slider('values' , 0, $('#'+$(this).data('rel')).slider('option' , 'min' ));
-				$('#'+$(this).data('rel')).slider('values' , 1, $('#'+$(this).data('rel')).slider('option' , 'max' ));
-				$('#'+$(this).data('rel')).slider('option', 'slide')(0,{values:[$('#'+$(this).data('rel')).slider( 'option' , 'min' ), $('#'+$(this).data('rel')).slider( 'option' , 'max' )]});
+				$('#'+$(this).attr('rel')).slider('values' , 0, $('#'+$(this).attr('rel')).slider('option' , 'min' ));
+				$('#'+$(this).attr('rel')).slider('values' , 1, $('#'+$(this).attr('rel')).slider('option' , 'max' ));
+				$('#'+$(this).attr('rel')).slider('option', 'slide')(0,{values:[$('#'+$(this).attr('rel')).slider( 'option' , 'min' ), $('#'+$(this).attr('rel')).slider( 'option' , 'max' )]});
 			}
-			else if($('#'+$(this).data('rel').replace(/_slider$/, '_range_min')).length)
+			else if($('#'+$(this).attr('rel').replace(/_slider$/, '_range_min')).length)
 			{
-				$('#'+$(this).data('rel').replace(/_slider$/, '_range_min')).val($('#'+$(this).data('rel').replace(/_slider$/, '_range_min')).attr('limitValue'));
-				$('#'+$(this).data('rel').replace(/_slider$/, '_range_max')).val($('#'+$(this).data('rel').replace(/_slider$/, '_range_max')).attr('limitValue'));
+				$('#'+$(this).attr('rel').replace(/_slider$/, '_range_min')).val($('#'+$(this).attr('rel').replace(/_slider$/, '_range_min')).attr('limitValue'));
+				$('#'+$(this).attr('rel').replace(/_slider$/, '_range_max')).val($('#'+$(this).attr('rel').replace(/_slider$/, '_range_max')).attr('limitValue'));
 			}
 		}
 		else
 		{
-			if ($('option#'+$(this).data('rel')).length)
+			if ($('option#'+$(this).attr('rel')).length)
 			{
-				$('#'+$(this).data('rel')).parent().val('');
+				$('#'+$(this).attr('rel')).parent().val('');
 			}
 			else
 			{
-				$('#'+$(this).data('rel')).attr('checked', false);
-				$('.'+$(this).data('rel')).attr('checked', false);
-				$('#layered_form input[type=hidden][name='+$(this).data('rel')+']').remove();
+				$('#'+$(this).attr('rel')).attr('checked', false);
+				$('.'+$(this).attr('rel')).attr('checked', false);
+				$('#layered_form input[type=hidden][name='+$(this).attr('rel')+']').remove();
 			}
 		}
 		reloadContent();
@@ -310,13 +301,13 @@ function openCloseFilter()
 	{
 		if ($(this).html() == '&lt;')
 		{
-			$('#'+$(this).data('rel')).show();
+			$('#'+$(this).attr('rel')).show();
 			$(this).html('v');
 			$(this).parent().removeClass('closed');
 		}
 		else
 		{
-			$('#'+$(this).data('rel')).hide();
+			$('#'+$(this).attr('rel')).hide();
 			$(this).html('&lt;');
 			$(this).parent().addClass('closed');
 		}
@@ -328,10 +319,8 @@ function openCloseFilter()
 function stopAjaxQuery() {
 	if (typeof(ajaxQueries) == 'undefined')
 		ajaxQueries = new Array();
-	for(i = 0; i < ajaxQueries.length; i++) {
-		if (typeof ajaxQueries[i] != 'undefined')
-			ajaxQueries[i].abort();
-	}		
+	for(i = 0; i < ajaxQueries.length; i++)
+		ajaxQueries[i].abort();
 	ajaxQueries = new Array();
 }
 
@@ -549,7 +538,7 @@ function getUrlParams()
 function updateProductUrl()
 {
 	// Adding the filters to URL product
-	if (typeof(param_product_url) != 'undefined' && param_product_url != '' && param_product_url !='#') {
+	if (typeof(param_product_url) != 'undefined') {
 		$.each($('ul#product_list li.ajax_block_product .product_img_link,'+
 				'ul#product_list li.ajax_block_product h3 a,'+
 				'ul#product_list li.ajax_block_product .product_desc a,'+

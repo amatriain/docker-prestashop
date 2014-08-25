@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -26,10 +26,6 @@
 
 class WebserviceRequestCore
 {
-	const HTTP_GET = 1;
-	const HTTP_POST = 2;
-	const HTTP_PUT = 4;
-	
 	protected $_available_languages = null;
 	/**
 	 * Errors triggered at execution
@@ -59,7 +55,7 @@ class WebserviceRequestCore
 	 * PrestaShop Webservice Documentation URL
 	 * @var string
 	 */
-	protected $_docUrl = 'http://doc.prestashop.com/display/PS16/Using+the+PrestaShop+Web+Service';
+	protected $_docUrl = 'http://doc.prestashop.com/display/PS15/Using+the+PrestaShop+Web+Service';
 
 	/**
 	 * Set if the authentication key was checked
@@ -210,7 +206,6 @@ class WebserviceRequestCore
 		return self::$_instance;
 	}
 
-	/*
 	protected function getOutputObject($type)
 	{
 		switch ($type)
@@ -219,33 +214,6 @@ class WebserviceRequestCore
 			default :
 				$obj_render = new WebserviceOutputXML();
 				break;
-		}
-		return $obj_render;
-	}
-	*/
-	protected function getOutputObject($type)
-	{
-		// set header param in header or as get param
-		$headers = self::getallheaders();
-		if (isset($headers['Io-Format']))
-		   $type = $headers['Io-Format'];
-		else if (isset($headers['Output-Format']))
-		     $type = $headers['Output-Format'];
-		else if (isset($_GET['output_format']))
-		     $type = $_GET['output_format'];
-		else if (isset($_GET['io_format']))
-		   $type = $_GET['io_format'];
-		$this->outputFormat = $type;
-		switch ($type)
-		{
-			case 'JSON' :
-				require_once dirname(__FILE__).'/WebserviceOutputJSON.php';
-				$obj_render = new WebserviceOutputJSON();
-				break;
-			case 'XML' :
-			default :
-				$obj_render = new WebserviceOutputXML();
-			break;
 		}
 		return $obj_render;
 	}
@@ -280,8 +248,7 @@ class WebserviceRequestCore
 			'order_invoices' => array('description' => 'The Order invoices','class' => 'OrderInvoice'),
 			'orders' => array('description' => 'The Customers orders','class' => 'Order'),
 			'order_payments' => array('description' => 'The Order payments','class' => 'OrderPayment'),
-			'order_states' => array('description' => 'The Order statuses','class' => 'OrderState'),
-			'order_slip' => array('description' => 'The Order slips', 'class' => 'OrderSlip'),
+			'order_states' => array('description' => 'The Order states','class' => 'OrderState'),
 			'price_ranges' => array('description' => 'Price ranges', 'class' => 'RangePrice'),
 			'product_features' => array('description' => 'The product features','class' => 'Feature'),
 			'product_feature_values' => array('description' => 'The product feature values','class' => 'FeatureValue'),
@@ -309,7 +276,7 @@ class WebserviceRequestCore
 			'warehouse_product_locations' => array('description' => 'Location of products in warehouses', 'class' => 'WarehouseProductLocation', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
 			'supply_orders' => array('description' => 'Supply Orders', 'class' => 'SupplyOrder', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
 			'supply_order_details' => array('description' => 'Supply Order Details', 'class' => 'SupplyOrderDetail', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
-			'supply_order_states' => array('description' => 'Supply Order Statuses', 'class' => 'SupplyOrderState', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
+			'supply_order_states' => array('description' => 'Supply Order States', 'class' => 'SupplyOrderState', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
 			'supply_order_histories' => array('description' => 'Supply Order Histories', 'class' => 'SupplyOrderHistory', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
 			'supply_order_receipt_histories' => array('description' => 'Supply Order Receipt Histories', 'class' => 'SupplyOrderReceiptHistory', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
 			'product_suppliers' => array('description' => 'Product Suppliers', 'class' => 'ProductSupplier', 'forbidden_method' => array('PUT', 'POST', 'DELETE')),
@@ -317,7 +284,6 @@ class WebserviceRequestCore
 			'tax_rule_groups' => array('description' => 'Tax rule groups', 'class' => 'TaxRulesGroup'),
 			'specific_prices' => array('description' => 'Specific price management', 'class' => 'SpecificPrice'),
 			'specific_price_rules' => array('description' => 'Specific price management', 'class' => 'SpecificPriceRule'),
-			'shop_urls' => array('description' => 'Shop URLs from multi-shop feature', 'class' => 'ShopUrl'),
 		);
 		ksort($resources);
 		return $resources;
@@ -375,14 +341,16 @@ class WebserviceRequestCore
 			$use_tax = (int)(isset($value['use_tax']) ? $value['use_tax'] : Configuration::get('PS_TAX'));
 			$decimals = (int)(isset($value['decimals']) ? $value['decimals'] : Configuration::get('PS_PRICE_ROUND_MODE'));
 			$id_product_attribute = (int)(isset($value['product_attribute']) ? $value['product_attribute'] : null);
+			$id_county = (int)(isset($value['county']) ? $value['county'] : null);
+
 			$only_reduc = (int)(isset($value['only_reduction']) ? $value['only_reduction'] : false);
 			$use_reduc = (int)(isset($value['use_reduction']) ? $value['use_reduction'] : true);
 			$use_ecotax = (int)(isset($value['use_ecotax']) ? $value['use_ecotax'] : Configuration::get('PS_USE_ECOTAX'));
 			$specific_price_output = null;
-			$id_county = (int)(isset($value['county']) ? $value['county'] : 0);
+			$id_county = (isset($value['county']) ? $value['county'] : 0);
 			$return_value = Product::priceCalculation($id_shop, $value['object_id'], $id_product_attribute, $id_country, $id_state, $id_county, $id_currency, $id_group, $quantity,
 									$use_tax, $decimals, $only_reduc, $use_reduc, $use_ecotax, $specific_price_output, null);
-			$arr_return[$name] = array('sqlId'=>strtolower($name), 'value'=>sprintf('%f', $return_value));
+			$arr_return[$name] = array('sqlId'=>strtolower($name), 'value'=>$return_value);
 		}
 		return $arr_return;
 	}
@@ -545,6 +513,7 @@ class WebserviceRequestCore
 						$this->setError(501, sprintf('The specific management class is not implemented for the "%s" entity.', $this->urlSegment[0]), 124);
 					else
 					{
+						$this->setFieldsToDisplay();
 						$this->objectSpecificManagement = new $specificObjectName();
 						$this->objectSpecificManagement->setObjectOutput($this->objOutput)
 													   ->setWsObject($this);
@@ -561,10 +530,9 @@ class WebserviceRequestCore
 				}
 			}
 		}
-		$return = $this->returnOutput();
+		return $this->returnOutput();
 		unset($webservice_call);
-		unset($display_errors);
-		return $return;
+		unset ($display_errors);
 	}
 
 	protected function webserviceChecks()
@@ -1190,7 +1158,6 @@ class WebserviceRequestCore
 				$sorts = array($this->urlFragments['sort']);
 
 			$sql_sort .= ' ORDER BY ';
-
 			foreach ($sorts as $sort)
 			{
 				$delimiterPosition = strrpos($sort, '_');
@@ -1217,15 +1184,7 @@ class WebserviceRequestCore
 					$sql_sort .= 'main_i18n.`'.pSQL($this->resourceConfiguration['fields'][$fieldName]['sqlId']).'` '.$direction.', ';// ORDER BY main_i18n.`field` ASC|DESC
 				}
 				else
-				{
-					$object = new $this->resourceConfiguration['retrieveData']['className']();
-					$assoc = Shop::getAssoTable($this->resourceConfiguration['retrieveData']['table']);
-					if ($assoc !== false && $assoc['type'] == 'shop' && ($object->isMultiShopField($this->resourceConfiguration['fields'][$fieldName]['sqlId']) || $fieldName == 'id'))
-						$table_alias = 'multi_shop_'.$this->resourceConfiguration['retrieveData']['table'];
-					else
-						$table_alias = '';
-					$sql_sort .= (isset($this->resourceConfiguration['retrieveData']['tableAlias']) ? '`'.bqSQL($this->resourceConfiguration['retrieveData']['tableAlias']).'`.' : '`'.bqSQL($table_alias).'`.').'`'.pSQL($this->resourceConfiguration['fields'][$fieldName]['sqlId']).'` '.$direction.', ';// ORDER BY `field` ASC|DESC
-				}
+					$sql_sort .= (isset($this->resourceConfiguration['retrieveData']['tableAlias']) ? $this->resourceConfiguration['retrieveData']['tableAlias'].'.' : '').'`'.pSQL($this->resourceConfiguration['fields'][$fieldName]['sqlId']).'` '.$direction.', ';// ORDER BY `field` ASC|DESC
 			}
 			$sql_sort = rtrim($sql_sort, ', ')."\n";
 		}
@@ -1253,15 +1212,12 @@ class WebserviceRequestCore
 		return $filters;
 	}
 
+
+
 	public function getFilteredObjectList()
 	{
 		$objects = array();
 		$filters = $this->manageFilters();
-
-		/* If we only need to display the synopsis, analyzing the first row is sufficient */
-		if (isset($this->urlFragments['schema']) && in_array($this->urlFragments['schema'], array('blank', 'synopsis')))
-			$filters = array('sql_join' => '', 'sql_filter' => '', 'sql_sort' => '', 'sql_limit' => ' LIMIT 1');
-			
 		$this->resourceConfiguration['retrieveData']['params'][] = $filters['sql_join'];
 		$this->resourceConfiguration['retrieveData']['params'][] = $filters['sql_filter'];
 		$this->resourceConfiguration['retrieveData']['params'][] = $filters['sql_sort'];
@@ -1273,16 +1229,7 @@ class WebserviceRequestCore
 		if ($sqlObjects)
 		{
 			foreach ($sqlObjects as $sqlObject)
-			{
-				if ($this->fieldsToDisplay == 'minimum')
-				{
-					$obj = new $this->resourceConfiguration['retrieveData']['className']();
-					$obj->id = (int)$sqlObject[$this->resourceConfiguration['fields']['id']['sqlId']];
-					$objects[] = $obj;
-				}
-				else
-					$objects[] = new $this->resourceConfiguration['retrieveData']['className']((int)$sqlObject[$this->resourceConfiguration['fields']['id']['sqlId']]);
-			}
+				$objects[] = new $this->resourceConfiguration['retrieveData']['className']((int)$sqlObject[$this->resourceConfiguration['fields']['id']['sqlId']]);
 			return $objects;
 		}
 	}
@@ -1293,39 +1240,32 @@ class WebserviceRequestCore
 		if (!isset($this->urlFragments['display']))
 			$this->fieldsToDisplay = 'full';
 
+		// Check if Object is accessible for this/those id_shop
+		$assoc = Shop::getAssoTable($this->resourceConfiguration['retrieveData']['table']);
+		if ($assoc !== false)
+		{
+			$sql = 'SELECT 1
+ 						FROM `'.bqSQL(_DB_PREFIX_.$this->resourceConfiguration['retrieveData']['table']);
+			if ($assoc['type'] != 'fk_shop')
+				$sql .= '_'.$assoc['type'];
+			$sql .= '`';
+
+			foreach (self::$shopIDs as $id_shop)
+				$OR[] = ' id_shop = '.(int)$id_shop.' ';
+
+			$check = ' WHERE ('.implode('OR', $OR).') AND `'.bqSQL($this->resourceConfiguration['fields']['id']['sqlId']).'` = '.(int)$this->urlSegment[1];
+			if (!Db::getInstance()->getValue($sql.$check))
+				$this->setError(403, 'Bad id_shop : You are not allowed to access this '.$this->resourceConfiguration['retrieveData']['className'].' ('.(int)$this->urlSegment[1].')', 131);
+		}
+
 		//get entity details
 		$object = new $this->resourceConfiguration['retrieveData']['className']((int)$this->urlSegment[1]);
 		if ($object->id)
 		{
 			$objects[] = $object;
-			// Check if Object is accessible for this/those id_shop
-			$assoc = Shop::getAssoTable($this->resourceConfiguration['retrieveData']['table']);
-			if ($assoc !== false)
-			{
-				$check_shop_group = false;
-
-				$sql = 'SELECT 1
-	 						FROM `'.bqSQL(_DB_PREFIX_.$this->resourceConfiguration['retrieveData']['table']);
-				if ($assoc['type'] != 'fk_shop')
-					$sql .= '_'.$assoc['type'];
-				else
-				{
-					$def = ObjectModel::getDefinition($this->resourceConfiguration['retrieveData']['className']);
-					if (isset($def['fields']) && isset($def['fields']['id_shop_group']))
-						$check_shop_group = true;
-				}
-				$sql .= '`';
-
-				foreach (self::$shopIDs as $id_shop)
-					$OR[] = ' (id_shop = '.(int)$id_shop.($check_shop_group ? ' OR (id_shop = 0 AND id_shop_group='.(int)Shop::getGroupFromShop((int)$id_shop).')' : '').') ';
-
-				$check = ' WHERE ('.implode('OR', $OR).') AND `'.bqSQL($this->resourceConfiguration['fields']['id']['sqlId']).'` = '.(int)$this->urlSegment[1];
-				if (!Db::getInstance()->getValue($sql.$check))
-					$this->setError(404, 'This '.$this->resourceConfiguration['retrieveData']['className'].' ('.(int)$this->urlSegment[1].') does not exists on this shop', 131);
-			}
 			return $objects;
 		}
-		if (!count($this->errors))
+		elseif (!count($this->errors))
 		{
 			$this->objOutput->setStatus(404);
 			$this->_outputEnabled = false;
@@ -1550,14 +1490,6 @@ class WebserviceRequestCore
 						$object->{$fieldName} = (string)$attributes->$fieldName;
 				}
 			}
-
-			// Apply the modifiers if they exist
-			foreach ($this->resourceConfiguration['fields'] as $fieldName => $fieldProperties)
-			{				
-				if (isset($fieldProperties['modifier']) && isset($fieldProperties['modifier']['modifier']) && $fieldProperties['modifier']['http_method'] & constant('WebserviceRequest::HTTP_'.$this->method))
-					$object->{$fieldProperties['modifier']['modifier']}();
-			}
-
 			if (!$this->hasErrors())
 			{
 				if ($i18n && ($retValidateFieldsLang = $object->validateFieldsLang(false, true)) !== true)
@@ -1661,7 +1593,7 @@ class WebserviceRequestCore
 						$temp .= bqSQL($tableAlias).'`'.bqSQL($sqlId).'` = "'.bqSQL($value).'" OR ';
 					$ret .= rtrim($temp, 'OR ').')'."\n";
 				}
-				elseif (preg_match('/^([\d\.:\-\s]+),([\d\.:\-\s]+)$/', $matches[2], $matches3))
+				elseif (preg_match('/^([\d\.:-\s]+),([\d\.:-\s]+)$/', $matches[2], $matches3))
 				{
 					unset($matches3[0]);
 					if (count($matches3) > 0)
@@ -1851,36 +1783,5 @@ class WebserviceRequestCore
 		$return['headers'] = $this->objOutput->buildHeader();
 		restore_error_handler();
 		return $return;
-	}
-
-	public static function getallheaders()
-	{
-		$retarr = array();
-		$headers = array();
-		
-		if (function_exists('apache_request_headers'))
-		{
-			$headers = apache_request_headers();
-		}
-		else
-		{
-			$headers = array_merge($_ENV, $_SERVER);
-			foreach ($headers as $key => $val)
-			{
-				//we need this header
-				if (strpos(strtolower($key), 'content-type') !== FALSE)
-					continue;
-				if (strtoupper(substr($key, 0, 5)) != "HTTP_")
-					unset($headers[$key]);
-			}
-		}
-		//Normalize this array to Cased-Like-This structure.
-		foreach ($headers AS $key => $value) {
-			$key = preg_replace('/^HTTP_/i', '', $key);
-			$key = str_replace(" ", "-", ucwords(strtolower(str_replace(array("-", "_"), " ", $key))));
-			$retarr[$key] = $value;
-		}
-		ksort($retarr);
-		return $retarr;
 	}
 }

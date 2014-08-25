@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -56,7 +56,7 @@ class InstallControllerHttpConfigure extends InstallControllerHttp
 				$params = http_build_query(array(
 					'email' => $this->session->admin_email,
 					'method' => 'addMemberToNewsletter',
-					'language' => $this->language->getLanguageIso(),
+					'language' => $this->session->lang,
 					'visitorType' => 1,
 					'source' => 'installer'
 				));

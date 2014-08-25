@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -27,11 +27,11 @@
 <div id="permanent_links">
 	<!-- Sitemap -->
 	<div class="sitemap">
-		<a href="{$link->getPageLink('sitemap')|escape:'html'}" title="{l s='Shop sitemap' mod='blockpermanentlinks'}">{l s='Sitemap' mod='blockpermanentlinks'}</a>
+		<a href="{$link->getPageLink('sitemap')}">{l s='Sitemap' mod='blockpermanentlinks'}</a>
 	</div>
 	<!-- Contact -->
 	<div class="contact">
-		<a href="{$link->getPageLink('contact', true)|escape:'html'}" title="{l s='Contact form' mod='blockpermanentlinks'}">{l s='Contact' mod='blockpermanentlinks'}</a>
+		<a href="{$link->getPageLink('contact', true)}">{l s='Contact' mod='blockpermanentlinks'}</a>
 	</div>
 	<!-- Bookmark -->
 	<div class="add_bookmark" style="height:30px;">

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,26 +28,25 @@ global $smarty;
 $smarty->debugging = false;
 $smarty->debugging_ctrl = 'NONE';
 
-// Let user choose to force compilation
-$smarty->force_compile = (Configuration::get('PS_SMARTY_FORCE_COMPILE') == _PS_SMARTY_FORCE_COMPILE_) ? true : false;
-// But force compile_check since the performance impact is small and it is better for debugging
+/* Smarty should be in compile check mode in the BackOffice */
+$smarty->force_compile = false;
 $smarty->compile_check = true;
 
 function smartyTranslate($params, &$smarty)
 {
 	$htmlentities = !isset($params['js']);
 	$pdf = isset($params['pdf']);
-	$addslashes = (isset($params['slashes']) || isset($params['js']));
+	$addslashes = isset($params['slashes']);
 	$sprintf = isset($params['sprintf']) ? $params['sprintf'] : false;
 
 	if ($pdf)
-		return Translate::smartyPostProcessTranslation(Translate::getPdfTranslation($params['s']), $params);
+		return Translate::getPdfTranslation($params['s']);
 
 	$filename = ((!isset($smarty->compiler_object) || !is_object($smarty->compiler_object->template)) ? $smarty->template_resource : $smarty->compiler_object->template->getTemplateFilepath());
 
 	// If the template is part of a module
 	if (!empty($params['mod']))
-		return Translate::smartyPostProcessTranslation(Translate::getModuleTranslation($params['mod'], $params['s'], basename($filename, '.tpl'), $sprintf, isset($params['js'])), $params);
+		return Translate::getModuleTranslation($params['mod'], $params['s'], basename($filename, '.tpl'), $sprintf);
 
 	// If the tpl is at the root of the template folder
 	if (dirname($filename) == '.')
@@ -58,16 +57,7 @@ function smartyTranslate($params, &$smarty)
 	// If the tpl is used by a Controller
 	else
 	{
-		if (!empty(Context::getContext()->override_controller_name_for_translations))
-			$class = Context::getContext()->override_controller_name_for_translations;
-		elseif (isset(Context::getContext()->controller))
-		{
-			$class_name = get_class(Context::getContext()->controller);
-			$class = substr($class_name, 0, strpos(Tools::strtolower($class_name), 'controller'));
-		}
-		else
-		{
-	// Split by \ and / to get the folder tree for the file
+		// Split by \ and / to get the folder tree for the file
 		$folder_tree = preg_split('#[/\\\]#', $filename);
 		$key = array_search('controllers', $folder_tree);
 
@@ -79,8 +69,8 @@ function smartyTranslate($params, &$smarty)
 			$class = 'Admin'.Tools::toCamelCase($folder_tree[0], true);
 		else
 			$class = null;
-		}
 	}
 
-	return Translate::smartyPostProcessTranslation(Translate::getAdminTranslation($params['s'], $class, $addslashes, $htmlentities, $sprintf), $params);
+	return Translate::getAdminTranslation($params['s'], $class, $addslashes, $htmlentities, $sprintf);
 }
+

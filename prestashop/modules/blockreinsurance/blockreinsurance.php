@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
@@ -39,25 +39,20 @@ class Blockreinsurance extends Module
 			$this->tab = 'front_office_features';
 		else
 			$this->tab = 'Blocks';
-		$this->version = '2.1.1';
-		$this->author = 'PrestaShop';
+		$this->version = '2.0';
 
-		$this->bootstrap = true;
-		parent::__construct();	
+		parent::__construct();
 
 		$this->displayName = $this->l('Customer reassurance block');
 		$this->description = $this->l('Adds an information block aimed at offering helpful information to reassure customers that your store is trustworthy.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
 	}
 
 	public function install()
 	{
 		return parent::install() &&
 			$this->installDB() &&
-			Configuration::updateValue('BLOCKREINSURANCE_NBBLOCKS', 5) &&
-			$this->registerHook('footer') && $this->installFixtures() &&
-			// Disable on mobiles and tablets
-			$this->disableDevice(Context::DEVICE_TABLET | Context::DEVICE_MOBILE);
+			Configuration::updateValue('blockreinsurance_nbblocks', 5) &&
+			$this->registerHook('footer') && $this->installFixtures();
 	}
 	
 	public function installDB()
@@ -85,7 +80,7 @@ class Blockreinsurance extends Module
 	public function uninstall()
 	{
 		// Delete configuration
-		return Configuration::deleteByName('BLOCKREINSURANCE_NBBLOCKS') &&
+		return Configuration::deleteByName('blockreinsurance_nbblocks') &&
 			$this->uninstallDB() &&
 			parent::uninstall();
 	}
@@ -206,7 +201,7 @@ class Blockreinsurance extends Module
 
 		if (isset($_POST['submitModule']))
 		{
-			Configuration::updateValue('BLOCKREINSURANCE_NBBLOCKS', ((isset($_POST['nbblocks']) && $_POST['nbblocks'] != '') ? (int)$_POST['nbblocks'] : ''));
+			Configuration::updateValue('blockreinsurance_nbblocks', ((isset($_POST['nbblocks']) && $_POST['nbblocks'] != '') ? (int)$_POST['nbblocks'] : ''));
 			if ($this->removeFromDB() && $this->addToDB())
 			{
 				$this->_clearCache('blockreinsurance.tpl');
@@ -232,18 +227,18 @@ class Blockreinsurance extends Module
 
 		$this->fields_form[0]['form'] = array(
 			'legend' => array(
-				'title' => $this->l('New reassurance block'),
+				'title' => $this->l('New reassurance block.'),
 			),
 			'input' => array(
 				array(
 					'type' => 'file',
-					'label' => $this->l('Image'),
+					'label' => $this->l('Image:'),
 					'name' => 'image',
 					'value' => true
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Text'),
+					'label' => $this->l('Text:'),
 					'lang' => true,
 					'name' => 'text',
 					'cols' => 40,
@@ -252,6 +247,7 @@ class Blockreinsurance extends Module
 			),
 			'submit' => array(
 				'title' => $this->l('Save'),
+				'class' => 'button'
 			)
 		);
 
@@ -293,18 +289,15 @@ class Blockreinsurance extends Module
 	{
 		$this->fields_list = array(
 			'id_reinsurance' => array(
-				'title' => $this->l('ID'),
+				'title' => $this->l('Id'),
 				'width' => 120,
 				'type' => 'text',
-				'search' => false,
-				'orderby' => false
 			),
 			'text' => array(
 				'title' => $this->l('Text'),
 				'width' => 140,
 				'type' => 'text',
-				'search' => false,
-				'orderby' => false
+				'filter_key' => 'a!lastname'
 			),
 		);
 
@@ -313,7 +306,7 @@ class Blockreinsurance extends Module
 
 		$helper = new HelperList();
 		$helper->shopLinkType = '';
-		$helper->simple_header = false;
+		$helper->simple_header = true;
 		$helper->identifier = 'id_reinsurance';
 		$helper->actions = array('edit', 'delete');
 		$helper->show_toolbar = true;
@@ -332,6 +325,10 @@ class Blockreinsurance extends Module
 
 	public function hookFooter($params)
 	{
+		// Check if not a mobile theme
+		if ($this->context->getMobileDevice() != false)
+			return false;
+
 		$this->context->controller->addCSS($this->_path.'style.css', 'all');
 		if (!$this->isCached('blockreinsurance.tpl', $this->getCacheId()))
 		{

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -27,49 +27,47 @@
 function add_order_reference_in_order_payment()
 {
 	$res = true;
-	$payments = Db::getInstance()->query('
+	$payments = Db::getInstance()->executeS('
 	SELECT op.id_order_payment, o.reference
 	FROM `'._DB_PREFIX_.'order_payment` op
 	INNER JOIN `'._DB_PREFIX_.'orders` o
 	ON o.id_order = op.id_order');
 	
-	if (!is_resource($payments) || !$payments)
-		return true;
+	if (!is_array($payments))
+		return false;
 	
 	$errors = array();
+	
+	
 	// Populate "order_reference"
-	while ($payment = Db::getInstance()->nextRow($payments))
+	foreach ($payments as $payment)
 	{
-		if(isset($payment['id_order_payment']) && $payment['id_order_payment'])
-		{
-			$res = Db::getInstance()->execute('
-			UPDATE `'._DB_PREFIX_.'order_payment`
-			SET order_reference = \''.pSQL($payment['reference']).'\'
-			WHERE id_order_payment = '.(int)$payment['id_order_payment']);
-			if (!$res)
-				$errors[] = Db::getInstance()->getMsgError();
-		}
+		$res = Db::getInstance()->execute('
+		UPDATE `'._DB_PREFIX_.'order_payment`
+		SET order_reference = \''.$payment['reference'].'\'
+		WHERE id_order_payment = '.(int)$payment['id_order_payment']);
+		
+		if (!$res)
+			$errors[] = Db::getInstance()->getMsgError();
 	}
 	
 	if (count($errors))
 		return array('error' => true, 'msg' => implode('<br/>', $errors));
 
 	// Get lines to merge (with multishipping on, durring the payment one line was added by order, only one is necessary by cart)
-	$duplicate_lines = Db::getInstance()->query('
+	$duplicate_lines = Db::getInstance()->executeS('
 	SELECT GROUP_CONCAT(id_order_payment) as id_order_payments
 	FROM `'._DB_PREFIX_.'order_payment`
 	GROUP BY order_reference, date_add
 	HAVING COUNT(*) > 1');
 	
-	if (!is_resource($duplicate_lines) || !$duplicate_lines)
-		return true;
+	if (!is_array($duplicate_lines))
+		return false;
 
 	$order_payments_to_remove = array();
-	while ($order_payments = Db::getInstance()->nextRow($duplicate_lines))
+	foreach ($duplicate_lines as $order_payments)
 	{
-		$order_payments_array = array();
-		if(isset($order_payments['id_order_payments']))
-			$order_payments_array = explode(',', $order_payments['id_order_payments']);
+		$order_payments_array = explode(',', $order_payments['id_order_payments']);
 		// Remove the first item (we want to keep one line)
 		$id_order_payment_keep = array_shift($order_payments_array);
 		
@@ -86,5 +84,6 @@ function add_order_reference_in_order_payment()
 	
 	if (!$res)
 		return array('errors' => true, 'msg' =>  Db::getInstance()->getMsgError());
+	
 	return true;
 }

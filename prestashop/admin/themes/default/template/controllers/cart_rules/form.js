@@ -1,5 +1,5 @@
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -109,29 +109,8 @@ for (i in restrictions)
 	$('#' + restrictions[i] + '_select_remove').click(function() {removeCartRuleOption(this);});
 	$('#' + restrictions[i] + '_select_add').click(function() {addCartRuleOption(this);});
 }
-
 toggleCartRuleFilter($('#product_restriction'));
-
-$('#product_restriction').click(function() {
-	toggleCartRuleFilter(this);
-
-	if ($(this).prop('checked'))
-	{
-		$('#apply_discount_to_selection').prop('disabled', false);
-		$('#apply_discount_to_selection_warning').hide();
-	}
-	else
-	{
-		$('#apply_discount_to_selection').prop('disabled', true);
-		$('#apply_discount_to_selection_warning').show();
-	}
-});
-
-$('#apply_discount_to_selection_shortcut').click(function(e) {
-	displayCartRuleTab('conditions');
-	$('#product_restriction').focus();
-	e.preventDefault();
-});
+$('#product_restriction').click(function() {toggleCartRuleFilter(this);});
 
 function toggleApplyDiscount(percent, amount, apply_to)
 {
@@ -158,21 +137,15 @@ function toggleApplyDiscount(percent, amount, apply_to)
 			toggleApplyDiscountTo();
 		$('#apply_discount_to_cheapest').hide();
 		$('*[for=apply_discount_to_cheapest]').hide();
-		$('#apply_discount_to_cheapest').prop('checked', false);
+		$('#apply_discount_to_cheapest').removeAttr('checked');
 		$('#apply_discount_to_selection').hide();
 		$('*[for=apply_discount_to_selection]').hide();
-		$('#apply_discount_to_selection').prop('checked', false);
+		$('#apply_discount_to_selection').removeAttr('checked');
 	}
 	else
 	{
 		$('#apply_discount_amount_div').hide(200);
 		$('#reduction_amount').val('0');
-
-		if ($('#apply_discount_off').prop('checked'))
-		{
-			$('#apply_discount_to_product').prop('checked', false)
-			toggleApplyDiscountTo();
-		}
 	}
 		
 	if (apply_to)
@@ -213,54 +186,36 @@ function toggleGiftProduct()
 	}
 }
 
-$('#apply_discount_percent').click(function(){
-	toggleApplyDiscount(true, false, true);
-});
+$('#apply_discount_percent').click(function() {toggleApplyDiscount(true, false, true);});
 if ($('#apply_discount_percent').prop('checked'))
 	toggleApplyDiscount(true, false, true);
 
-$('#apply_discount_amount').click(function(){
-	toggleApplyDiscount(false, true, true);
-});
+$('#apply_discount_amount').click(function() {toggleApplyDiscount(false, true, true);});
 if ($('#apply_discount_amount').prop('checked'))
 	toggleApplyDiscount(false, true, true);
 
-$('#apply_discount_off').click(function(){
-	toggleApplyDiscount(false, false, false);
-});
+$('#apply_discount_off').click(function() {toggleApplyDiscount(false, false, false);});
 if ($('#apply_discount_off').prop('checked'))
 	toggleApplyDiscount(false, false, false);
 
-$('#apply_discount_to_order').click(function(){
-	toggleApplyDiscountTo();}
-);
+$('#apply_discount_to_order').click(function() {toggleApplyDiscountTo();});
 if ($('#apply_discount_to_order').prop('checked'))
 	toggleApplyDiscountTo();
 	
-$('#apply_discount_to_product').click(function(){
-	toggleApplyDiscountTo();}
-);
+$('#apply_discount_to_product').click(function() {toggleApplyDiscountTo();});
 if ($('#apply_discount_to_product').prop('checked'))
 	toggleApplyDiscountTo();
 	
-$('#apply_discount_to_cheapest').click(function(){
-	toggleApplyDiscountTo();}
-);
+$('#apply_discount_to_cheapest').click(function() {toggleApplyDiscountTo();});
 if ($('#apply_discount_to_cheapest').prop('checked'))
 	toggleApplyDiscountTo();
 	
-$('#apply_discount_to_selection').click(function(){
-	toggleApplyDiscountTo();}
-);
+$('#apply_discount_to_selection').click(function() {toggleApplyDiscountTo();});
 if ($('#apply_discount_to_selection').prop('checked'))
 	toggleApplyDiscountTo();
 	
-$('#free_gift_on').click(function(){
-	toggleGiftProduct();}
-);
-$('#free_gift_off').click(function(){
-	toggleGiftProduct();}
-);
+$('#free_gift_on').click(function() {toggleGiftProduct();});
+$('#free_gift_off').click(function() {toggleGiftProduct();});
 toggleGiftProduct();
 
 // Main form submit
@@ -271,17 +226,17 @@ $('#cart_rule_form').submit(function() {
 	for (i in restrictions)
 	{
 		if ($('#' + restrictions[i] + '_select_1 option').length == 0)
-			$('#' + restrictions[i] + '_restriction').prop('checked', false);
+			$('#' + restrictions[i] + '_restriction').removeAttr('checked');
 		else
 		{
 			$('#' + restrictions[i] + '_select_2 option').each(function(i) {
-				$(this).prop('selected', true);
+				$(this).attr('selected', true);
 			});
 		}
 	}
 	
 	$('.product_rule_toselect option').each(function(i) {
-		$(this).prop('selected', true);
+		$(this).attr('selected', true);
 	});
 });
 	
@@ -348,16 +303,16 @@ $('#customerFilter')
 function displayCartRuleTab(tab)
 {
 	$('.cart_rule_tab').hide();
-	$('.tab-row.active').removeClass('active');
+	$('.tab-page').removeClass('selected');
 	$('#cart_rule_' + tab).show();
-	$('#cart_rule_link_' + tab).parent().addClass('active');
+	$('#cart_rule_link_' + tab).addClass('selected');
 	$('#currentFormTab').val(tab);
 }
 
 $('.cart_rule_tab').hide();
-$('.tab-row.active').removeClass('active');
+$('.tab-page').removeClass('selected');
 $('#cart_rule_' + currentFormTab).show();
-$('#cart_rule_link_' + currentFormTab).parent().addClass('active');
+$('#cart_rule_link_' + currentFormTab).addClass('selected');
 
 var date = new Date();
 var hours = date.getHours();

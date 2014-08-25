@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,34 +28,29 @@ class AdminLoginControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->errors = array();
 	 	$this->context = Context::getContext();
 	 	$this->display_header = false;
 	 	$this->display_footer = false;
-		$this->meta_title = $this->l('Administration panel');
-		parent::__construct();
-		$this->layout = _PS_ADMIN_DIR_.DIRECTORY_SEPARATOR.'themes'.DIRECTORY_SEPARATOR.$this->bo_theme
-			.DIRECTORY_SEPARATOR.'template'.DIRECTORY_SEPARATOR.'controllers'.DIRECTORY_SEPARATOR.'login'
-			.DIRECTORY_SEPARATOR.'layout.tpl';
 
-		if (!headers_sent())
-			header('Login: true');
+		$this->meta_title = $this->l('Administration panel');
+
+		parent::__construct();
 	}
 
 	public function setMedia()
 	{
 		$this->addJquery();
-		$this->addjqueryPlugin('validate');
-		$this->addJS(_PS_JS_DIR_.'jquery/plugins/validate/localization/messages_'.$this->context->language->iso_code.'.js');
-		$this->addCSS(__PS_BASE_URI__.$this->admin_webpath.'/themes/'.$this->bo_theme.'/css/admin-theme.css');
-		$this->addJS(_PS_JS_DIR_.'vendor/spin.js');
-		$this->addJS(_PS_JS_DIR_.'vendor/ladda.js');
+		$this->addCSS(_PS_CSS_DIR_.'login.css');
+		$this->addJS(_PS_JS_DIR_.'login.js');
+		$this->addJqueryUI('ui.widget');
+		$this->addJqueryUI('effects.shake');
+		$this->addJqueryUI('effects.slide');
 	}
 	
 	public function initContent()
 	{
-		if (!Tools::usingSecureMode() && Configuration::get('PS_SSL_ENABLED'))
+		if ((empty($_SERVER['HTTPS']) || strtolower($_SERVER['HTTPS']) == 'off') && Configuration::get('PS_SSL_ENABLED'))
 		{
 			// You can uncomment these lines if you want to force https even from localhost and automatically redirect
 			// header('HTTP/1.1 301 Moved Permanently');
@@ -64,13 +59,13 @@ class AdminLoginControllerCore extends AdminController
 			$clientIsMaintenanceOrLocal = in_array(Tools::getRemoteAddr(), array_merge(array('127.0.0.1'), explode(',', Configuration::get('PS_MAINTENANCE_IP'))));
 			// If ssl is enabled, https protocol is required. Exception for maintenance and local (127.0.0.1) IP
 			if ($clientIsMaintenanceOrLocal)
-				$warningSslMessage = Tools::displayError('SSL is activated. However, your IP is allowed to enter unsecure mode for maintenance or local IP issues.');
+				$this->errors[] = Tools::displayError('SSL is activated. However, your IP is allowed to enter unsecure mode for maintenance or local IP issues.');
 			else
-			{	
-				$url = 'https://'.Tools::safeOutput(Tools::getServerName()).Tools::safeOutput($_SERVER['REQUEST_URI']);
-				$warningSslMessage = sprintf(Tools::displayError('SSL is activated. Please connect using the following link to <a href="%s">log into secure mode (https://)</a>', false), $url);
+			{
+				$warningSslMessage = Tools::displayError('SSL is activated. Please connect using the following URL to log into secure mode (https://).');
+				$warningSslMessage .= '<a href="https://'.Tools::safeOutput(Tools::getServerName()).Tools::safeOutput($_SERVER['REQUEST_URI']).'">https://'.Tools::safeOutput(Tools::getServerName()).Tools::safeOutput($_SERVER['REQUEST_URI']).'</a>';
+				$this->context->smarty->assign(array('warningSslMessage' => $warningSslMessage));
 			}
-			$this->context->smarty->assign('warningSslMessage', $warningSslMessage);
 		}
 
 		if (file_exists(_PS_ADMIN_DIR_.'/../install'))
@@ -110,11 +105,6 @@ class AdminLoginControllerCore extends AdminController
 				'shop_name' => Tools::safeOutput(Configuration::get('PS_SHOP_NAME')),
 				'disableDefaultErrorOutPut' => true,
 			));
-
-		if ($email = Tools::getValue('email'))
-			$this->context->smarty->assign('email', $email);
-		if ($password = Tools::getValue('password'))
-			$this->context->smarty->assign('password', $password);
 
 		$this->setMedia();
 		$this->initHeader();
@@ -186,10 +176,6 @@ class AdminLoginControllerCore extends AdminController
 				$cookie->profile = $this->context->employee->id_profile;
 				$cookie->passwd = $this->context->employee->passwd;
 				$cookie->remote_addr = $this->context->employee->remote_addr;
-
-				if (!Tools::getValue('stay_logged_in'))
-					$cookie->last_activity = time();
-
 				$cookie->write();
 
 				// If there is a valid controller name submitted, redirect to it
@@ -247,8 +233,6 @@ class AdminLoginControllerCore extends AdminController
 			if (Mail::Send($employee->id_lang, 'password', Mail::l('Your new password', $employee->id_lang), $params, $employee->email, $employee->firstname.' '.$employee->lastname))
 			{
 				// Update employee only if the mail can be sent
-				Shop::setContext(Shop::CONTEXT_SHOP, (int)min($employee->getAssociatedShops()));
-
 				$result = $employee->update();
 				if (!$result)
 					$this->errors[] = Tools::displayError('An error occurred while attempting to change your password.');

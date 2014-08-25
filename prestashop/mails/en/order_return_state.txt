@@ -1,18 +1,9 @@
+Hi {firstname} {lastname},
 
-[{shop_url}] 
+We have updated the progress on your return #{id_order_return}, the new status is: "{state_order_return}"
 
-Hi {firstname} {lastname}, 
+You can review your order and download your invoice from the "Order history" section of your customer account by clicking "My account" on our shop.
 
-We have updated the progress on your return #{id_order_return}, the
-new status is: "{state_order_return}"
+{shop_name} - {shop_url}
 
-MESSAGE: {message} 		 
-
-You can review your order and download your invoice from the
-"Order history" [{history_url}] section of your
-customer account by clicking "My account"
-[{my_account_url}] on our shop. 
-
-{shop_name} [{shop_url}] powered by
-PrestaShop(tm) [http://www.prestashop.com/] 
-
+{shop_url} powered by PrestaShop™

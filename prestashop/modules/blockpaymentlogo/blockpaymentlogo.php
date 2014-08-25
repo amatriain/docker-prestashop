@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,37 +33,26 @@ class BlockPaymentLogo extends Module
 	{
 		$this->name = 'blockpaymentlogo';
 		$this->tab = 'front_office_features';
-		$this->version = '0.3.1';
+		$this->version = '0.2';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
-		$this->bootstrap = true;
-		parent::__construct();	
+		parent::__construct();
 
-		$this->displayName = $this->l('Payment logos block.');
-		$this->description = $this->l('Adds a block which displays all of your payment logos.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+		$this->displayName = $this->l('Payment logo block.');
+		$this->description = $this->l('This block will display all of your payment logos.');
 	}
 
 	public function install()
 	{
 		Configuration::updateValue('PS_PAYMENT_LOGO_CMS_ID', 0);
-		$success = (parent::install() && $this->registerHook('header'));
-
-		if ($success)
-		{
-			// Hook the module either on the left or right column
-			$theme = new Theme(Context::getContext()->shop->id_theme);
-			if ((!$theme->default_left_column || !$this->registerHook('leftColumn'))
-				&& (!$theme->default_right_column || !$this->registerHook('rightColumn')))
-			{
-				// If there are no colums implemented by the template, throw an error and uninstall the module
-				$this->_errors[] = $this->l('This module need to be hooked in a column and your theme does not implement one');
-				parent::uninstall();
-				return false;
-			}
-		}
-		return $success;
+		if (!parent::install())
+			return false;
+		if (!$this->registerHook('leftColumn'))
+			return false;
+		if (!$this->registerHook('header'))
+			return false;
+		return true;
 	}
 
 	public function uninstall()
@@ -74,12 +63,14 @@ class BlockPaymentLogo extends Module
 
 	public function getContent()
 	{
-		$html = '';
+		$html = '
+		<h2>'.$this->l('Payment logo.').'</h2>
+		';
 
 		if (Tools::isSubmit('submitConfiguration'))
-			if (Validate::isUnsignedInt(Tools::getValue('PS_PAYMENT_LOGO_CMS_ID')))
+			if (Validate::isUnsignedInt(Tools::getValue('id_cms')))
 			{
-				Configuration::updateValue('PS_PAYMENT_LOGO_CMS_ID', (int)(Tools::getValue('PS_PAYMENT_LOGO_CMS_ID')));
+				Configuration::updateValue('PS_PAYMENT_LOGO_CMS_ID', (int)(Tools::getValue('id_cms')));
 				$this->_clearCache('blockpaymentlogo.tpl');
 				$html .= $this->displayConfirmation($this->l('The settings have been updated.'));
 			}
@@ -89,8 +80,23 @@ class BlockPaymentLogo extends Module
 		if (!count($cmss))
 			$html .= $this->displayError($this->l('No CMS page is available.'));
 		else
-			$html .= $this->renderForm();
-
+		{
+			$html .= '
+			<form action="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'" method="post">
+				<fieldset>
+					<legend><img src="'.$this->_path.'/logo.gif" alt="" /> '.$this->l('Configure').'</legend>
+					<label>'.$this->l('Page CMS for link').':</label>
+					<div class="margin-form">
+						<select name="id_cms"><option value="0">('.$this->l('Select a page').')</option>';
+			foreach ($cmss as $cms)
+				$html .= '<option value="'.$cms['id_cms'].'"'.(Configuration::get('PS_PAYMENT_LOGO_CMS_ID') == $cms['id_cms'] ? ' selected="selected"' : '').'>'.$cms['meta_title'].'</option>';
+			$html .= '</select>
+					</div>
+					<p class="center"><input class="button" type="submit" name="submitConfiguration" value="'.$this->l('Save settings').'" /></p>
+				</fieldset>
+			</form>
+			';
+		}
 		return $html;
 	}
 
@@ -132,60 +138,6 @@ class BlockPaymentLogo extends Module
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return;
 		$this->context->controller->addCSS(($this->_path).'blockpaymentlogo.css', 'all');
-	}
-	
-	public function renderForm()
-	{
-		$fields_form = array(
-			'form' => array(
-				'legend' => array(
-					'title' => $this->l('Settings'),
-					'icon' => 'icon-cogs'
-				),
-				'input' => array(
-					array(
-						'type' => 'select',
-						'label' => $this->l('Destination page for the block\'s link'),
-						'name' => 'PS_PAYMENT_LOGO_CMS_ID',
-						'required' => false,
-						'default_value' => (int)$this->context->country->id,
-						'options' => array(
-							'query' => CMS::listCms($this->context->language->id),
-							'id' => 'id_cms',
-							'name' => 'meta_title'
-						)
-					),
-				),
-				'submit' => array(
-					'title' => $this->l('Save'),
-				)
-			),
-		);
-		
-		$helper = new HelperForm();
-		$helper->show_toolbar = false;
-		$helper->table =  $this->table;
-		$lang = new Language((int)Configuration::get('PS_LANG_DEFAULT'));
-		$helper->default_form_language = $lang->id;
-		$helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') ? Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG') : 0;
-		$helper->identifier = $this->identifier;
-		$helper->submit_action = 'submitConfiguration';
-		$helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false).'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
-		$helper->token = Tools::getAdminTokenLite('AdminModules');
-		$helper->tpl_vars = array(
-			'fields_value' => $this->getConfigFieldsValues(),
-			'languages' => $this->context->controller->getLanguages(),
-			'id_language' => $this->context->language->id
-		);
-
-		return $helper->generateForm(array($fields_form));
-	}
-	
-	public function getConfigFieldsValues()
-	{		
-		return array(
-			'PS_PAYMENT_LOGO_CMS_ID' => Tools::getValue('PS_PAYMENT_LOGO_CMS_ID', Configuration::get('PS_PAYMENT_LOGO_CMS_ID')),
-		);
 	}
 
 }

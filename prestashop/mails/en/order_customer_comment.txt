@@ -1,15 +1,10 @@
+Hello,
 
-[{shop_url}] 
+You have received a new message from a customer regarding order with the reference {order_name}.
 
-Hi {firstname} {lastname}, 
+Customer: {firstname} {lastname} ({email})
 
-You have received a new message regarding order with the reference
-{order_name}.
+Message:
+{message}
 
-CUSTOMER: {firstname} {lastname} ({email})
-
-{message} 		 
-
-{shop_name} [{shop_url}] powered by
-PrestaShop(tm) [http://www.prestashop.com/] 
-
+{shop_url} powered by PrestaShop&trade;

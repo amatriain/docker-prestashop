@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -45,15 +45,6 @@ class MySQLCore extends Db
 			throw new PrestaShopDatabaseException(Tools::displayError('PrestaShop Fatal error: no utf-8 support. Please check your server configuration.'));
 
 		return $this->link;
-	}
-	
-	public static function createDatabase($host, $user, $password, $dbname, $dropit = false)
-	{
-		$link = mysql_connect($host, $user, $password);
-		$success = mysql_query('CREATE DATABASE `'.str_replace('`', '\\`', $dbname).'`', $link);
-		if ($dropit && (mysql_query('DROP DATABASE `'.str_replace('`', '\\`', $dbname).'`', $link) !== false))
-			return true;
-		return $success;
 	}
 
 	/**
@@ -174,36 +165,22 @@ class MySQLCore extends Db
 			return 1;
 		if (!@mysql_select_db($db, $link))
 			return 2;
+
+		if (strtolower($engine) == 'innodb')
+		{
+			$sql = 'SHOW VARIABLES WHERE Variable_name = \'have_innodb\'';
+			$result = mysql_query($sql);
+			if (!$result)
+				return 4;
+			$row = mysql_fetch_assoc($result);
+			if (!$row || strtolower($row['Value']) != 'yes')
+				return 4;
+		}
 		@mysql_close($link);
 		return 0;
 	}
-		
-	public function getBestEngine()
-	{
-		$value = 'InnoDB';
-		
-		$sql = 'SHOW VARIABLES WHERE Variable_name = \'have_innodb\'';
-		$result = mysql_query($sql);
-		if (!$result)
-			$value = 'MyISAM';
-		$row = mysql_fetch_assoc($result);
-		if (!$row || strtolower($row['Value']) != 'yes')
-			$value = 'MyISAM';
-		
-		/* MySQL >= 5.6 */
-		$sql = 'SHOW ENGINES';
-		$result = mysql_query($sql);
-		while ($row = mysql_fetch_assoc($result))
-			if ($row['Engine'] == 'InnoDB')
-			{
-				if (in_array($row['Support'], array('DEFAULT', 'YES')))
-					$value = 'InnoDB';
-				break;
-			}
-		return $value;
-	}
 	
-	public static function checkCreatePrivilege($server, $user, $pwd, $db, $prefix, $engine = null)
+	public static function checkCreatePrivilege($server, $user, $pwd, $db, $prefix, $engine)
 	{
 		ini_set('mysql.connect_timeout', 5);
 		if (!$link = @mysql_connect($server, $user, $pwd, true))

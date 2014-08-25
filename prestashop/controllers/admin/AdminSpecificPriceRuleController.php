@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,7 +30,6 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'specific_price_rule';
 		$this->className = 'SpecificPriceRule';
 	 	$this->lang = false;
@@ -51,19 +50,13 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 		LEFT JOIN '._DB_PREFIX_.'country_lang cl ON (cl.id_country = a.id_country AND cl.id_lang='.(int)$this->context->language->id.')
 		LEFT JOIN '._DB_PREFIX_.'group_lang gl ON (gl.id_group = a.id_group AND gl.id_lang='.(int)$this->context->language->id.')';
 
-		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
+	 	$this->bulk_actions = array('delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')));
 
 		$this->fields_list = array(
 			'id_specific_price_rule' => array(
 				'title' => $this->l('ID'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 25
 			),
 			'name' => array(
 				'title' => $this->l('Name'),
@@ -92,7 +85,6 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 			'from_quantity' => array(
 				'title' => $this->l('From quantity'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
 			),
 			'reduction_type' => array(
 				'title' => $this->l('Reduction type'),
@@ -104,8 +96,7 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 			'reduction' => array(
 				'title' => $this->l('Reduction'),
 				'align' => 'center',
-				'type' => 'decimal',
-				'class' => 'fixed-width-xs'
+				'type' => 'decimal'
 			),
 			'from' => array(
 				'title' => $this->l('Beginning'),
@@ -120,18 +111,6 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 		);
 
 		parent::__construct();
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		if (empty($this->display))
-			$this->page_header_toolbar_btn['new_specific_price_rule'] = array(
-				'href' => self::$currentIndex.'&addspecific_price_rule&token='.$this->token,
-				'desc' => $this->l('Add new catalog price rule', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-
-		parent::initPageHeaderToolbar();
 	}
 
 	public function getList($id_lang, $order_by = null, $order_way = null, $start = 0, $limit = null, $id_lang_shop = false)
@@ -156,14 +135,14 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 
 		$this->fields_form = array(
 			'legend' => array(
-				'title' => $this->l('Catalog price rules'),
-				'icon' => 'icon-dollar'
+				'title' => $this->l('Specific price rules'),
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
 					'label' => $this->l('Name'),
 					'name' => 'name',
+					'size' => 33,
 					'maxlength' => 32,
 					'required' => true,
 					'hint' => $this->l('Forbidden characters').' <>;=#{}'
@@ -214,6 +193,7 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 					'type' => 'text',
 					'label' => $this->l('From quantity'),
 					'name' => 'from_quantity',
+					'size' => 6,
 					'maxlength' => 10,
 					'required' => true,
 				),
@@ -221,6 +201,7 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 					'type' => 'text',
 					'label' => $this->l('Price (tax excl.)'),
 					'name' => 'price',
+					'size' => 6,
 					'disabled' => ($this->object->price == -1 ? 1 : 0),
 					'maxlength' => 10,
 					'suffix' => $this->context->currency->getSign('right'),
@@ -243,14 +224,16 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'datetime',
+					'type' => 'date',
 					'label' => $this->l('From'),
-					'name' => 'from'
+					'name' => 'from',
+					'size' => 12,
 				),
 				array(
-					'type' => 'datetime',
+					'type' => 'date',
 					'label' => $this->l('To'),
-					'name' => 'to'
+					'name' => 'to',
+					'size' => 12,
 				),
 				array(
 					'type' => 'select',
@@ -270,50 +253,49 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 				),
 			),
 			'submit' => array(
-				'title' => $this->l('Save')
+				'title' => $this->l('Save'),
+				'class' => 'button'
 			),
 		);
 		if (($value = $this->getFieldValue($this->object, 'price')) != -1)	
-			$price = number_format($value, 6);
+			$price = number_format($value, 2);
 		else
 			$price = '';
 
 		$this->fields_value = array(
-			'price' => $price,
-			'from_quantity' => (($value = $this->getFieldValue($this->object, 'from_quantity')) ? $value : 1),
-			'reduction' => number_format((($value = $this->getFieldValue($this->object, 'reduction')) ? $value : 0), 6),
-			'leave_bprice_on' => $price ? 0 : 1
-		);
+										'price' => $price,
+										'from_quantity' => (($value = $this->getFieldValue($this->object, 'from_quantity')) ? $value : 1),
+										'reduction' => number_format((($value = $this->getFieldValue($this->object, 'reduction')) ? $value : 0), 2),
+										'leave_bprice_on' => $price ? 0 : 1
+									);
 
 		$attribute_groups = array();
 		$attributes = Attribute::getAttributes((int)$this->context->language->id);
 		foreach ($attributes as $attribute)
 		{
 			if (!isset($attribute_groups[$attribute['id_attribute_group']]))
-			{
 				$attribute_groups[$attribute['id_attribute_group']]  = array(
-					'id_attribute_group' => $attribute['id_attribute_group'],
-					'name' => $attribute['attribute_group']
-				);
-				$attribute_groups[$attribute['id_attribute_group']]['attributes'][] = array(
-					'id_attribute' => $attribute['id_attribute'],
-					'name' => $attribute['name']
-				);
-			}
+																							'id_attribute_group' => $attribute['id_attribute_group'],
+																							'name' => $attribute['attribute_group']
+																						);
+			$attribute_groups[$attribute['id_attribute_group']]['attributes'][] = array(
+																											'id_attribute' => $attribute['id_attribute'],
+																											'name' => $attribute['name']
+																										);
 		}
 		$features = Feature::getFeatures((int)$this->context->language->id);
 		foreach ($features as &$feature)
 			$feature['values'] = FeatureValue::getFeatureValuesWithLang((int)$this->context->language->id, $feature['id_feature'], true);
 
 		$this->tpl_form_vars = array(
-			'manufacturers' => Manufacturer::getManufacturers(),
-			'suppliers' => Supplier::getSuppliers(),
-			'attributes_group' => $attribute_groups,
-			'features' => $features,
-			'categories' => Category::getSimpleCategories((int)$this->context->language->id),
-			'conditions' => $this->object->getConditions(),
-			'is_multishop' => Shop::isFeatureActive()
-			);
+										'manufacturers' => Manufacturer::getManufacturers(),
+										'suppliers' => Supplier::getSuppliers(),
+										'attributes_group' => $attribute_groups,
+										'features' => $features,
+										'categories' => Category::getSimpleCategories((int)$this->context->language->id),
+										'conditions' => $this->object->getConditions(),
+										'is_multishop' => Shop::isFeatureActive()
+										);
 		return parent::renderForm();
 	}
 
@@ -339,11 +321,5 @@ class AdminSpecificPriceRuleControllerCore extends AdminController
 			$object->apply();
 			return $object;
 		}
-	}
-
-	public function postProcess()
-	{
-		Tools::clearSmartyCache();
-		return parent::postProcess();
 	}
 }

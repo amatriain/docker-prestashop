@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -31,10 +31,9 @@
 	{ldelim}
 		"id":            {$product.id_product},
 		"link":          "{$link->getProductLink($product.id_product, $product.link_rewrite, $product.category, null, null, $product.id_shop, $product.id_product_attribute)|addslashes|replace:'\\\'':'\''}",
-		"quantity":      {$product.cart_quantity|intval},
+		"quantity":      {$product.cart_quantity},
 		"priceByLine":   "{if $priceDisplay == $smarty.const.PS_TAX_EXC}{displayWtPrice|html_entity_decode:2:'UTF-8' p=$product.total}{else}{displayWtPrice|html_entity_decode:2:'UTF-8' p=$product.total_wt}{/if}",
-		"image":         "{$link->getImageLink($product.link_rewrite, $product.id_image, 'home_default')|addslashes|replace:'\\\'':'\''}",		
-		"name":          "{$product.name|html_entity_decode:2:'UTF-8'|truncate:15:'...':true|escape:'html'}",
+		"name":          "{$product.name|html_entity_decode:2:'UTF-8'|escape:'htmlall'|truncate:15:'...':true}",
 		"price":         "{if $priceDisplay == $smarty.const.PS_TAX_EXC}{displayWtPrice|html_entity_decode:2:'UTF-8' p=$product.total}{else}{displayWtPrice|html_entity_decode:2:'UTF-8' p=$product.total_wt}{/if}",
 		"price_float":   "{$product.total}",
 		"idCombination": {if isset($product.attributes_small)}{$productAttributeId}{else}0{/if},
@@ -62,8 +61,8 @@
 					{foreach from=$datas key='index' item='data' name='datas'}
 						{ldelim}
 						"index":			{$index},
-						"value":			"{Tools::nl2br($data.value|addslashes|replace: '\\\'':'\'')}",
-						"truncatedValue":	"{Tools::nl2br($data.value|truncate:28:'...'|addslashes|replace: '\\\'':'\'')}"
+						"value":			"{$data.value|addslashes|replace: '\\\'':'\''}",
+						"truncatedValue":	"{$data.value|truncate:28:'...'|addslashes|replace: '\\\'':'\''}"
 						{rdelim}{if !$smarty.foreach.datas.last},{/if}
 					{/foreach}]
 				{rdelim}{if !$smarty.foreach.customization.last},{/if}
@@ -80,11 +79,11 @@
 {if $discounts}{foreach from=$discounts item=discount name='discounts'}
 	{ldelim}
 		"id":              "{$discount.id_discount}",
-		"name":            "{$discount.name|truncate:18:'...'|addslashes|replace:'\\\'':'\''}",
+		"name":            "{$discount.name|cat:' : '|cat:$discount.description|truncate:18:'...'|addslashes|replace:'\\\'':'\''}",
 		"description":     "{$discount.description|addslashes|replace:'\\\'':'\''}",
 		"nameDescription": "{$discount.name|cat:' : '|cat:$discount.description|truncate:18:'...'|addslashes|replace:'\\\'':'\''}",
 		"code":            "{$discount.code}",
-		"link":            "{$link->getPageLink("$order_process", true, NULL, "deleteDiscount={$discount.id_discount}")|escape:'html'}",
+		"link":            "{$link->getPageLink("$order_process", true, NULL, "deleteDiscount={$discount.id_discount}")}",
 		"price":           "{if $priceDisplay == 1}{convertPrice|html_entity_decode:2:'UTF-8' price=$discount.value_tax_exc}{else}{convertPrice|html_entity_decode:2:'UTF-8' price=$discount.value_real}{/if}",
 		"price_float":     "{if $priceDisplay == 1}{$discount.value_tax_exc}{else}{$discount.value_real}{/if}"
 	{rdelim}
@@ -100,8 +99,6 @@
 "nbTotalProducts": "{$nb_total_products}",
 "total": "{$total|html_entity_decode:2:'UTF-8'}",
 "productTotal": "{$product_total|html_entity_decode:2:'UTF-8'}",
-"freeShipping": "{displayWtPrice|html_entity_decode:2:'UTF-8' p=$free_shipping}",
-"freeShippingFloat": "{$free_shipping|html_entity_decode:2:'UTF-8'}",
 {if isset($errors) && $errors}
 "hasError" : true,
 "errors" : [

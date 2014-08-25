@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,195 +18,94 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <script type="text/javascript">
 $(function() {
-	$('#content .panel').highlight('{$query}');
+	$('body').highlight('{$query}');
 });
 </script>
 
-{if $query}
-	<h2>
-	{if isset($nb_results) && $nb_results == 0}
-		<h2>{l s='There are no results matching your query "%s".' sprintf=$query}</h2>
-	{elseif isset($nb_results) && $nb_results == 1}
-		{l s='1 result matches your query "%s".' sprintf=$query}
-	{elseif isset($nb_results)}
-		{l s='%d results match your query "%s".' sprintf=[$nb_results|intval, $query]}
-	{/if}
-	</h2>
+{if $show_toolbar}
+	{include file="toolbar.tpl" toolbar_btn=$toolbar_btn toolbar_scroll=$toolbar_scroll title=$title}
+	<div class="leadin">{block name="leadin"}{/block}</div>
 {/if}
 
-<div class="panel">
-	<h3>Search</h3>
-
-	<div class="row">
-		<div class="col-lg-4">
-			{include file="search_form.tpl" id="in_content"}
-		</div>
-	</div>
-</div>
-
-
-{if $query && isset($nb_results) && $nb_results}
-
-	{if isset($features)}
-	<div class="panel">
-		<h3>
-			{if $features|@count == 1}
-				{l s='1 feature'}
-			{else}
-				{l s='%d features' sprintf=$features|@count}
-			{/if}
-		</h3>
-		<table class="table">
-			<tbody>
+{if isset($features)}
+	{if !$features}
+		<h3>{l s='No features matching your query'} : {$query}</h3>
+	{else}
+		<h3>{l s='Features matching your query'} : {$query}</h3>
+		<table class="table" cellpadding="0" cellspacing="0">
 			{foreach $features key=key item=feature}
 				{foreach $feature key=k item=val name=feature_list}
 					<tr>
-						<td><a href="{$val.link}"{if $smarty.foreach.feature_list.first}><strong>{$key}</strong>{/if}</a></td>
-						<td><a href="{$val.link}">{$val.value}</a></td>
+						<th>{if $smarty.foreach.feature_list.first}{$key}{/if}</th>
+						<td>
+							<a href="{$val.link}">{$val.value}</a>
+						</td>
 					</tr>
 				{/foreach}
 			{/foreach}
-			</tbody>
 		</table>
-	</div>
+		<div class="clear">&nbsp;</div>
 	{/if}
-
-	{if isset($modules) && $modules}
-	<div class="panel">
-		<h3>
-			{if $modules|@count == 1}
-				{l s='1 module'}
-			{else}
-				{l s='%d modules' sprintf=$modules|@count}
-			{/if}
-		</h3>
-		<table class="table">
-			<tbody>
+{/if}
+{if isset($modules)}
+	{if !$modules}
+		<h3>{l s='No modules matching your query'} : {$query}</h3>
+	{else}
+		<h3>{l s='Modules matching your query'} : {$query}</h3>
+		<table class="table" cellpadding="0" cellspacing="0">
 			{foreach $modules key=key item=module}
 				<tr>
-					<td><a href="{$module->linkto|escape:'html':'UTF-8'}"><strong>{$module->displayName}</strong></a></td>
-					<td><a href="{$module->linkto|escape:'html':'UTF-8'}">{$module->description}</a></td>
+					<th><a href="{$module->linkto|escape:'htmlall':'UTF-8'}">{$module->displayName}</a></th>
+					<td><a href="{$module->linkto|escape:'htmlall':'UTF-8'}">{$module->description}</a></td>
 				</tr>
 			{/foreach}
-		</tbody>
 		</table>
-	</div>
+		<div class="clear">&nbsp;</div>
 	{/if}
-
-	{if isset($categories) && $categories}
-	<div class="panel">
-		<h3>
-			{if $categories|@count == 1}
-				{l s='1 category'}
-			{else}
-				{l s='%d categories' sprintf=$categories|@count}
-			{/if}
-		</h3>
-		<table class="table" style="border-spacing : 0; border-collapse : collapse;">
+{/if}
+{if isset($categories)}
+	{if !$categories}
+		<h3>{l s='No categories matching your query'} : {$query}</h3>
+	{else}
+		<h3>{l s='Categories matching your query'} : {$query}</h3>
+		<table cellspacing="0" cellpadding="0" class="table">
 			{foreach $categories key=key item=category}
-				<tr>
+				<tr class="alt_row">
 					<td>{$category}</td>
 				</tr>
 			{/foreach}
 		</table>
-	</div>
+		<div class="clear">&nbsp;</div>
 	{/if}
-
-	{if isset($products) && $products}
-	<div class="panel">
-		<h3>
-			{if $products|@count == 1}
-				{l s='1 product'}
-			{else}
-				{l s='%d products' sprintf=$products|@count}
-			{/if}
-		</h3>
-		{$products}
-	</div>
-	{/if}
-
-	{if isset($customers) && $customers}
-	<div class="panel">
-		<h3>
-			{if $customers|@count == 1}
-				{l s='1 customer'}
-			{else}
-				{l s='%d customers' sprintf=$customers|@count}
-			{/if}
-		</h3>
-		{$customers}
-	</div>
-	{/if}
-
-	{if isset($orders) && $orders}
-	<div class="panel">
-		<h3>
-			{if $orders|@count == 1}
-				{l s='1 order'}
-			{else}
-				{l s='%d orders' sprintf=$orders|@count}
-			{/if}
-		</h3>
-		{$orders}
-	</div>
-	{/if}
-
-	{if isset($addons) && $addons}
-	<div class="panel">
-		<h3>
-			{if $addons|@count == 1}
-				{l s='1 addon'}
-			{else}
-				{l s='%d addons' sprintf=$addons|@count}
-			{/if}
-		</h3>
-		<table class="table">
-			<tbody>
-			{foreach $addons key=key item=addon}
-				<tr>
-					<td><a href="{$addon.href|escape:'html':'UTF-8'}&amp;utm_source=backoffice_search" target="_blank"><strong><i class="icon-external-link-sign"></i> {$addon.title|escape:'html':'UTF-8'}</strong></a></td>
-					<td><a href="{$addon.href|escape:'html':'UTF-8'}&amp;utm_source=backoffice_search" target="_blank">{$addon.description|truncate:256:'...'|escape:'html':'UTF-8'}</a></td>
-				</tr>
-			{/foreach}
-		</tbody>
-			<tfoot>
-				<tr>
-					<td colspan="2" class="text-center"><a href="http://addons.prestashop.com/search.php?search_query={$query|urlencode}&amp;utm_source=backoffice_search" target="_blank"><strong>{l s='Show more results...'}</strong></a></td>
-				</tr>
-			</tfoot>
-		</table>
-	</div>
-	{/if}
-
 {/if}
-<div class="row">
-	<div class="col-lg-4">
-		<div class="panel">
-			<h3>{l s='Search doc.prestashop.com'}</h3>
-			<a href="http://doc.prestashop.com/dosearchsite.action?spaceSearch=true&amp;queryString={$query}&amp;utm_source=backoffice_search" target="_blank" class="btn btn-default">{l s='Go to the documentation'}</a>
-		</div>
-	</div>
-	<div class="col-lg-4">
-		<div class="panel">
-			<h3>{l s='Search addons.prestashop.com'}</h3>
-			<a href="http://addons.prestashop.com/search.php?search_query={$query}&amp;utm_source=backoffice_search" target="_blank" class="btn btn-default">{l s='Go to Addons'}</a>
-		</div>
-	</div>
-	<div class="col-lg-4">
-		<div class="panel">
-			<h3>{l s='Search prestashop.com forum'}</h3>
-			<a href="https://www.google.fr/search?q=site%3Aprestashop.com%2Fforums%2F+{$query}" target="_blank" class="btn btn-default">{l s='Go to the Forum'}</a>
-		</div>
-	</div>
-</div>
-
-
-
-
+{if isset($products)}
+	{if !$products}
+		<h3>{l s='There are no products matching your query'} : {$query}</h3>
+	{else}
+		<h3>{l s='Products matching your query'} : {$query}</h3>
+		{$products}
+	{/if}
+{/if}
+{if isset($customers)}
+	{if !$customers}
+		<h3>{l s='There are no customers matching your query'} : {$query}</h3>
+	{else}
+		<h3>{l s='Customers matching your query'} : {$query}</h3>
+		{$customers}
+	{/if}
+{/if}
+{if isset($orders)}
+	{if !$orders}
+		<h3>{l s='There are no orders matching your query'} : {$query}</h3>
+	{else}
+		<h3>{l s='Orders matching your query'} : {$query}</h3>
+		{$orders}
+	{/if}
+{/if}

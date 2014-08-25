@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -34,17 +34,13 @@ class HistoryControllerCore extends FrontController
 	public function setMedia()
 	{
 		parent::setMedia();
-		$this->addCSS(array(
-			_THEME_CSS_DIR_.'history.css',
-			_THEME_CSS_DIR_.'addresses.css'
-		));
-		$this->addJS(array(
-			_THEME_JS_DIR_.'history.js',
-			_THEME_JS_DIR_.'tools.js' // retro compat themes 1.5
-		));
-		$this->addJqueryPlugin('footable');
-		$this->addJqueryPlugin('footable-sort');
+		$this->addCSS(_THEME_CSS_DIR_.'history.css');
+		$this->addCSS(_THEME_CSS_DIR_.'addresses.css');
 		$this->addJqueryPlugin('scrollTo');
+		$this->addJS(array(
+					_THEME_JS_DIR_.'history.js',
+					_THEME_JS_DIR_.'tools.js')
+					);
 	}
 
 	/**
@@ -65,10 +61,10 @@ class HistoryControllerCore extends FrontController
 		$this->context->smarty->assign(array(
 			'orders' => $orders,
 			'invoiceAllowed' => (int)(Configuration::get('PS_INVOICE')),
-			'reorderingAllowed' => !(int)(Configuration::get('PS_DISALLOW_HISTORY_REORDERING')),
 			'slowValidation' => Tools::isSubmit('slowvalidation')
 		));
 
 		$this->setTemplate(_PS_THEME_DIR_.'history.tpl');
 	}
 }
+

@@ -1,10 +1,5 @@
+Newsletter from {shop_name}
 
-[{shop_url}] 
+{message}
 
-Hi {firstname} {lastname}, 
-
-{message} 
-
-{shop_name} [{shop_url}] powered by
-PrestaShop(tm) [http://www.prestashop.com/] 
-
+{shop_url} powered by PrestaShop™

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -34,12 +34,13 @@ class SupplierControllerCore extends FrontController
 	{
 		parent::setMedia();
 		$this->addCSS(_THEME_CSS_DIR_.'product_list.css');
+
+		if (Configuration::get('PS_COMPARATOR_MAX_ITEM'))
+			$this->addJS(_THEME_JS_DIR_.'products-comparison.js');
 	}
 
 	public function canonicalRedirection($canonicalURL = '')
 	{
-		if (Tools::getValue('live_edit'))
-			return ;
 		if (Validate::isLoadedObject($this->supplier))
 			parent::canonicalRedirection($this->context->link->getSupplierLink($this->supplier));
 	}
@@ -93,31 +94,16 @@ class SupplierControllerCore extends FrontController
 	 */
 	protected function assignOne()
 	{
-		if (Configuration::get('PS_DISPLAY_SUPPLIERS'))
-		{
-			$this->supplier->description = Tools::nl2br(trim($this->supplier->description));
-			$nbProducts = $this->supplier->getProducts($this->supplier->id, null, null, null, $this->orderBy, $this->orderWay, true);
-			$this->pagination((int)$nbProducts);
-
-			$products = $this->supplier->getProducts($this->supplier->id, $this->context->cookie->id_lang, (int)$this->p, (int)$this->n, $this->orderBy, $this->orderWay);
-			$this->addColorsToProductList($products);
-
-			$this->context->smarty->assign(
-				array(
-					'nb_products' => $nbProducts,
-					'products' => $products,
-					'path' => ($this->supplier->active ? Tools::safeOutput($this->supplier->name) : ''),
-					'supplier' => $this->supplier,
-					'comparator_max_item' => Configuration::get('PS_COMPARATOR_MAX_ITEM'),
-					'body_classes' => array(
-						$this->php_self.'-'.$this->supplier->id,
-						$this->php_self.'-'.$this->supplier->link_rewrite
-					)
-				)
-			);
-		}
-		else
-			Tools::redirect('index.php?controller=404');
+		$this->supplier->description = Tools::nl2br(trim($this->supplier->description));
+		$nbProducts = $this->supplier->getProducts($this->supplier->id, null, null, null, $this->orderBy, $this->orderWay, true);
+		$this->pagination((int)$nbProducts);
+		$this->context->smarty->assign(array(
+			'nb_products' => $nbProducts,
+			'products' => $this->supplier->getProducts($this->supplier->id, $this->context->cookie->id_lang, (int)$this->p, (int)$this->n, $this->orderBy, $this->orderWay),
+			'path' => ($this->supplier->active ? Tools::safeOutput($this->supplier->name) : ''),
+			'supplier' => $this->supplier,
+			'comparator_max_item' => Configuration::get('PS_COMPARATOR_MAX_ITEM')
+		));
 	}
 
 	/**
@@ -144,6 +130,6 @@ class SupplierControllerCore extends FrontController
 			));
 		}
 		else
-			Tools::redirect('index.php?controller=404');
+			$this->context->smarty->assign('nbSuppliers', 0);
 	}
 }

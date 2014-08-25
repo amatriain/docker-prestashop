@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -58,8 +58,8 @@ class OrderControllerCore extends ParentOrderController
 		{
 			$this->step = 0;
 			$this->errors[] = sprintf(
-				Tools::displayError('A minimum purchase total of %1s (tax excl.) is required in order to validate your order, current purchase total is %2s (tax excl.).'),
-				Tools::displayPrice($minimal_purchase, $currency), Tools::displayPrice($this->context->cart->getOrderTotal(false, Cart::ONLY_PRODUCTS), $currency)
+				Tools::displayError('A minimum purchase total of %s is required in order to validate your order.'),
+				Tools::displayPrice($minimal_purchase, $currency)
 			);
 		}
 		if (!$this->context->customer->isLogged(true) && in_array($this->step, array(1, 2, 3)))
@@ -94,6 +94,8 @@ class OrderControllerCore extends ParentOrderController
 	 */
 	public function initContent()
 	{
+		global $isVirtualCart;
+
 		parent::initContent();
 
 		if (Tools::isSubmit('ajax') && Tools::getValue('method') == 'updateExtraCarrier')
@@ -115,10 +117,7 @@ class OrderControllerCore extends ParentOrderController
 		}
 
 		if ($this->nbProducts)
-			$this->context->smarty->assign('virtual_cart', $this->context->cart->isVirtualCart());
-
-		if (!Tools::getValue('multi-shipping'))
-			$this->context->cart->setNoMultishipping();
+			$this->context->smarty->assign('virtual_cart', $isVirtualCart);
 
 		// 4 steps to the order
 		switch ((int)$this->step)
@@ -156,18 +155,14 @@ class OrderControllerCore extends ParentOrderController
 					Tools::redirect('index.php?controller=order&step=2');
 				Context::getContext()->cookie->check_cgv = true;
 
-				// Check the delivery option is set
+				// Check the delivery option is setted
 				if (!$this->context->cart->isVirtualCart())
 				{
 					if (!Tools::getValue('delivery_option') && !Tools::getValue('id_carrier') && !$this->context->cart->delivery_option && !$this->context->cart->id_carrier)
 						Tools::redirect('index.php?controller=order&step=2');
 					elseif (!Tools::getValue('id_carrier') && !$this->context->cart->id_carrier)
 					{
-						$deliveries_options = Tools::getValue('delivery_option');
-						if (!$deliveries_options)
-							$deliveries_options = $this->context->cart->delivery_option;
-
-						foreach ($deliveries_options as $delivery_option)
+						foreach (Tools::getValue('delivery_option') as $delivery_option)
 							if (empty($delivery_option))
 								Tools::redirect('index.php?controller=order&step=2');
 					}
@@ -226,26 +221,13 @@ class OrderControllerCore extends ParentOrderController
 	 */
 	public function autoStep()
 	{
+		global $isVirtualCart;
+
 		if ($this->step >= 2 && (!$this->context->cart->id_address_delivery || !$this->context->cart->id_address_invoice))
 			Tools::redirect('index.php?controller=order&step=1');
 
-		if ($this->step > 2 && !$this->context->cart->isVirtualCart())
-		{
-			$redirect = false;
-			if (count($this->context->cart->getDeliveryOptionList()) == 0)
-				$redirect = true;
-
-			if (!$this->context->cart->isMultiAddressDelivery())
-				foreach ($this->context->cart->getProducts() as $product)
-					if (!in_array($this->context->cart->id_carrier, Carrier::getAvailableCarrierList(new Product($product['id_product']), null, $this->context->cart->id_address_delivery)))
-					{
-						$redirect = true;
-						break;
-					}
-			
-			if ($redirect)
-				Tools::redirect('index.php?controller=order&step=2');
-		} 
+		if ($this->step > 2 && !$isVirtualCart && count($this->context->cart->getDeliveryOptionList()) == 0)
+			Tools::redirect('index.php?controller=order&step=2');
 
 		$delivery = new Address((int)$this->context->cart->id_address_delivery);
 		$invoice = new Address((int)$this->context->cart->id_address_invoice);
@@ -265,6 +247,9 @@ class OrderControllerCore extends ParentOrderController
 	 */
 	public function processAddress()
 	{
+		if (!Tools::getValue('multi-shipping'))
+			$this->context->cart->setNoMultishipping();
+		
 		$same = Tools::isSubmit('same');
 		if(!Tools::getValue('id_address_invoice', false) && !$same)
 			$same = true;
@@ -328,6 +313,8 @@ class OrderControllerCore extends ParentOrderController
 			$this->_assignCarrier();
 			$this->step = 2;
 			$this->displayContent();
+			include(dirname(__FILE__).'/../footer.php');
+			exit;
 		}
 		$orderTotal = $this->context->cart->getOrderTotal();
 	}
@@ -384,11 +371,5 @@ class OrderControllerCore extends ParentOrderController
 
 		parent::_assignPayment();
 	}
-
-	public function setMedia()
-	{
-		parent::setMedia();
-		if ($this->step == 2)
-			$this->addJS(_THEME_JS_DIR_.'order-carrier.js');
-	}
 }
+

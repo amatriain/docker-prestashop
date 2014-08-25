@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -34,7 +34,6 @@ class CMSCore extends ObjectModel
 	public $link_rewrite;
 	public $id_cms_category;
 	public $position;
-	public $indexation;
 	public $active;
 
 	/**
@@ -47,7 +46,6 @@ class CMSCore extends ObjectModel
 		'fields' => array(
 			'id_cms_category' => 	array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'),
 			'position' => 			array('type' => self::TYPE_INT),
-			'indexation' =>     	array('type' => self::TYPE_BOOL),
 			'active' => 			array('type' => self::TYPE_BOOL),
 
 			// Lang fields
@@ -55,7 +53,7 @@ class CMSCore extends ObjectModel
 			'meta_keywords' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 255),
 			'meta_title' =>			array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 128),
 			'link_rewrite' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isLinkRewrite', 'required' => true, 'size' => 128),
-			'content' => 			array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 3999999999999),
+			'content' => 			array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isString', 'size' => 3999999999999),
 		),
 	);
 
@@ -190,16 +188,13 @@ class CMSCore extends ObjectModel
 		return (Db::getInstance()->getValue($sql));
 	}
 
-	public static function getCMSPages($id_lang = null, $id_cms_category = null, $active = true, $id_shop = null)
+	public static function getCMSPages($id_lang = null, $id_cms_category = null, $active = true)
 	{
 		$sql = new DbQuery();
 		$sql->select('*');
 		$sql->from('cms', 'c');
 		if ($id_lang)
 			$sql->innerJoin('cms_lang', 'l', 'c.id_cms = l.id_cms AND l.id_lang = '.(int)$id_lang);
-
-		if ($id_shop)
-			$sql->innerJoin('cms_shop', 'cs', 'c.id_cms = cs.id_cms AND cs.id_shop = '.(int)$id_shop); 
 
 		if ($active)
 			$sql->where('c.active = 1');

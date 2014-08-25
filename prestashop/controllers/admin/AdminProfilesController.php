@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,7 +28,6 @@ class AdminProfilesControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 		$this->context = Context::getContext();
 		$this->table = 'profile';
 		$this->className = 'Profile';
@@ -39,18 +38,15 @@ class AdminProfilesControllerCore extends AdminController
 		$this->addRowActionSkipList('delete', array(1));
 
 		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
+			'delete' => array('text' => $this->l('Delete selected'), 
+			'confirm' => $this->l('Delete selected items?'))
+			);
 
 		$this->fields_list = array(
 			'id_profile' => array(
 						'title' => $this->l('ID'), 
-						'align' => 'center',
-						'class' => 'fixed-width-xs'
+						'align' => 'center', 
+						'width' => 25
 						),
 			'name' => array('title' => $this->l('Name'))
 			);
@@ -60,19 +56,21 @@ class AdminProfilesControllerCore extends AdminController
 		$this->fields_form = array(
 			'legend' => array(
 				'title' => $this->l('Profile'),
-				'icon' => 'icon-group'
+				'image' => '../img/admin/profiles.png'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
+					'size' => 33,
 					'required' => true,
 					'lang' => true,
 				)
 			),
 			'submit' => array(
-				'title' => $this->l('Save'),
+				'title' => $this->l('Save   '),
+				'class' => 'button'
 			)
 		);
 
@@ -97,18 +95,6 @@ class AdminProfilesControllerCore extends AdminController
 			$this->errors[] = $this->l('For security reasons, you cannot delete the Administrator\'s profile.');
 		else
 			parent::postProcess();
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		if (empty($this->display))
-			$this->page_header_toolbar_btn['new_profile'] = array(
-				'href' => self::$currentIndex.'&addprofile&token='.$this->token,
-				'desc' => $this->l('Add new profile', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-		
-		parent::initPageHeaderToolbar();
 	}
 }
 

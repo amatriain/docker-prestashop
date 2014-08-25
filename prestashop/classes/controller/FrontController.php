@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -65,24 +65,10 @@ class FrontControllerCore extends Controller
 
 		parent::__construct();
 
-		if (Configuration::get('PS_SSL_ENABLED') && Configuration::get('PS_SSL_ENABLED_EVERYWHERE'))
-			$this->ssl = true;
-
 		if (isset($useSSL))
 			$this->ssl = $useSSL;
 		else
 			$useSSL = $this->ssl;
-
-		if (isset($this->php_self)  && is_object(Context::getContext()->theme))
-		{
-			$colums = Context::getContext()->theme->hasColumns($this->php_self);
-			// don't use theme tables if not configurated in DB
-			if ($colums)
-			{
-				$this->display_column_left = $colums['left_column'];
-				$this->display_column_right = $colums['right_column'];
-			}
-		}
 	}
 
 	/**
@@ -122,24 +108,27 @@ class FrontControllerCore extends Controller
 
 		// If current URL use SSL, set it true (used a lot for module redirect)
 		if (Tools::usingSecureMode())
-			$useSSL = true;
+			$useSSL = $this->ssl = true;
 
 		// For compatibility with globals, DEPRECATED as of version 1.5
 		$css_files = $this->css_files;
 		$js_files = $this->js_files;
 
-		// If we call a SSL controller without SSL or a non SSL controller with SSL, we redirect with the right protocol
-		if (Configuration::get('PS_SSL_ENABLED') && $_SERVER['REQUEST_METHOD'] != 'POST' && $this->ssl != Tools::usingSecureMode())
-		{	
+		if ($this->ssl && !Tools::usingSecureMode() && Configuration::get('PS_SSL_ENABLED'))
+		{
 			header('HTTP/1.1 301 Moved Permanently');
 			header('Cache-Control: no-cache');
-			if ($this->ssl)					
-				header('Location: '.Tools::getShopDomainSsl(true).$_SERVER['REQUEST_URI']);
-			else						
-				header('Location: '.Tools::getShopDomain(true).$_SERVER['REQUEST_URI']);
+			header('Location: '.Tools::getShopDomainSsl(true).$_SERVER['REQUEST_URI']);
 			exit();
 		}
-		
+		elseif (Configuration::get('PS_SSL_ENABLED') && Tools::usingSecureMode() && !($this->ssl))
+		{
+			header('HTTP/1.1 301 Moved Permanently');
+			header('Cache-Control: no-cache');
+			header('Location: '.Tools::getShopDomain(true).$_SERVER['REQUEST_URI']);
+			exit();
+		}
+
 		if ($this->ajax)
 		{
 			$this->display_header = false;
@@ -158,6 +147,8 @@ class FrontControllerCore extends Controller
 		// Init cookie language
 		// @TODO This method must be moved into switchLanguage
 		Tools::setCookieLanguage($this->context->cookie);
+		
+		$currency = Tools::setCurrency($this->context->cookie);
 
 		$protocol_link = (Configuration::get('PS_SSL_ENABLED') || Tools::usingSecureMode()) ? 'https://' : 'http://';
 		$useSSL = ((isset($this->ssl) && $this->ssl && Configuration::get('PS_SSL_ENABLED')) || Tools::usingSecureMode()) ? true : false;
@@ -173,13 +164,11 @@ class FrontControllerCore extends Controller
 
 		/* Theme is missing */
 		if (!is_dir(_PS_THEME_DIR_))
-			throw new PrestaShopException((sprintf(Tools::displayError('Current theme unavailable "%s". Please check your theme directory name and permissions.'), basename(rtrim(_PS_THEME_DIR_, '/\\')))));
+			die(sprintf(Tools::displayError('Current theme unavailable "%s". Please check your theme directory name and permissions.'), basename(rtrim(_PS_THEME_DIR_, '/\\'))));
 
 		if (Configuration::get('PS_GEOLOCATION_ENABLED'))
 			if (($newDefault = $this->geolocationManagement($this->context->country)) && Validate::isLoadedObject($newDefault))
 				$this->context->country = $newDefault;
-
-		$currency = Tools::setCurrency($this->context->cookie);
 
 		if (isset($_GET['logout']) || ($this->context->customer->logged && Customer::isBanned($this->context->customer->id)))
 		{
@@ -262,8 +251,6 @@ class FrontControllerCore extends Controller
 			$this->context->cart = $cart;
 			CartRule::autoAddToCart($this->context);
 		}
-		else
-			$this->context->cart = $cart;	
 
 		/* get page name to display it in body id */
 
@@ -284,7 +271,7 @@ class FrontControllerCore extends Controller
 		else
 		{
 			$page_name = Dispatcher::getInstance()->getController();
-			$page_name = (preg_match('/^[0-9]/', $page_name) ? 'page_'.$page_name : $page_name);
+			$page_name = (preg_match('/^[0-9]/', $page_name)) ? 'page_'.$page_name : $page_name;
 		}
 
 		$this->context->smarty->assign(Meta::getMetaTags($this->context->language->id, $page_name));
@@ -315,10 +302,6 @@ class FrontControllerCore extends Controller
 		foreach ($languages as $lang)
 			$meta_language[] = $lang['iso_code'];
 
-		$compared_products = array();
-		if (Configuration::get('PS_COMPARATOR_MAX_ITEM') && isset($this->context->cookie->id_compare))
-			$compared_products = CompareProduct::getCompareProducts($this->context->cookie->id_compare);
-
 		$this->context->smarty->assign(array(
 			// Usefull for layout.tpl
 			'mobile_device' => $this->context->getMobileDevice(),
@@ -341,10 +324,8 @@ class FrontControllerCore extends Controller
 			'cart_qties' => (int)$cart->nbProducts(),
 			'currencies' => Currency::getCurrencies(),
 			'languages' => $languages,
-			'meta_language' => implode(',', $meta_language),
-			'priceDisplay' => Product::getTaxCalculationMethod((int)$this->context->cookie->id_customer),
-			'is_logged' => (bool)$this->context->customer->isLogged(),
-			'is_guest' => (bool)$this->context->customer->isGuest(),
+			'meta_language' => implode('-', $meta_language),
+			'priceDisplay' => Product::getTaxCalculationMethod(),
 			'add_prod_display' => (int)Configuration::get('PS_ATTRIBUTE_CATEGORY_DISPLAY'),
 			'shop_name' => Configuration::get('PS_SHOP_NAME'),
 			'roundMode' => (int)Configuration::get('PS_PRICE_ROUND_MODE'),
@@ -355,16 +336,11 @@ class FrontControllerCore extends Controller
 			'opc' => (bool)Configuration::get('PS_ORDER_PROCESS_TYPE'),
 			'PS_CATALOG_MODE' => (bool)Configuration::get('PS_CATALOG_MODE') || !(bool)Group::getCurrent()->show_prices,
 			'b2b_enable' => (bool)Configuration::get('PS_B2B_ENABLE'),
-			'request' => $link->getPaginationLink(false, false, false, true),
-			'PS_STOCK_MANAGEMENT' => Configuration::get('PS_STOCK_MANAGEMENT'),
-			'quick_view' => (bool)Configuration::get('PS_QUICK_VIEW'),
-			'shop_phone' => Configuration::get('PS_SHOP_PHONE'),
-			'compared_products' => is_array($compared_products) ? $compared_products : array(),
-			'comparator_max_item' => (int)Configuration::get('PS_COMPARATOR_MAX_ITEM')
+			'request' => $link->getPaginationLink(false, false, false, true)
 		));
 
 		// Add the tpl files directory for mobile
-		if ($this->useMobileTheme())
+		if ($this->context->getMobileDevice() != false)
 			$this->context->smarty->assign(array(
 				'tpl_mobile_uri' => _PS_THEME_MOBILE_DIR_,
 			));
@@ -393,11 +369,11 @@ class FrontControllerCore extends Controller
 		);
 
 		// Add the images directory for mobile
-		if ($this->useMobileTheme())
+		if ($this->context->getMobileDevice() != false)
 			$assign_array['img_mobile_dir'] = _THEME_MOBILE_IMG_DIR_;
 
 		// Add the CSS directory for mobile
-		if ($this->useMobileTheme())
+		if ($this->context->getMobileDevice() != false)
 			$assign_array['css_mobile_dir'] = _THEME_MOBILE_CSS_DIR_;
 
 		foreach ($assign_array as $assign_key => $assign_value)
@@ -439,10 +415,12 @@ class FrontControllerCore extends Controller
 		$this->process();
 		if (!isset($this->context->cart))
 			$this->context->cart = new Cart();
-		if (!$this->useMobileTheme())
+		if ($this->context->getMobileDevice() == false)
 		{
 			// These hooks aren't used for the mobile theme.
 			// Needed hooks are called in the tpl files.
+			if (!isset($this->context->cart))
+				$this->context->cart = new Cart();
 			$this->context->smarty->assign(array(
 				'HOOK_HEADER' => Hook::exec('displayHeader'),
 				'HOOK_TOP' => Hook::exec('displayTop'),
@@ -451,7 +429,11 @@ class FrontControllerCore extends Controller
 			));
 		}
 		else
-			$this->context->smarty->assign('HOOK_MOBILE_HEADER', Hook::exec('displayMobileHeader'));
+		{
+			$this->context->smarty->assign(array(
+				'HOOK_MOBILE_HEADER' => Hook::exec('displayMobileHeader'),
+			));
+		}
 	}
 
 	/**
@@ -459,8 +441,8 @@ class FrontControllerCore extends Controller
 	 */
 	public function displayHeader($display = true)
 	{
+		// This method will be removed in 1.6
 		Tools::displayAsDeprecated();
-
 		$this->initHeader();
 		$hook_header = Hook::exec('displayHeader');
 		if ((Configuration::get('PS_CSS_THEME_CACHE') || Configuration::get('PS_JS_THEME_CACHE')) && is_writable(_PS_THEME_DIR_.'cache'))
@@ -482,10 +464,8 @@ class FrontControllerCore extends Controller
 			'HOOK_FOOTER' => Hook::exec('displayFooter')
 		));
 
-		$this->context->smarty->assign(array(
-			'css_files' => $this->css_files,
-			'js_files' => ($this->getLayout() && (bool)Configuration::get('PS_JS_DEFER')) ? array() : $this->js_files
-		));
+		$this->context->smarty->assign('css_files', $this->css_files);
+		$this->context->smarty->assign('js_files', array_unique($this->js_files));
 
 		$this->display_header = $display;
 		$this->smartyOutputContent(_PS_THEME_DIR_.'header.tpl');
@@ -497,6 +477,7 @@ class FrontControllerCore extends Controller
 	 */
 	public function displayFooter($display = true)
 	{
+		// This method will be removed in 1.6
 		Tools::displayAsDeprecated();
 		$this->smartyOutputContent(_PS_THEME_DIR_.'footer.tpl');
 	}
@@ -516,7 +497,7 @@ class FrontControllerCore extends Controller
 	}
 
 	/**
-	 * 1.4 retrocompatibility
+	 * 1.4 retrocompatibility - will be removed in 1.6
 	 */
 	public function displayContent()
 	{
@@ -533,37 +514,41 @@ class FrontControllerCore extends Controller
 			if (Configuration::get('PS_CSS_THEME_CACHE'))
 				$this->css_files = Media::cccCSS($this->css_files);
 			//JS compressor management
-			if (Configuration::get('PS_JS_THEME_CACHE') && !$this->useMobileTheme())
+			if (Configuration::get('PS_JS_THEME_CACHE'))
 				$this->js_files = Media::cccJs($this->js_files);
 		}
 
+		$this->context->smarty->assign('css_files', $this->css_files);
+		$this->context->smarty->assign('js_files', array_unique($this->js_files));
 		$this->context->smarty->assign(array(
-			'css_files' => $this->css_files,
-			'js_files' => ($this->getLayout() && (bool)Configuration::get('PS_JS_DEFER')) ? array() : $this->js_files,
-			'js_defer' => (bool)Configuration::get('PS_JS_DEFER'),
 			'errors' => $this->errors,
 			'display_header' => $this->display_header,
 			'display_footer' => $this->display_footer,
 		));
-				
+		
+		$live_edit_content = '';
+		// Don't use live edit if on mobile device
+		if (!$this->context->getMobileDevice() && $this->checkLiveEditAccess())
+			$live_edit_content = $this->getLiveEditFooter();
+		
 		$layout = $this->getLayout();
 		if ($layout)
 		{
 			if ($this->template)
-				$template = $this->context->smarty->fetch($this->template);
+				$this->context->smarty->assign('template', $this->context->smarty->fetch($this->template).$live_edit_content);
 			else // For retrocompatibility with 1.4 controller
 			{
 				ob_start();
 				$this->displayContent();
 				$template = ob_get_contents();
 				ob_clean();
-
+				$this->context->smarty->assign('template', $template.$live_edit_content);
 			}
-			$template = $this->context->smarty->assign('template', $template);
 			$this->smartyOutputContent($layout);
 		}
 		else
 		{
+			// BEGIN - 1.4 retrocompatibility - will be removed in 1.6
 			Tools::displayAsDeprecated('layout.tpl is missing in your theme directory');
 			if ($this->display_header)
 				$this->smartyOutputContent(_PS_THEME_DIR_.'header.tpl');
@@ -575,7 +560,9 @@ class FrontControllerCore extends Controller
 
 			if ($this->display_footer)
 				$this->smartyOutputContent(_PS_THEME_DIR_.'footer.tpl');
+			// END - 1.4 retrocompatibility - will be removed in 1.6
 		}
+				
 		return true;
 	}
 
@@ -590,13 +577,9 @@ class FrontControllerCore extends Controller
 				header('HTTP/1.1 503 temporarily overloaded');
 				
 				$this->context->smarty->assign($this->initLogoAndFavicon());
-				$this->context->smarty->assign(array(
-					'HOOK_MAINTENANCE' => Hook::exec('displayMaintenance', array()),
-				));
 
-				// If the controller is a module, then getTemplatePath will try to find the template in the modules, so we need to instanciate a real frontcontroller
-				$front_controller = preg_match('/ModuleFrontController$/', get_class($this)) ? new FrontController() : $this;
-				$this->smartyOutputContent($front_controller->getTemplatePath($this->getThemeDir().'maintenance.tpl'));
+				$template_dir = ($this->context->getMobileDevice() == true ? _PS_THEME_MOBILE_DIR_ : _PS_THEME_DIR_);
+				$this->smartyOutputContent($template_dir.'maintenance.tpl');
 				exit;
 			}
 		}
@@ -606,21 +589,18 @@ class FrontControllerCore extends Controller
 	protected function displayRestrictedCountryPage()
 	{
 		header('HTTP/1.1 503 temporarily overloaded');
-		$this->context->smarty->assign(array(
-			'shop_name' => Context::getContext()->shop->name,
-			'favicon_url' => _PS_IMG_.Configuration::get('PS_FAVICON'),
-			'logo_url' =>  self::$link->getMediaLink(_PS_IMG_.Configuration::get('PS_LOGO'))
-		));
-		$this->smartyOutputContent($this->getTemplatePath($this->getThemeDir().'restricted-country.tpl'));
+		$this->context->smarty->assign('favicon_url', _PS_IMG_.Configuration::get('PS_FAVICON'));
+		$this->smartyOutputContent(_PS_THEME_DIR_.'restricted-country.tpl');
 		exit;
 	}
 
 	protected function canonicalRedirection($canonical_url = '')
 	{
-		if (!$canonical_url || !Configuration::get('PS_CANONICAL_REDIRECT') || strtoupper($_SERVER['REQUEST_METHOD']) != 'GET' || Tools::getValue('live_edit'))
+		if (!$canonical_url || !Configuration::get('PS_CANONICAL_REDIRECT') || strtoupper($_SERVER['REQUEST_METHOD']) != 'GET')
 			return;
 
-		$match_url = rawurldecode(Tools::getCurrentUrlProtocolPrefix().$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']);
+		$match_url = (($this->ssl && Configuration::get('PS_SSL_ENABLED')) ? 'https://' : 'http://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+		$match_url = rawurldecode($match_url);
 		if (!preg_match('/^'.Tools::pRegexp(rawurldecode($canonical_url), '/').'([&?].*)?$/', $match_url))
 		{
 			$params = array();
@@ -650,8 +630,7 @@ class FrontControllerCore extends Controller
 			if (defined('_PS_MODE_DEV_') && _PS_MODE_DEV_ && $_SERVER['REQUEST_URI'] != __PS_BASE_URI__)
 				die('[Debug] This page has moved<br />Please use the following URL instead: <a href="'.$final_url.'">'.$final_url.'</a>');
 
-			$redirect_type = Configuration::get('PS_CANONICAL_REDIRECT') == 2 ? '301' : '302';
-			header('HTTP/1.0 '.$redirect_type.' Moved');
+			header('HTTP/1.0 301 Moved');
 			header('Cache-Control: no-cache');
 			Tools::redirectLink($final_url);
 		}
@@ -690,7 +669,6 @@ class FrontControllerCore extends Controller
 						}
 					}
 				}
-
 				if (isset($this->context->cookie->iso_code_country) && $this->context->cookie->iso_code_country && !Validate::isLanguageIsoCode($this->context->cookie->iso_code_country))
 					$this->context->cookie->iso_code_country = Country::getIsoById(Configuration::get('PS_COUNTRY_DEFAULT'));
 				if (isset($this->context->cookie->iso_code_country) && ($id_country = Country::getByIso(strtoupper($this->context->cookie->iso_code_country))))
@@ -719,69 +697,47 @@ class FrontControllerCore extends Controller
 
 	/**
 	 * Specific medias for mobile device.
-	 * if autoload directory is present in the mobile theme, these files will not be loaded
 	 */
 	public function setMobileMedia()
 	{
 		$this->addjquery();
+		$this->addJS(_THEME_MOBILE_JS_DIR_.'jquery.mobile-1.3.0.min.js');
+		$this->addJS(_THEME_MOBILE_JS_DIR_.'jqm-docs.js');
+		$this->addJS(_PS_JS_DIR_.'tools.js');
+		$this->addJS(_THEME_MOBILE_JS_DIR_.'global.js');
+		$this->addjqueryPlugin('fancybox');
 
-		if (!file_exists($this->getThemeDir().'js/autoload/'))
-		{
-			$this->addJS(_THEME_MOBILE_JS_DIR_.'jquery.mobile-1.3.0.min.js');
-			$this->addJS(_THEME_MOBILE_JS_DIR_.'jqm-docs.js');
-			$this->addJS(_PS_JS_DIR_.'tools.js');
-			$this->addJS(_THEME_MOBILE_JS_DIR_.'global.js');
-			$this->addjqueryPlugin('fancybox');
-		}
-
-		if (!file_exists($this->getThemeDir().'css/autoload/'))
-		{
-			$this->addCSS(_THEME_MOBILE_CSS_DIR_.'jquery.mobile-1.3.0.min.css', 'all');
-			$this->addCSS(_THEME_MOBILE_CSS_DIR_.'jqm-docs.css', 'all');
-			$this->addCSS(_THEME_MOBILE_CSS_DIR_.'global.css', 'all');
-		}
+		$this->addCSS(_THEME_MOBILE_CSS_DIR_.'jquery.mobile-1.3.0.min.css', 'all');
+		$this->addCSS(_THEME_MOBILE_CSS_DIR_.'jqm-docs.css', 'all');
+		$this->addCSS(_THEME_MOBILE_CSS_DIR_.'global.css', 'all');
 	}
 
 	public function setMedia()
 	{
 		// if website is accessed by mobile device
 		// @see FrontControllerCore::setMobileMedia()
-		if ($this->useMobileTheme())
+		if ($this->context->getMobileDevice() != false)
 		{
 			$this->setMobileMedia();
 			return true;
 		}
 
-		$this->addCSS(_THEME_CSS_DIR_.'grid_prestashop.css', 'all');  // retro compat themes 1.5
+		if (Tools::file_exists_cache(_PS_ROOT_DIR_.Tools::str_replace_once(__PS_BASE_URI__, DIRECTORY_SEPARATOR, _THEME_CSS_DIR_.'grid_prestashop.css')))
+			$this->addCSS(_THEME_CSS_DIR_.'grid_prestashop.css', 'all');
 		$this->addCSS(_THEME_CSS_DIR_.'global.css', 'all');
 		$this->addjquery();
 		$this->addjqueryPlugin('easing');
 		$this->addJS(_PS_JS_DIR_.'tools.js');
-		$this->addJS(_THEME_JS_DIR_.'global.js');
-
-		// Automatically add js files from js/autoload directory in the template
-		if (@filemtime($this->getThemeDir().'js/autoload/'))
-			foreach (scandir($this->getThemeDir().'js/autoload/', 0) as $file)
-				if (preg_match('/^[^.].*\.js$/', $file))
-					$this->addJS($this->getThemeDir().'js/autoload/'.$file);
-		// Automatically add css files from css/autoload directory in the template
-		if (@filemtime($this->getThemeDir().'css/autoload/'))
-			foreach (scandir($this->getThemeDir().'css/autoload', 0) as $file)
-				if (preg_match('/^[^.].*\.css$/', $file))
-					$this->addCSS($this->getThemeDir().'css/autoload/'.$file);
 
 		if (Tools::isSubmit('live_edit') && Tools::getValue('ad') && Tools::getAdminToken('AdminModulesPositions'.(int)Tab::getIdFromClassName('AdminModulesPositions').(int)Tools::getValue('id_employee')))
 		{
 			$this->addJqueryUI('ui.sortable');
 			$this->addjqueryPlugin('fancybox');
 			$this->addJS(_PS_JS_DIR_.'hookLiveEdit.js');
+			$this->addCSS(_PS_CSS_DIR_.'jquery.fancybox-1.3.4.css', 'all'); // @TODO
 		}
-
-		if (Configuration::get('PS_QUICK_VIEW'))
-			$this->addjqueryPlugin('fancybox');
-
-		if (Configuration::get('PS_COMPARATOR_MAX_ITEM') > 0)
-			$this->addJS(_THEME_JS_DIR_.'products-comparison.js');
+		if ($this->context->language->is_rtl)
+			$this->addCSS(_THEME_CSS_DIR_.'rtl.css');
 
 		// Execute Hook FrontController SetMedia
 		Hook::exec('actionFrontControllerSetMedia', array());
@@ -814,24 +770,14 @@ class FrontControllerCore extends Controller
 			'PS_SHOP_NAME' => Configuration::get('PS_SHOP_NAME'),
 			'PS_ALLOW_MOBILE_DEVICE' => isset($_SERVER['HTTP_USER_AGENT']) && (bool)Configuration::get('PS_ALLOW_MOBILE_DEVICE') && @filemtime(_PS_THEME_MOBILE_DIR_)
 		));
-		//RTL support
-		//rtl.css overrides theme css files for rtl
-		//iso_code.css overrides default font for every language (optional)
-		if ($this->context->language->is_rtl)
-		{
-			$this->addCSS(_THEME_CSS_DIR_.'rtl.css');
-			$this->addCSS(_THEME_CSS_DIR_.$this->context->language->iso_code.'.css');
-		}
 
 	}
 	
 	public function checkLiveEditAccess()
 	{
-		if (!Tools::isSubmit('live_edit') || !Tools::getValue('ad') || !Tools::getValue('liveToken'))
-			return false;
-		if (Tools::getValue('liveToken') != Tools::getAdminToken('AdminModulesPositions'.(int)Tab::getIdFromClassName('AdminModulesPositions').(int)Tools::getValue('id_employee')))
-			return false;
-		return is_dir(_PS_CORE_DIR_.DIRECTORY_SEPARATOR.Tools::getValue('ad'));
+		$live_token = Tools::getAdminToken('AdminModulesPositions'.(int)Tab::getIdFromClassName('AdminModulesPositions').(int)Tools::getValue('id_employee'));
+		$ad = Tools::getValue('ad');
+		return Tools::isSubmit('live_edit') && $ad && Tools::getValue('liveToken') == $live_token && is_dir(_PS_ROOT_DIR_.DIRECTORY_SEPARATOR.$ad);
 	}
 	
 	public function getLiveEditFooter()
@@ -860,7 +806,7 @@ class FrontControllerCore extends Controller
 		// 'orderwaydefault' => Tools::getProductsOrder('way'),
 
 		$stock_management = Configuration::get('PS_STOCK_MANAGEMENT') ? true : false; // no display quantity order if stock management disabled
-		$order_by_values = array(0 => 'name', 1 => 'price', 2 => 'date_add', 3 => 'date_upd', 4 => 'position', 5 => 'manufacturer_name', 6 => 'quantity', 7 => 'reference');
+		$order_by_values = array(0 => 'name', 1 => 'price', 2 => 'date_add', 3 => 'date_upd', 4 => 'position', 5 => 'manufacturer_name', 6 => 'quantity');
 		$order_way_values = array(0 => 'asc', 1 => 'desc');
 		$this->orderBy = Tools::strtolower(Tools::getValue('orderby', $order_by_values[(int)Configuration::get('PS_PRODUCTS_ORDER_BY')]));
 		$this->orderWay = Tools::strtolower(Tools::getValue('orderway', $order_way_values[(int)Configuration::get('PS_PRODUCTS_ORDER_WAY')]));
@@ -878,54 +824,48 @@ class FrontControllerCore extends Controller
 			'stock_management' => (int)$stock_management));
 	}
 
-	public function pagination($total_products = null)
+	public function pagination($nbProducts = 10)
 	{
 		if (!self::$initialized)
 			$this->init();
 		elseif (!$this->context)
 			$this->context = Context::getContext();
 
-		// Retrieve the default number of products per page and the other available selections
-		$default_products_per_page = max(1, (int)Configuration::get('PS_PRODUCTS_PER_PAGE'));
-		$nArray = array($default_products_per_page, $default_products_per_page * 2, $default_products_per_page * 5);
+		$nArray = (int)Configuration::get('PS_PRODUCTS_PER_PAGE') != 10 ? array((int)Configuration::get('PS_PRODUCTS_PER_PAGE'), 10, 20, 50) : array(10, 20, 50);
+		// Clean duplicate values
+		$nArray = array_unique($nArray);
+		asort($nArray);
+		$this->n = abs((int)(Tools::getValue('n', ((isset($this->context->cookie->nb_item_per_page) && $this->context->cookie->nb_item_per_page >= 10) ? $this->context->cookie->nb_item_per_page : (int)Configuration::get('PS_PRODUCTS_PER_PAGE')))));
+		$this->p = abs((int)Tools::getValue('p', 1));
 
-		if ((int)Tools::getValue('n') && (int)$total_products > 0)
-			$nArray[] = $total_products;
-		// Retrieve the current number of products per page (either the default, the GET parameter or the one in the cookie)
-		$this->n = $default_products_per_page;
-		if (isset($this->context->cookie->nb_item_per_page) && in_array($this->context->cookie->nb_item_per_page, $nArray))
-				$this->n = (int)$this->context->cookie->nb_item_per_page;
-			
-		if ((int)Tools::getValue('n') && in_array((int)Tools::getValue('n'), $nArray))
-			$this->n = (int)Tools::getValue('n');
-
-		// Retrieve the page number (either the GET parameter or the first page)
-		$this->p = (int)Tools::getValue('p', 1);
-		// If the parameter is not correct then redirect (do not merge with the previous line, the redirect is required in order to avoid duplicate content)
-		if (!is_numeric($this->p) || $this->p < 1)
+		if (!is_numeric(Tools::getValue('p', 1)) || Tools::getValue('p', 1) < 0)
 			Tools::redirect(self::$link->getPaginationLink(false, false, $this->n, false, 1, false));
 
-		// Remove the page parameter in order to get a clean URL for the pagination template
-		$current_url = preg_replace('/(\?)?(&amp;)?p=\d+/', '$1', Tools::htmlentitiesUTF8($_SERVER['REQUEST_URI']));
-
-		if ($this->n != $default_products_per_page || isset($this->context->cookie->nb_item_per_page))
-			$this->context->cookie->nb_item_per_page = $this->n;
-
-		$pages_nb = ceil($total_products / (int)$this->n);
-		if ($this->p > $pages_nb && $total_products != 0)
-			Tools::redirect(self::$link->getPaginationLink(false, false, $this->n, false, $pages_nb, false));
+		$current_url = tools::htmlentitiesUTF8($_SERVER['REQUEST_URI']);
+		//delete parameter page
+		$current_url = preg_replace('/(\?)?(&amp;)?p=\d+/', '$1', $current_url);
 
 		$range = 2; /* how many pages around page selected */
+
+		if ($this->p < 0)
+			$this->p = 0;
+
+		if (isset($this->context->cookie->nb_item_per_page) && $this->n != $this->context->cookie->nb_item_per_page && in_array($this->n, $nArray))
+			$this->context->cookie->nb_item_per_page = $this->n;
+
+		$pages_nb = ceil($nbProducts / (int)$this->n);
+		if ($this->p > $pages_nb && $nbProducts <> 0)
+			Tools::redirect(self::$link->getPaginationLink(false, false, $this->n, false, $pages_nb, false));
+
 		$start = (int)($this->p - $range);
 		if ($start < 1)
 			$start = 1;
 		$stop = (int)($this->p + $range);
 		if ($stop > $pages_nb)
 			$stop = (int)$pages_nb;
-
-		$this->context->smarty->assign(array(
-			'nb_products' => $total_products,
-			'products_per_page' => $this->n,
+		$this->context->smarty->assign('nb_products', $nbProducts);
+		$pagination_infos = array(
+			'products_per_page' => (int)Configuration::get('PS_PRODUCTS_PER_PAGE'),
 			'pages_nb' => $pages_nb,
 			'p' => $this->p,
 			'n' => $this->n,
@@ -934,7 +874,8 @@ class FrontControllerCore extends Controller
 			'start' => $start,
 			'stop' => $stop,
 			'current_url' => $current_url
-		));
+		);
+		$this->context->smarty->assign($pagination_infos);
 	}
 
 	public static function getCurrentCustomerGroups()
@@ -969,7 +910,7 @@ class FrontControllerCore extends Controller
 		$ips = array_map('trim', $ips);
 		if (is_array($ips) && count($ips))
 			foreach ($ips as $ip)
-				if (!empty($ip) && preg_match('/^'.$ip.'.*/', $user_ip))
+				if (!empty($ip) && strpos($user_ip, $ip) === 0)
 					$allowed = true;
 		return $allowed;
 	}
@@ -988,77 +929,27 @@ class FrontControllerCore extends Controller
 		return (strcasecmp(Tools::getToken(false), Tools::getValue('token')) == 0);
 	}
 
-	public function addMedia($media_uri, $css_media_type = null, $offset = null, $remove = false)
-	{
-		if (!is_array($media_uri))
-		{
-			if ($css_media_type)
-				$media_uri = array($media_uri => $css_media_type);
-			else
-				$media_uri = array($media_uri);
-		}
-
-		$list_uri = array();
-		foreach ($media_uri as $file => $media)
-		{
-			if (!preg_match('/^http(s?):\/\//i', $media))
-			{
-				$different = 0;
-                $different_css = 0;
-				$type = 'css';
-				if (!$css_media_type)
-				{
-					$type = 'js';
-					$file = $media;
-				}
-				$override_path = str_replace(__PS_BASE_URI__.'modules/', _PS_ROOT_DIR_.'/themes/'._THEME_NAME_.'/'.$type.'/modules/', $file, $different);
-
-                $override_path_css = str_replace(basename ($file), $type.'/'.basename ($file), str_replace(__PS_BASE_URI__, _PS_ROOT_DIR_.'/', $file), $different_css );
-
-				if ($different && file_exists($override_path))
-					$file = str_replace(__PS_BASE_URI__.'modules/', __PS_BASE_URI__.'themes/'._THEME_NAME_.'/'.$type.'/modules/', $file, $different);
-                elseif ($different_css && file_exists($override_path_css))
-                    $file = $override_path_css;
-
-				if ($css_media_type)
-					$list_uri[$file] = $media;
-				else
-					$list_uri[] = $file;
-			}
-			else
-				$list_uri[$file] = $media;
-		}
-
-		if ($remove)
-		{
-			if ($css_media_type)
-				return parent::removeCSS($list_uri, $css_media_type);
-			return parent::removeJS($list_uri);
-		}
-
-		if ($css_media_type)
-			return parent::addCSS($list_uri, $css_media_type, $offset);
-		return parent::addJS($list_uri);
-	}
-
-	public function removeMedia($media_uri, $css_media_type = null)
-	{
-		Frontcontroller::addMedia($media_uri, $css_media_type, null, true);
-	}
-
 	/**
 	 * Add one or several CSS for front, checking if css files are overriden in theme/css/modules/ directory
 	 *
 	 * @see Controller::addCSS()
 	 */
-	public function addCSS($css_uri, $css_media_type = 'all', $offset = null)
+	public function addCSS($css_uri, $css_media_type = 'all')
 	{
-		return Frontcontroller::addMedia($css_uri, $css_media_type, $offset = null);
-	}
+		if (!is_array($css_uri))
+			$css_uri = array($css_uri => $css_media_type);
 
-	public function removeCSS($css_uri, $css_media_type = 'all')
-	{
-		return Frontcontroller::removeMedia($css_uri, $css_media_type);
+		$list_uri = array();
+		foreach ($css_uri as $file => $media)
+		{
+			$different = 0;
+			$override_path = str_replace(__PS_BASE_URI__.'modules/', _PS_ROOT_DIR_.'/themes/'._THEME_NAME_.'/css/modules/', $file, $different);
+			if ($different && file_exists($override_path))
+				$file = str_replace(__PS_BASE_URI__.'modules/', __PS_BASE_URI__.'themes/'._THEME_NAME_.'/css/modules/', $file, $different);
+			$list_uri[$file] = $media;
+		}
+
+		return parent::addCSS($list_uri, $css_media_type);
 	}
 
 	/**
@@ -1068,12 +959,21 @@ class FrontControllerCore extends Controller
 	 */
 	public function addJS($js_uri)
 	{
-		return Frontcontroller::addMedia($js_uri);
-	}
+		if (!is_array($js_uri))
+			$js_uri = array($js_uri);
 
-	public function removeJS($js_uri)
-	{
-		return Frontcontroller::removeMedia($js_uri);
+		foreach ($js_uri as $key => &$file)
+		{
+			if (!preg_match('/^http(s?):\/\//i', $file))
+			{
+				$different = 0;
+				$override_path = str_replace(__PS_BASE_URI__.'modules/', _PS_ROOT_DIR_.'/themes/'._THEME_NAME_.'/js/modules/', $file, $different);
+				if ($different && file_exists($override_path))
+					$file = str_replace(__PS_BASE_URI__.'modules/', __PS_BASE_URI__.'themes/'._THEME_NAME_.'/js/modules/', $file, $different);
+			}
+		}
+
+		return parent::addJS($js_uri);
 	}
 
 	protected function recoverCart()
@@ -1086,13 +986,10 @@ class FrontControllerCore extends Controller
 				$customer = new Customer((int)$cart->id_customer);
 				if (Validate::isLoadedObject($customer))
 				{
-					$customer->logged = 1;
-					$this->context->customer = $customer;
 					$this->context->cookie->id_customer = (int)$customer->id;
 					$this->context->cookie->customer_lastname = $customer->lastname;
 					$this->context->cookie->customer_firstname = $customer->firstname;
 					$this->context->cookie->logged = 1;
-					$this->context->cookie->check_cgv = 1;
 					$this->context->cookie->is_guest = $customer->isGuest();
 					$this->context->cookie->passwd = $customer->passwd;
 					$this->context->cookie->email = $customer->email;
@@ -1110,7 +1007,7 @@ class FrontControllerCore extends Controller
 	 */
 	public function setTemplate($default_template)
 	{
-		if ($this->useMobileTheme())
+		if ($this->context->getMobileDevice() != false)
 			$this->setMobileTemplate($default_template);
 		else
 		{
@@ -1133,28 +1030,7 @@ class FrontControllerCore extends Controller
 	{
 		return Hook::exec('DisplayOverrideTemplate', array('controller' => $this));
 	}
-	
-	protected function useMobileTheme()
-	{
-		static $use_mobile_template = null;
 
-		// The mobile theme must have a layout to be used
-		if ($use_mobile_template === null)
-			$use_mobile_template = ($this->context->getMobileDevice() && file_exists(_PS_THEME_MOBILE_DIR_.'layout.tpl'));
-
-		return $use_mobile_template;
-	}
-	
-	protected function getThemeDir()
-	{
-		return $this->useMobileTheme() ? _PS_THEME_MOBILE_DIR_ : _PS_THEME_DIR_;
-	}
-	
-	protected function getOverrideThemeDir()
-	{
-		return $this->useMobileTheme() ? _PS_THEME_MOBILE_OVERRIDE_DIR_ : _PS_THEME_OVERRIDE_DIR_;
-	}
-	
 	/**
 	 * Returns the layout corresponding to the current page by using the override system
 	 * Ex:
@@ -1169,11 +1045,16 @@ class FrontControllerCore extends Controller
 	 */
 	public function getLayout()
 	{
-		$entity = $this->php_self;
+		$entity = Tools::getValue('controller');
 		$id_item = (int)Tools::getValue('id_'.$entity);
 
-		$layout_dir = $this->getThemeDir();
-		$layout_override_dir  = $this->getOverrideThemeDir();
+		$layout_dir = _PS_THEME_DIR_;
+		$layout_override_dir  = _PS_THEME_OVERRIDE_DIR_;
+		if ($this->context->getMobileDevice() != false)
+		{
+			$layout_dir = _PS_THEME_MOBILE_DIR_;
+			$layout_override_dir = _PS_THEME_MOBILE_OVERRIDE_DIR_;
+		}
 
 		$layout = false;
 		if ($entity)
@@ -1190,28 +1071,6 @@ class FrontControllerCore extends Controller
 		return $layout;
 	}
 
-	public function getTemplatePath($template)
-	{
-		if (!$this->useMobileTheme())
-			return $template;
-
-		$tpl_file = basename($template);
-		$dirname = dirname($template).(substr(dirname($template), -1, 1) == '/' ? '' : '/');
-
-		if ($dirname == _PS_THEME_DIR_)
-		{
-			if (file_exists(_PS_THEME_MOBILE_DIR_.$tpl_file))
-				$template = _PS_THEME_MOBILE_DIR_.$tpl_file;
-		}
-		elseif ($dirname == _PS_THEME_MOBILE_DIR_)
-		{
-			if (!file_exists(_PS_THEME_MOBILE_DIR_.$tpl_file) && file_exists(_PS_THEME_DIR_.$tpl_file))
-				$template = _PS_THEME_DIR_.$tpl_file;
-		}
-		
-		return $template;
-	}
-	
 	/**
 	 * This checks if the template set is available for mobile themes,
 	 * otherwise the front template is choosen.
@@ -1227,16 +1086,27 @@ class FrontControllerCore extends Controller
 		$this->context->smarty->assign('display_manufacturer_link', (bool)$blockmanufacturer->active);
 		$this->context->smarty->assign('display_supplier_link', (bool)$blocksupplier->active);
 		$this->context->smarty->assign('PS_DISPLAY_SUPPLIERS', Configuration::get('PS_DISPLAY_SUPPLIERS'));
-		$this->context->smarty->assign('PS_DISPLAY_BEST_SELLERS', Configuration::get('PS_DISPLAY_BEST_SELLERS'));
 		$this->context->smarty->assign('display_store', Configuration::get('PS_STORES_DISPLAY_SITEMAP'));
 		$this->context->smarty->assign('conditions', Configuration::get('PS_CONDITIONS'));
 		$this->context->smarty->assign('id_cgv', Configuration::get('PS_CONDITIONS_CMS_ID'));
 		$this->context->smarty->assign('PS_SHOP_NAME', Configuration::get('PS_SHOP_NAME'));
 
-		$template = $this->getTemplatePath($template);
+		$mobile_template = '';
+		$tpl_file = basename($template);
+		$dirname = dirname($template).(substr(dirname($template), -1, 1) == '/' ? '' : '/');
 
+		if ($dirname == _PS_THEME_DIR_)
+		{
+			if (file_exists(_PS_THEME_MOBILE_DIR_.$tpl_file))
+				$template = _PS_THEME_MOBILE_DIR_.$tpl_file;
+		}
+		elseif ($dirname == _PS_THEME_MOBILE_DIR_)
+		{
+			if (!file_exists(_PS_THEME_MOBILE_DIR_.$tpl_file) && file_exists(_PS_THEME_DIR_.$tpl_file))
+				$template = _PS_THEME_DIR_.$tpl_file;
+		}
 		$assign = array();
-		$assign['tpl_file'] = basename($template, '.tpl');
+		$assign['tpl_file'] = basename($tpl_file, '.tpl');
 		if (isset($this->php_self))
 			$assign['controller_name'] = $this->php_self;
 
@@ -1254,11 +1124,12 @@ class FrontControllerCore extends Controller
 	public function initLogoAndFavicon()
 	{
 		$mobile_device = $this->context->getMobileDevice();
+		$logo = _PS_IMG_.Configuration::get('PS_LOGO').'?'.Configuration::get('PS_IMG_UPDATE_TIME');
 		
 		if ($mobile_device && Configuration::get('PS_LOGO_MOBILE'))
-			$logo = self::$link->getMediaLink(_PS_IMG_.Configuration::get('PS_LOGO_MOBILE').'?'.Configuration::get('PS_IMG_UPDATE_TIME'));
+			$logo = _PS_IMG_.Configuration::get('PS_LOGO_MOBILE').'?'.Configuration::get('PS_IMG_UPDATE_TIME');
 		else
-			$logo = self::$link->getMediaLink(_PS_IMG_.Configuration::get('PS_LOGO'));
+			$logo = _PS_IMG_.Configuration::get('PS_LOGO').'?'.Configuration::get('PS_IMG_UPDATE_TIME');
 		
 		return array(
  				'favicon_url' => _PS_IMG_.Configuration::get('PS_FAVICON'),
@@ -1266,47 +1137,5 @@ class FrontControllerCore extends Controller
 	            'logo_image_height' => ($mobile_device == false ? Configuration::get('SHOP_LOGO_HEIGHT') : Configuration::get('SHOP_LOGO_MOBILE_HEIGHT')),
 	            'logo_url' => $logo
   				);
-	}
-	
-	public function addColorsToProductList(&$products)
-	{
-		if (!is_array($products) || !count($products) || !file_exists(_PS_THEME_DIR_.'product-list-colors.tpl'))
-			return;
-
-		$products_need_cache = array();
-		foreach ($products as &$product)
-			if (!$this->isCached(_PS_THEME_DIR_.'product-list-colors.tpl', $this->getColorsListCacheId($product['id_product'])))
-				$products_need_cache[] = (int)$product['id_product']; 
-		
-		unset($product);
-
-		$colors = false;
-		if (count($products_need_cache))
-			$colors = Product::getAttributesColorList($products_need_cache);
-
-		Tools::enableCache();
-		foreach ($products as &$product)
-		{
-			$tpl = $this->context->smarty->createTemplate(_PS_THEME_DIR_.'product-list-colors.tpl');
-			if (isset($colors[$product['id_product']]))
-					$tpl->assign(array(
-						'id_product' => $product['id_product'],
-						'colors_list' => $colors[$product['id_product']],
-						'link' => Context::getContext()->link,
-						'img_col_dir' => _THEME_COL_DIR_,
-						'col_img_dir' => _PS_COL_IMG_DIR_
-					));
-
-			if (!in_array($product['id_product'], $products_need_cache) || isset($colors[$product['id_product']]))
-				$product['color_list'] = $tpl->fetch(_PS_THEME_DIR_.'product-list-colors.tpl', $this->getColorsListCacheId($product['id_product']));
-			else
-				$product['color_list'] = '';
-		}
-		Tools::restoreCacheSettings();
-	}
-	
-	protected function getColorsListCacheId($id_product)
-	{
-		return Product::getColorsListCacheId($id_product);
 	}
 }

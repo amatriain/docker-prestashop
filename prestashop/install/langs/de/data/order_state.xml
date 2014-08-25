@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <entity_order_state>
   <order_state id="Awaiting_cheque_payment">
-    <name>Warten auf Scheckzahlung</name>
+    <name>Scheckzahlung wird erwartet</name>
     <template>cheque</template>
   </order_state>
   <order_state id="Payment_accepted">
@@ -9,23 +9,23 @@
     <template>payment</template>
   </order_state>
   <order_state id="Preparation_in_progress">
-    <name>Bestellung in Bearbeitung</name>
+    <name>Bestellung eingegangen</name>
     <template>preparation</template>
   </order_state>
   <order_state id="Shipped">
-    <name>Bestellung versandt</name>
+    <name>Versendet</name>
     <template>shipped</template>
   </order_state>
   <order_state id="Delivered">
-    <name>Bestellung ausgeliefert</name>
+    <name>Erfolgreich abgeschlossen</name>
     <template/>
   </order_state>
   <order_state id="Canceled">
-    <name>Bestellung storniert</name>
+    <name>Storniert</name>
     <template>order_canceled</template>
   </order_state>
   <order_state id="Refund">
-    <name>Zahlung erstattet</name>
+    <name>Erstattet</name>
     <template>refund</template>
   </order_state>
   <order_state id="Payment_error">
@@ -33,11 +33,11 @@
     <template>payment_error</template>
   </order_state>
   <order_state id="On_backorder">
-    <name>Artikel nicht auf Lager</name>
+    <name>Artikel erwartet</name>
     <template>outofstock</template>
   </order_state>
   <order_state id="Awaiting_bank_wire_payment">
-    <name>Warten auf Zahlungseingang von Bank</name>
+    <name>Warten auf Zahlungseingang</name>
     <template>bankwire</template>
   </order_state>
   <order_state id="Awaiting_PayPal_payment">
@@ -45,7 +45,7 @@
     <template/>
   </order_state>
   <order_state id="Payment_remotely_accepted">
-    <name>Zahlung ausserhalb von PrestaShop eingegangen</name>
+    <name>Payment Anmeldung erfolgreich</name>
     <template>payment</template>
   </order_state>
 </entity_order_state>

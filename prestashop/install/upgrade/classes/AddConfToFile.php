@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -58,12 +58,8 @@ class	AddConfToFile
 	
 	public function writeInFile($name, $data)
 	{
-		if ($name == '_PS_VERSION_' && strpos($this->file, 'settings.inc') !== false)
-			$string = 'if (!defined(\''.$name.'\'))'."\n\t".'define(\''.$name.'\', \''.$this->checkString($data).'\');'."\n";
-		else
-			$string = 'define(\''.$name.'\', \''.$this->checkString($data).'\');'."\n";
-
-		if (!$res = @fwrite($this->fd, $string))
+		if (!$res = @fwrite($this->fd,
+			'define(\''.$name.'\', \''.$this->checkString($data).'\');'."\n"))
 		{
 			$this->error = 6;
 			return false;

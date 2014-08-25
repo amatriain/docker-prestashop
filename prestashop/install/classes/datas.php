@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -77,12 +77,6 @@ class Datas
 			'validate' => 'isInt',
 			'help' => 'Drop existing tables' 
 		),
-		'database_create' => array(
-			'name' => 'db_create',
-			'default' => '0',
-			'validate' => 'isInt',
-			'help' => 'Create the database if not exist' 
-		),
 		'database_prefix' => array(
 			'name' => 'prefix',
 			'default' => 'ps_',
@@ -139,11 +133,6 @@ class Datas
 			'default' => 1,
 			'help' => 'get news from PrestaShop',
 		),
-		'send_email' => array(
-			'name' => 'send_email',
-			'default' => 1,
-			'help' => 'send an email to the administrator after installation',
-		),
 	);
 
 	protected $datas = array();
@@ -186,9 +175,6 @@ class Datas
 
 			if ($res[1] == 'license' && !isset($res[2]))
 				$res[2] = 1;
-			elseif (!isset($res[2]))
-				continue;
-
 			$args_ok[$res[1]] = $res[2];
 		}
 

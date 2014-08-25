@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,7 +33,7 @@ class BlockCurrencies extends Module
 	{
 		$this->name = 'blockcurrencies';
 		$this->tab = 'front_office_features';
-		$this->version = '0.3.1';
+		$this->version = 0.1;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -41,12 +41,11 @@ class BlockCurrencies extends Module
 
 		$this->displayName = $this->l('Currency block');
 		$this->description = $this->l('Adds a block allowing customers to choose their preferred shopping currency.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
 	}
 
 	public function install()
 	{
-		return parent::install() && $this->registerHook('displayNav') && $this->registerHook('displayHeader');
+		return parent::install() && $this->registerHook('top') && $this->registerHook('header');
 	}
 
 	private function _prepareHook($params)
@@ -54,7 +53,7 @@ class BlockCurrencies extends Module
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return false;
 
-		if (!Currency::isMultiCurrencyActivated())
+		if (!count(Currency::getCurrencies()))
 			return false;
 
 		$this->smarty->assign('blockcurrencies_sign', $this->context->currency->sign);
@@ -68,18 +67,13 @@ class BlockCurrencies extends Module
 	* @param array $params Parameters
 	* @return string Content
 	*/
-	public function hookDisplayTop($params)
+	public function hookTop($params)
 	{
 		if ($this->_prepareHook($params))
 			return $this->display(__FILE__, 'blockcurrencies.tpl');
 	}
 
-	public function hookDisplayNav($params)
-	{
-			return $this->hookDisplayTop($params);
-	}
-
-	public function hookDisplayHeader($params)
+	public function hookHeader($params)
 	{
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return;

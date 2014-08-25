@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,7 +30,6 @@ class AdminZonesControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'zone';
 		$this->className = 'Zone';
 	 	$this->lang = false;
@@ -39,41 +38,28 @@ class AdminZonesControllerCore extends AdminController
 			'id_zone' => array(
 				'title' => $this->l('ID'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 25
 			),
 			'name' => array(
 				'title' => $this->l('Zone'),
+				'width' => 'auto'
 			),
 			'active' => array(
 				'title' => $this->l('Enabled'),
+				'width' => '70',
 				'align' => 'center',
 				'active' => 'status',
 				'type' => 'bool',
-				'orderby' => false,
-				'class' => 'fixed-width-sm'
+				'orderby' => false
 			)
 		);
 		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
+			'delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')),
+			'enableSelection' => array('text' => $this->l('Enable selection')),
+			'disableSelection' => array('text' => $this->l('Disable selection'))
+			);
 			
 		parent::__construct();
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		if (empty($this->display))
-			$this->page_header_toolbar_btn['new_zone'] = array(
-				'href' => self::$currentIndex.'&addzone&token='.$this->token,
-				'desc' => $this->l('Add new zone', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-
-		parent::initPageHeaderToolbar();
 	}
 
 	public function renderList()
@@ -89,21 +75,23 @@ class AdminZonesControllerCore extends AdminController
 		$this->fields_form = array(
 			'legend' => array(
 				'title' => $this->l('Zones'),
-				'icon' => 'icon-globe'
+				'image' => '../img/admin/world.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
+					'size' => 33,
 					'required' => true,
-					'hint' => $this->l('Zone name (e.g. Africa, West Coast, Neighboring Countries).'),
+					'desc' => $this->l('Zone name (e.g. Africa, West Coast, Neighboring Countries)'),
 				),
 				array(
-					'type' => 'switch',
-					'label' => $this->l('Active'),
+					'type' => 'radio',
+					'label' => $this->l('Active:'),
 					'name' => 'active',
 					'required' => false,
+					'class' => 't',
 					'is_bool' => true,
 					'values' => array(
 						array(
@@ -117,7 +105,7 @@ class AdminZonesControllerCore extends AdminController
 							'label' => $this->l('Disabled')
 						)
 					),
-					'hint' => $this->l('Allow or disallow shipping to this zone.')
+					'desc' => $this->l('Allow or disallow shipping to this zone')
 				)
 			)
 		);
@@ -126,15 +114,18 @@ class AdminZonesControllerCore extends AdminController
 		{
 			$this->fields_form['input'][] = array(
 				'type' => 'shop',
-				'label' => $this->l('Shop association'),
+				'label' => $this->l('Group shop association:'),
 				'name' => 'checkBoxShopAsso',
 			);
 		}
 
 		$this->fields_form['submit'] = array(
-			'title' => $this->l('Save'),
+			'title' => $this->l('Save   '),
+			'class' => 'button'
 		);
 
 		return parent::renderForm();
 	}
 }
+
+

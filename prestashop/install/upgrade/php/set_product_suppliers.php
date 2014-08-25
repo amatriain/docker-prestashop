@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -46,8 +46,8 @@ function set_product_suppliers()
 				`id_currency`)
 			VALUES
 			("'.(int)$row['id_product'].'", "0", "'.(int)$row['id_supplier'].'", 
-			"'.pSQL($row['supplier_reference']).'", "'.(int)$row['wholesale_price'].'", 
-				"'.(int)$ps_currency_default.'")
+			"'.(int)$row['supplier_reference'].'", "'.(int)$row['wholesale_price'].'", 
+				"'.(int)$ps_currency_default.'"
 		');
 
 		//Try to get product attribues
@@ -68,7 +68,7 @@ function set_product_suppliers()
 				`product_supplier_price_te`, `id_currency`)
 				VALUES
 				("'.(int)$row['id_product'].'", "'.(int)$attribute['id_product_attribute'].'", 
-				"'.(int)$row['id_supplier'].'", "'.pSQL($attribute['supplier_reference']).'", 
+				"'.(int)$row['id_supplier'].'", "'.(int)$attribute['supplier_reference'].'", 
 				"'.(int)$attribute['wholesale_price'].'", "'.(int)$ps_currency_default.'")
 			');
 		}

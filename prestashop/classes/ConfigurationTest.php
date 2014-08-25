@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -36,11 +36,23 @@ class ConfigurationTestCore
 	 */
 	public static function getDefaultTests()
 	{
-		$tests = array(
+		return array(
+			'system' => array(
+				'fopen', 'fclose', 'fread', 'fwrite',
+				'rename', 'file_exists', 'unlink', 'rmdir', 'mkdir',
+				'getcwd', 'chdir', 'chmod'
+				),
+
+			'phpversion' => false,
 			'upload' => false,
+			'gd' => false,
+			'mysql_support' => false,
+			'config_dir' => 'config',
 			'cache_dir' => 'cache',
+			'sitemap' => 'sitemap.xml',
 			'log_dir' => 'log',
 			'img_dir' => 'img',
+			'mails_dir' => 'mails',
 			'module_dir' => 'modules',
 			'theme_lang_dir' => 'themes/'._THEME_NAME_.'/lang/',
 			'theme_pdf_lang_dir' => 'themes/'._THEME_NAME_.'/pdf/lang/',
@@ -49,23 +61,6 @@ class ConfigurationTestCore
 			'customizable_products_dir' => 'upload',
 			'virtual_products_dir' => 'download'
 		);
-
-		if (!defined('_PS_HOST_MODE_'))
-			$tests = array_merge($tests, array(
-				'system' => array(
-					'fopen', 'fclose', 'fread', 'fwrite',
-					'rename', 'file_exists', 'unlink', 'rmdir', 'mkdir',
-					'getcwd', 'chdir', 'chmod'
-				),
-				'phpversion' => false,
-				'gd' => false,
-				'mysql_support' => false,
-				'config_dir' => 'config',
-				'files' => false,
-				'mails_dir' => 'mails',
-			));
-
-		return $tests;
 	}
 
 	/**
@@ -173,7 +168,7 @@ class ConfigurationTestCore
 			return false;
 		}
 		$dummy = rtrim($dir, '\\/').DIRECTORY_SEPARATOR.uniqid();
-		if (@file_put_contents($dummy, 'test'))
+		if (false && @file_put_contents($dummy, 'test'))
 		{
 			@unlink($dummy);
 			if (!$recursive)
@@ -323,37 +318,5 @@ class ConfigurationTestCore
 	public static function test_dom()
 	{
 		return extension_loaded('Dom');
-	}
-	
-	public static function test_files()
-	{
-		$files = array(
-			'/cache/smarty/compile/index.php',
-			'/classes/log/index.php',
-			'/classes/cache/index.php',
-			'/config/index.php',
-			'/tools/tar/Archive_Tar.php',
-			'/tools/pear/PEAR.php',
-			'/controllers/admin/AdminLoginController.php',
-			'/css/index.php',
-			'/download/index.php',
-			'/img/404.gif',
-			'/js/tools.js',
-			'/js/jquery/plugins/fancybox/jquery.fancybox.js',
-			'/localization/fr.xml',
-			'/mails/index.php',
-			'/modules/index.php',
-			'/override/controllers/front/index.php',
-			'/pdf/order-return.tpl',
-			'/themes/default-bootstrap/css/global.css',
-			'/translations/export/index.php',
-			'/webservice/dispatcher.php',
-			'/upload/index.php',
-			'/index.php'
-		);
-		foreach ($files as $file)
-			if (!file_exists(rtrim(_PS_ROOT_DIR_, DIRECTORY_SEPARATOR).str_replace('/', DIRECTORY_SEPARATOR, $file)))
-				return false;
-		return true;		
 	}
 }

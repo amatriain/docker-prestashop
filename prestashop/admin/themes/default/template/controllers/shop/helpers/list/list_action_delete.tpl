@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,15 +18,15 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
-<a href="{$href|escape:'html':'UTF-8'}" class="delete" title="{$action|escape:'html':'UTF-8'}"
+<a href="{$href}" class="delete"
 	{if in_array($id_shop, $shops_having_dependencies)}
-		onclick="jAlert('{l s='You cannot delete this shop\'s (customer and/or order dependency)' js=1}'); return false;"
+		onclick="jAlert('{l s='You cannot delete this shop\'s (customer and/or order dependency)'}'); return false;"
 	{elseif isset($confirm)}
-		onclick="if (confirm('{$confirm}')){ldelim}return true;{rdelim}else{ldelim}event.stopPropagation(); event.preventDefault();{rdelim};"
-	{/if}>
-	<i class="icon-trash"></i> {$action|escape:'html':'UTF-8'}
+		onclick="if (confirm('{$confirm}')){ return true; }else{ event.stopPropagation(); event.preventDefault();};"
+	{/if} title="{$action}">
+	<img src="../img/admin/delete.gif" alt="{$action}" />
 </a>

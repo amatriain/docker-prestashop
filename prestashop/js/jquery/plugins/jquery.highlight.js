@@ -1,6 +1,6 @@
 /*
 
-highlight v4
+highlight v3
 
 Highlights arbitrary terms.
 
@@ -37,9 +37,9 @@ jQuery.fn.highlight = function(pat) {
   }
   return skip;
  }
- return this.length && pat && pat.length ? this.each(function() {
+ return this.each(function() {
   innerHighlight(this, pat.toUpperCase());
- }) : this;
+ });
 };
 
 jQuery.fn.removeHighlight = function() {

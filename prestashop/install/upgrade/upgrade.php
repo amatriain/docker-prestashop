@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -34,8 +34,8 @@ $engineType = 'ENGINE_TYPE';
 // setting the memory limit to 128M only if current is lower
 $memory_limit = ini_get('memory_limit');
 if (substr($memory_limit,-1) != 'G'
-	AND ((substr($memory_limit,-1) == 'M' AND substr($memory_limit,0, -1) < 128)
-	OR is_numeric($memory_limit) AND (intval($memory_limit) < 131072) AND $memory_limit > 0)
+	AND ((substr($memory_limit,-1) == 'M' AND substr($memory_limit,0,-1) < 128)
+	OR is_numeric($memory_limit) AND (intval($memory_limit) < 131072))
 )
 	@ini_set('memory_limit','128M');
 
@@ -253,12 +253,12 @@ Cache::clean('*');
 
 Context::getContext()->shop = new Shop(1);
 Shop::setContext(Shop::CONTEXT_SHOP, 1);
-
+Configuration::loadConfiguration();
 if (!isset(Context::getContext()->language) || !Validate::isLoadedObject(Context::getContext()->language))
-	if ($id_lang = (int)getConfValue('PS_LANG_DEFAULT'))
+	if ($id_lang = (int)Configuration::get('PS_LANG_DEFAULT'))
 		Context::getContext()->language = new Language($id_lang);
 if (!isset(Context::getContext()->country) || !Validate::isLoadedObject(Context::getContext()->country))
-	if ($id_country = (int)getConfValue('PS_COUNTRY_DEFAULT'))
+	if ($id_country = (int)Configuration::get('PS_COUNTRY_DEFAULT'))
 		Context::getContext()->country = new Country((int)$id_country);
 
 Context::getContext()->cart = new Cart();
@@ -346,7 +346,7 @@ if (empty($fail_result))
 					if (strpos($phpString, '::') === false)
 					{
 						$func_name = str_replace($pattern[0], '', $php[0]);
-						require_once(_PS_INSTALLER_PHP_UPGRADE_DIR_.Tools::strtolower($func_name).'.php');
+						require_once(_PS_INSTALLER_PHP_UPGRADE_DIR_.$func_name.'.php');
 						$phpRes = call_user_func_array($func_name, $parameters);
 					}
 					/* Or an object method */
@@ -410,7 +410,7 @@ if (empty($fail_result))
 					unlink($dir.DIRECTORY_SEPARATOR.$file);
 
 	// delete cache filesystem if activated
-	$depth = getConfValue('PS_CACHEFS_DIRECTORY_DEPTH');
+	$depth = Configuration::get('PS_CACHEFS_DIRECTORY_DEPTH');
 	if (defined('_PS_CACHE_ENABLED_') && _PS_CACHE_ENABLED_  && $depth)
 	{
 		CacheFs::deleteCacheDirectory();
@@ -477,24 +477,4 @@ else
 				break;
 		}
 	}
-}
-function getConfValue($name)
-{
-	$full = version_compare('1.5.0.10', _PS_VERSION_) < 0;
-
-	$sql = 'SELECT IF(cl.`id_lang` IS NULL, c.`value`, cl.`value`) AS value
-			FROM `'._DB_PREFIX_.'configuration` c
-			LEFT JOIN `'._DB_PREFIX_.'configuration_lang` cl ON (c.`id_configuration` = cl.`id_configuration`)
-			WHERE c.`name` LIKE \''.pSQL($name).'\'';
-
-	if ($full)
-	{
-		$id_shop = Shop::getContextShopID(true);
-		$id_shop_group = Shop::getContextShopGroupID(true);
-		if ($id_shop)
-			$sql .= ' AND c.`id_shop` = '.(int)$id_shop;
-		if ($id_shop_group)
-			$sql .= ' AND c.`id_shop_group` = '.(int)$id_shop_group;
-	}
-	return Db::getInstance()->getValue($sql);
 }

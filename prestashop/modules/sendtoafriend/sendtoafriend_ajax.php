@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -27,33 +27,25 @@
 require_once(dirname(__FILE__).'/../../config/config.inc.php');
 require_once(dirname(__FILE__).'/../../init.php');
 include_once(dirname(__FILE__).'/sendtoafriend.php');
+include_once(dirname(__FILE__).'/../../classes/Product.php');
 
 $module = new SendToAFriend();
 
 if (Tools::getValue('action') == 'sendToMyFriend' && Tools::getValue('secure_key') == $module->secure_key)
 {
-		// Retrocompatibilty with old theme
-		if($friend = Tools::getValue('friend'))
+		$friend_infos = Tools::jsonDecode(Tools::getValue('friend'));
+		$friendName = "";
+		$friendMail = "";
+		$id_product = null;
+		foreach ($friend_infos as $entry)
 		{
-			$friend = Tools::jsonDecode($friend, true);
-
-			foreach ($friend as $key => $value)
-			{
-				if ($value['key'] == 'friend_name')
-					$friendName = $value['value'];
-				elseif ($value['key'] == 'friend_email')
-					$friendMail = $value['value'];
-				elseif ($value['key'] == 'id_product')
-					$id_product = $value['value'];
-			}
+			if ($entry->key == "friend_name")
+				$friendName = $entry->value;
+			else if ($entry->key == "friend_email")
+				$friendMail = $entry->value;
+			else if ($entry->key == "id_product")
+				$id_product = $entry->value;
 		}
-		else
-		{
-			$friendName = Tools::getValue('name');
-			$friendMail = Tools::getValue('email');
-			$id_product = Tools::getValue('id_product');
-		}
-
 		if (!$friendName || !$friendMail || !$id_product)
 			die('0');
 

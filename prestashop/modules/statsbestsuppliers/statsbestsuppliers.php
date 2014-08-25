@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -29,53 +29,55 @@ if (!defined('_PS_VERSION_'))
 
 class StatsBestSuppliers extends ModuleGrid
 {
-	private $html = null;
-	private $query = null;
-	private $columns = null;
-	private $default_sort_column = null;
-	private $default_sort_direction = null;
-	private $empty_message = null;
-	private $paging_message = null;
+	private $_html = null;
+	private $_query = null;
+	private $_columns = null;
+	private $_defaultSortColumn = null;
+	private $_defaultSortDirection = null;
+	private $_emptyMessage = null;
+	private $_pagingMessage = null;
 
 	public function __construct()
 	{
 		$this->name = 'statsbestsuppliers';
 		$this->tab = 'analytics_stats';
-		$this->version = '1.2';
+		$this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		parent::__construct();
 
-		$this->default_sort_column = 'sales';
-		$this->default_sort_direction = 'DESC';
-		$this->empty_message = $this->l('Empty record set returned');
-		$this->paging_message = sprintf($this->l('Displaying %1$s of %2$s'), '{0} - {1}', '{2}');
+		$this->_defaultSortColumn = 'sales';
+		$this->_defaultSortDirection = 'DESC';
+		$this->_emptyMessage = $this->l('Empty record set returned');
+		$this->_pagingMessage = sprintf($this->l('Displaying %1$s of %2$s'), '{0} - {1}', '{2}');
 
-		$this->columns = array(
+		$this->_columns = array(
 			array(
 				'id' => 'name',
 				'header' => $this->l('Name'),
 				'dataIndex' => 'name',
-				'align' => 'center'
+				'align' => 'left',
+				'width' => 200
 			),
 			array(
 				'id' => 'quantity',
 				'header' => $this->l('Quantity sold'),
 				'dataIndex' => 'quantity',
-				'align' => 'center'
+				'width' => 60,
+				'align' => 'right'
 			),
 			array(
 				'id' => 'sales',
 				'header' => $this->l('Total paid'),
 				'dataIndex' => 'sales',
-				'align' => 'center'
+				'width' => 60,
+				'align' => 'right'
 			)
 		);
 
 		$this->displayName = $this->l('Best suppliers');
-		$this->description = $this->l('Adds a list of the best suppliers to the Stats dashboard.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+		$this->description = $this->l('A list of the best suppliers');
 	}
 
 	public function install()
@@ -85,27 +87,24 @@ class StatsBestSuppliers extends ModuleGrid
 
 	public function hookAdminStatsModules($params)
 	{
-		$engine_params = array(
+		$engineParams = array(
 			'id' => 'id_category',
 			'title' => $this->displayName,
-			'columns' => $this->columns,
-			'defaultSortColumn' => $this->default_sort_column,
-			'defaultSortDirection' => $this->default_sort_direction,
-			'emptyMessage' => $this->empty_message,
-			'pagingMessage' => $this->paging_message
+			'columns' => $this->_columns,
+			'defaultSortColumn' => $this->_defaultSortColumn,
+			'defaultSortDirection' => $this->_defaultSortDirection,
+			'emptyMessage' => $this->_emptyMessage,
+			'pagingMessage' => $this->_pagingMessage
 		);
 
 		if (Tools::getValue('export') == 1)
-				$this->csvExport($engine_params);
-		$this->html = '
-			<div class="panel-heading">
-				'.$this->displayName.'
-			</div>
-			'.$this->engine($engine_params).'
-			<a class="btn btn-default export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1">
-				<i class="icon-cloud-upload"></i> '.$this->l('CSV Export').'
-			</a>';
-		return $this->html;
+				$this->csvExport($engineParams);
+		$this->_html = '
+		<div class="blocStats"><h2 class="icon-'.$this->name.'"><span></span>'.$this->displayName.'</h2>
+			'.$this->engine($engineParams).'
+			<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1"><span>'.$this->l('CSV Export').'</span></a></p>
+		</div>';
+		return $this->_html;
 	}
 
 	/**
@@ -129,7 +128,7 @@ class StatsBestSuppliers extends ModuleGrid
 	{
 		$this->_totalCount = $this->getTotalCount();
 
-		$this->query = 'SELECT s.name, SUM(od.product_quantity) as quantity, ROUND(SUM(od.product_quantity * od.product_price) / o.conversion_rate, 2) as sales
+		$this->_query = 'SELECT s.name, SUM(od.product_quantity) as quantity, ROUND(SUM(od.product_quantity * od.product_price) / o.conversion_rate, 2) as sales
 				FROM '._DB_PREFIX_.'order_detail od
 				LEFT JOIN '._DB_PREFIX_.'product p ON p.id_product = od.product_id
 				LEFT JOIN '._DB_PREFIX_.'orders o ON o.id_order = od.id_order
@@ -141,13 +140,13 @@ class StatsBestSuppliers extends ModuleGrid
 				GROUP BY p.id_supplier';
 		if (Validate::IsName($this->_sort))
 		{
-			$this->query .= ' ORDER BY `'.$this->_sort.'`';
+			$this->_query .= ' ORDER BY `'.$this->_sort.'`';
 			if (isset($this->_direction) && Validate::isSortDirection($this->_direction))
-				$this->query .= ' '.$this->_direction;
+				$this->_query .= ' '.$this->_direction;
 		}
 
 		if (($this->_start === 0 || Validate::IsUnsignedInt($this->_start)) && Validate::IsUnsignedInt($this->_limit))
-			$this->query .= ' LIMIT '.$this->_start.', '.($this->_limit);
-		$this->_values = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($this->query);
+			$this->_query .= ' LIMIT '.$this->_start.', '.($this->_limit);
+		$this->_values = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($this->_query);
 	}
 }

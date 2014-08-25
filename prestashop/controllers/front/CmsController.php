@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,13 +30,10 @@ class CmsControllerCore extends FrontController
 	public $assignCase;
 	public $cms;
 	public $cms_category;
-	public $ssl = false;
 
 	public function canonicalRedirection($canonicalURL = '')
 	{
-		if (Tools::getValue('live_edit'))
-			return ;
-		if (Validate::isLoadedObject($this->cms) && ($canonicalURL = $this->context->link->getCMSLink($this->cms, $this->cms->link_rewrite, $this->ssl)))
+		if (Validate::isLoadedObject($this->cms) && ($canonicalURL = $this->context->link->getCMSLink($this->cms)))
 			parent::canonicalRedirection($canonicalURL);
 		else if (Validate::isLoadedObject($this->cms_category) && ($canonicalURL = $this->context->link->getCMSCategoryLink($this->cms_category)))
 			parent::canonicalRedirection($canonicalURL);
@@ -48,15 +45,12 @@ class CmsControllerCore extends FrontController
 	 */
 	public function init()
 	{
+		parent::init();
+
 		if ($id_cms = (int)Tools::getValue('id_cms'))
 			$this->cms = new CMS($id_cms, $this->context->language->id);
 		else if ($id_cms_category = (int)Tools::getValue('id_cms_category'))
 			$this->cms_category = new CMSCategory($id_cms_category, $this->context->language->id);
-
-		if (Configuration::get('PS_SSL_ENABLED') && Tools::getValue('content_only') && Tools::getValue('id_cms') == (int)Configuration::get('PS_CONDITIONS_CMS_ID') && Validate::isLoadedObject($this->cms))
-			$this->ssl = true;
-		
-		parent::init();
 
 		$this->canonicalRedirection();
 
@@ -112,12 +106,8 @@ class CmsControllerCore extends FrontController
 			$this->context->smarty->assign(array(
 				'cms' => $this->cms,
 				'content_only' => (int)(Tools::getValue('content_only')),
-				'path' => $path,
-				'body_classes' => array($this->php_self.'-'.$this->cms->id, $this->php_self.'-'.$this->cms->link_rewrite)
+				'path' => $path
 			));
-
-			if ($this->cms->indexation == 0)
-				$this->context->smarty->assign('nobots', true);
 		}
 		else if ($this->assignCase == 2)
 		{
@@ -125,9 +115,8 @@ class CmsControllerCore extends FrontController
 				'category' => $this->cms_category, //for backward compatibility
 				'cms_category' => $this->cms_category,
 				'sub_category' => $this->cms_category->getSubCategories($this->context->language->id),
-				'cms_pages' => CMS::getCMSPages($this->context->language->id, (int)($this->cms_category->id), true, (int)$this->context->shop->id),
+				'cms_pages' => CMS::getCMSPages($this->context->language->id, (int)($this->cms_category->id) ),
 				'path' => ($this->cms_category->id !== 1) ? Tools::getPath($this->cms_category->id, $this->cms_category->name, false, 'CMS') : '',
-				'body_classes' => array($this->php_self.'-'.$this->cms_category->id, $this->php_self.'-'.$this->cms_category->link_rewrite)
 			));
 		}
 

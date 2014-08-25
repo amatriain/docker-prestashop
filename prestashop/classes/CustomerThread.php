@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -80,7 +80,7 @@ class CustomerThreadCore extends ObjectModel
 		),
 		'associations' => array(
 			'customer_messages' => array(
-				'resource' => 'customer_messages',
+				'resource' => 'customer_message',
 				'id' => array('required' => true)),
 		)
 	);
@@ -97,27 +97,11 @@ class CustomerThreadCore extends ObjectModel
 	{
 		if (!Validate::isUnsignedId($this->id))
 			return false;
- 		
-		$return = true;			
-		$result = Db::getInstance()->executeS('
-			SELECT `id_customer_message` 
-			FROM `'._DB_PREFIX_.'customer_message`
+		Db::getInstance()->execute('
+			DELETE FROM `'._DB_PREFIX_.'customer_message`
 			WHERE `id_customer_thread` = '.(int)$this->id
 		);
-
-		if( count($result))
-		{
-			foreach ($result AS $res)
-			{
-			    $message = new CustomerMessage((int)$res['id_customer_message']);
-			    if (!Validate::isLoadedObject($message))
-					$return = false;
-			    else
-			        $return &= $message->delete();
-			}
-		}
-		$return &= parent::delete();
-		return $return;
+		return (parent::delete());
 	}
 
 	public static function getCustomerMessages($id_customer, $read = null)
@@ -196,7 +180,7 @@ class CustomerThreadCore extends ObjectModel
 			LEFT JOIN '._DB_PREFIX_.'customer c
 				ON (IFNULL(ct.id_customer, ct.email) = IFNULL(c.id_customer, c.email))
 			WHERE ct.id_customer_thread = '.(int)$id_customer_thread.'
-			ORDER BY cm.date_add ASC
+			ORDER BY cm.date_add DESC
 		');
 	}
 
@@ -221,3 +205,4 @@ class CustomerThreadCore extends ObjectModel
 		');
 	}
 }
+

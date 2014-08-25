@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,15 +19,13 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class AdminTagsControllerCore extends AdminController
 {
-	public $bootstrap = true ;
-
 	public function __construct()
 	{
 		$this->table = 'tag';
@@ -37,7 +35,7 @@ class AdminTagsControllerCore extends AdminController
 			'id_tag' => array(
 				'title' => $this->l('ID'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 25,
 			),
 			'lang' => array(
 				'title' => $this->l('Language'),
@@ -45,37 +43,19 @@ class AdminTagsControllerCore extends AdminController
 			),
 			'name' => array(
 				'title' => $this->l('Name'),
+				'width' => 200,
 				'filter_key' => 'a!name'
 			),
 			'products' => array(
-				'title' => $this->l('Products'),
-				'align' => 'center',
-				'class' => 'fixed-width-xs',
+				'title' => $this->l('Products:'),
+				'align' => 'right',
 				'havingFilter' => true
 			)
 		);
 
-		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'icon' => 'icon-trash',
-				'confirm' => $this->l('Delete selected items?')
-			)
-		);
+	 	$this->bulk_actions = array('delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')));
 
 		parent::__construct();
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		if (empty($this->display))
-			$this->page_header_toolbar_btn['new_tag'] = array(
-				'href' => self::$currentIndex.'&addtag&token='.$this->token,
-				'desc' => $this->l('Add new tag', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-
-		parent::initPageHeaderToolbar();
 	}
 
 	public function renderList()
@@ -97,23 +77,8 @@ class AdminTagsControllerCore extends AdminController
 	public function postProcess()
 	{
 		if ($this->tabAccess['edit'] === '1' && Tools::getValue('submitAdd'.$this->table))
-		{
 			if (($id = (int)Tools::getValue($this->identifier)) && ($obj = new $this->className($id)) && Validate::isLoadedObject($obj))
-			{
-				$previousProducts = $obj->getProducts();
-				$removedProducts = array();
-
-				foreach ($previousProducts as $product)
-					if (!in_array($product['id_product'], $_POST['products']))
-						$removedProducts[] = $product['id_product'];
-
-				if (Configuration::get('PS_SEARCH_INDEXATION'))
-					Search::removeProductsSearchIndex($removedProducts);
-
 				$obj->setProducts($_POST['products']);
-			}
-		}
-
 		return parent::postProcess();
 	}
 
@@ -124,19 +89,18 @@ class AdminTagsControllerCore extends AdminController
 
 		$this->fields_form = array(
 			'legend' => array(
-				'title' => $this->l('Tag'),
-				'icon' => 'icon-tag'
+				'title' => $this->l('Tag')
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
 					'required' => true
 				),
 				array(
 					'type' => 'select',
-					'label' => $this->l('Language'),
+					'label' => $this->l('Language:'),
 					'name' => 'id_lang',
 					'required' => true,
 					'options' => array(
@@ -151,7 +115,8 @@ class AdminTagsControllerCore extends AdminController
 				'products_unselected' => $obj->getProducts(false)
 			),
 			'submit' => array(
-				'title' => $this->l('Save'),
+				'title' => $this->l('Save   '),
+				'class' => 'button'
 			)
 		);
 

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -48,7 +48,7 @@ function p15012_add_missing_columns()
 	$q_list['cart_product']['id_shop']['mod'] = 'ALTER TABLE `'._DB_PREFIX_.'cart_product` 
 		CHANGE `id_shop` `id_shop` int(10) unsigned NOT NULL DEFAULT "1" AFTER `id_address_delivery`';
 	$q_list['cart_product']['id_shop']['add'] = 'ALTER TABLE `'._DB_PREFIX_.'cart_product` 
-		ADD `id_shop` int(10) unsigned NOT NULL DEFAULT "1" AFTER `id_address_delivery`';
+		ADD `id_shop` `id_shop` int(10) unsigned NOT NULL DEFAULT "1" AFTER `id_address_delivery`';
 	$q_list['cart_product']['id_product_attribute']['mod'] = 'ALTER TABLE `'._DB_PREFIX_.'cart_product`
 		CHANGE `id_product_attribute` `id_product_attribute` int(10) unsigned DEFAULT NULL AFTER `id_shop`';
 	$q_list['cart_product']['id_product_attribute']['add'] = 'ALTER TABLE `'._DB_PREFIX_.'cart_product`
@@ -112,7 +112,7 @@ function p15012_add_missing_columns()
 		CHANGE `note` note text';
 
   $q_list['order_payment']['id_order_invoice']['mod'] = 'ALTER TABLE `'._DB_PREFIX_.'order_payment`
-		CHANGE `id_order_invoice` id_order_invoice int(10) unsigned NOT NULL DEFAULT 0';
+		CHANGE `id_order_invoice` id_order_invoice int(10) unsigned DEFAULT NULL';
 
   $q_list['orders']['reference']['mod'] = 'ALTER TABLE `'._DB_PREFIX_.'orders`
 		CHANGE `reference` reference varchar(9) DEFAULT NULL';

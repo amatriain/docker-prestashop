@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -71,7 +71,7 @@
 <!-- PRODUCTS TAB -->
 <table style="width: 100%">
 	<tr>
-		<td style="width: 22%; padding-right: 7px; text-align: right; vertical-align: top">
+		<td style="width: 20%; padding-right: 7px; text-align: right; vertical-align: top">
 			<!-- CUSTOMER INFORMATIONS -->
 			<b>{l s='Order Number:' pdf='true'}</b><br />
 			{$order->getUniqReference()}<br />
@@ -93,58 +93,28 @@
 			{/foreach}
 			</table>
 			<br />
-			{if isset($carrier)}
-			<b>{l s='Carrier:' pdf='true'}</b><br />
-			{$carrier->name}<br />
-			<br />
-			{/if}			
 			<!-- / CUSTOMER INFORMATIONS -->
 		</td>
-		<td style="width: 78%; text-align: right">
+		<td style="width: 80%; text-align: right">
 			<table style="width: 100%">
 				<tr style="line-height:6px;">
 					<td style="text-align: left; background-color: #4D4D4D; color: #FFF; padding-left: 10px; font-weight: bold; width: 60%">{l s='ITEMS TO BE DELIVERED' pdf='true'}</td>
 					<td style="background-color: #4D4D4D; color: #FFF; text-align: left; font-weight: bold; width: 20%">{l s='REFERENCE' pdf='true'}</td>
 					<td style="background-color: #4D4D4D; color: #FFF; text-align: center; font-weight: bold; width: 20%">{l s='QTY' pdf='true'}</td>
 				</tr>
-				{foreach $order_details as $order_detail}
+				{foreach $order_details as $product}
 				{cycle values='#FFF,#DDD' assign=bgcolor}
 				<tr style="line-height:6px;background-color:{$bgcolor};">
-					<td style="text-align: left; width: 60%">{$order_detail.product_name}</td>
+					<td style="text-align: left; width: 60%">{$product.product_name}</td>
 					<td style="text-align: left; width: 20%">
-						{if empty($order_detail.product_reference)}
+						{if empty($product.product_reference)}
 							---
 						{else}
-							{$order_detail.product_reference}
+							{$product.product_reference}
 						{/if}
 					</td>
-					<td style="text-align: center; width: 20%">{$order_detail.product_quantity}</td>
+					<td style="text-align: center; width: 20%">{$product.product_quantity}</td>
 				</tr>
-					{foreach $order_detail.customizedDatas as $customizationPerAddress}
-						{foreach $customizationPerAddress as $customizationId => $customization}
-							<tr style="line-height:6px;background-color:{$bgcolor};">
-								<td style="line-height:3px; text-align: left; width: 60%; vertical-align: top">
-										<blockquote>
-											{if isset($customization.datas[$smarty.const._CUSTOMIZE_TEXTFIELD_]) && count($customization.datas[$smarty.const._CUSTOMIZE_TEXTFIELD_]) > 0}
-												{foreach $customization.datas[$smarty.const._CUSTOMIZE_TEXTFIELD_] as $customization_infos}
-													{$customization_infos.name}: {$customization_infos.value}
-													{if !$smarty.foreach.custo_foreach.last}<br />
-													{else}
-													<div style="line-height:0.4pt">&nbsp;</div>
-													{/if}
-												{/foreach}
-											{/if}
-
-											{if isset($customization.datas[$smarty.const._CUSTOMIZE_FILE_]) && count($customization.datas[$smarty.const._CUSTOMIZE_FILE_]) > 0}
-												{count($customization.datas[$smarty.const._CUSTOMIZE_FILE_])} {l s='image(s)' pdf='true'}
-											{/if}
-										</blockquote>
-								</td>
-								<td style="text-align: right; width: 20%"></td>
-								<td style="text-align: center; width: 20%; vertical-align: top">({$customization.quantity})</td>
-							</tr>
-						{/foreach}
-					{/foreach}
 				{/foreach}
 			</table>
 		</td>

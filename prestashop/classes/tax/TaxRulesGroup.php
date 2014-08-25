@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -56,12 +56,10 @@ class TaxRulesGroupCore extends ObjectModel
 	public static function getTaxRulesGroups($only_active = true)
 	{
 		return Db::getInstance()->executeS('
-			SELECT DISTINCT g.id_tax_rules_group, g.name, g.active
-			FROM `'._DB_PREFIX_.'tax_rules_group` g'
-			.Shop::addSqlAssociation('tax_rules_group', 'g')
-			.($only_active ? ' WHERE g.`active` = 1' : '').'
-			ORDER BY name ASC');
-
+		SELECT *
+		FROM `'._DB_PREFIX_.'tax_rules_group` g'
+		.($only_active ? ' WHERE g.`active` = 1' : '').'
+		ORDER BY name ASC');
 	}
 
 	/**
@@ -115,11 +113,11 @@ class TaxRulesGroupCore extends ObjectModel
 	    );
 	}
 	
-	public function hasUniqueTaxRuleForCountry($id_country, $id_state, $id_tax_rule = false)
+	public function hasUniqueTaxRuleForCountry($id_country, $id_state)
 	{
 		$rules = TaxRule::getTaxRulesByGroupId((int)Context::getContext()->language->id, (int)$this->id);
 		foreach ($rules as $rule)
-			if ($rule['id_country'] == $id_country && $id_state == $rule['id_state'] && !$rule['behavior'] && (int)$id_tax_rule != $rule['id_tax_rule'])
+			if ($rule['id_country'] == $id_country && $id_state == $rule['id_state'] && !$rule['behavior'])
 				return true;
 
 		return false;

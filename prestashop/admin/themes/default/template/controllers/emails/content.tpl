@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -28,17 +28,15 @@
 	var textSubject = "{l s='Test message -- Prestashop' js=1}";
 	var textSendOk = "{l s='A test email has been sent to the email address you provided.' js=1}";
 	var textSendError= "{l s='Error: Please check your configuration' js=1}";
-	var token_mail = '{$token|escape:'html':'UTF-8'}';
+	var token_mail = '{$token}';
 	var errorMail = "{l s='This email address is not valid' js=1}";
 	$(document).ready(function() {
 		if ($('input[name=PS_MAIL_METHOD]:checked').val() == 2)
-			$('#configuration_fieldset_smtp').show();
-		else
-			$('#configuration_fieldset_smtp').hide();
+			$('#smtp').show();
 	});
 </script>
+<script type="text/javascript" src="../js/sendMailTest.js"></script>
 
-{if isset($content)}
-	{$content}
-{/if}
+{$content}
+
 

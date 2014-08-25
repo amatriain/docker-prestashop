@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -40,20 +40,18 @@ if (!headers_sent())
 	header('Content-Type: text/html; charset=utf-8');
 
 /* No settings file? goto installer... */
-if (!file_exists(_PS_ROOT_DIR_.'/config/settings.inc.php'))
+if (!file_exists(dirname(__FILE__).'/settings.inc.php'))
 {
 	$dir = ((substr($_SERVER['REQUEST_URI'], -1) == '/' || is_dir($_SERVER['REQUEST_URI'])) ? $_SERVER['REQUEST_URI'] : dirname($_SERVER['REQUEST_URI']).'/');
-	if (file_exists(dirname(__FILE__).'/../install'))
-		header('Location: install/');
-	elseif (file_exists(dirname(__FILE__).'/../install-dev'))
-		header('Location: install-dev/');
-	else
+	if (!file_exists(dirname(__FILE__).'/../install'))
 		die('Error: "install" directory is missing');
+	header('Location: install/');
 	exit;
 }
-//include settings file only if we are not in multi-tenancy mode 
-require_once(_PS_ROOT_DIR_.'/config/settings.inc.php');
-require_once(_PS_CONFIG_DIR_.'autoload.php');
+
+require_once(dirname(__FILE__).'/settings.inc.php');
+
+require_once(dirname(__FILE__).'/autoload.php');
 
 if (_PS_DEBUG_PROFILING_)
 {
@@ -63,9 +61,6 @@ if (_PS_DEBUG_PROFILING_)
 	include_once(_PS_TOOL_DIR_.'profiling/Db.php');
 	include_once(_PS_TOOL_DIR_.'profiling/Tools.php');
 }
-
-if (Tools::isPHPCLI() && isset($argc) && isset($argv))
-	Tools::argvToGET($argc, $argv);
 
 /* Redefine REQUEST_URI if empty (on some webservers...) */
 if (!isset($_SERVER['REQUEST_URI']) || empty($_SERVER['REQUEST_URI']))
@@ -92,18 +87,8 @@ if (!isset($_SERVER['HTTP_HOST']) || empty($_SERVER['HTTP_HOST']))
 $context = Context::getContext();
 
 /* Initialize the current Shop */
-try 
-{
-	$context->shop = Shop::initialize();
-	$context->theme = new Theme((int)$context->shop->id_theme);
-	if ((Tools::isEmpty($theme_name = $context->shop->getTheme()) || !Validate::isLoadedObject($context->theme)) && !defined('_PS_ADMIN_DIR_'))
-		throw new PrestaShopException(Tools::displayError('Current theme unselected. Please check your theme configuration.'));
-}
-catch (PrestaShopException $e)
-{
-	$e->displayMessage();
-}
-define('_THEME_NAME_', $theme_name);
+$context->shop = Shop::initialize();
+define('_THEME_NAME_', $context->shop->getTheme());
 define('__PS_BASE_URI__', $context->shop->getBaseURI());
 
 /* Include all defines related to base uri and theme name */
@@ -114,9 +99,6 @@ $_MODULES = array();
 
 /* Load configuration */
 Configuration::loadConfiguration();
-
-if (Configuration::get('PS_USE_HTMLPURIFIER'))
-	require_once (_PS_TOOL_DIR_.'htmlpurifier/HTMLPurifier.standalone.php');
 
 /* Load all languages */
 Language::loadLanguages();
@@ -129,17 +111,17 @@ $context->country = $defaultCountry;
 @date_default_timezone_set(Configuration::get('PS_TIMEZONE'));
 
 /* Set locales */
-$locale = strtolower(Configuration::get('PS_LOCALE_LANGUAGE')).'_'.strtoupper(Configuration::get('PS_LOCALE_COUNTRY'));
-/* Please do not use LC_ALL here http://www.php.net/manual/fr/function.setlocale.php#25041 */
-setlocale(LC_COLLATE, $locale.'.UTF-8', $locale.'.utf8');
-setlocale(LC_CTYPE, $locale.'.UTF-8', $locale.'.utf8');
-setlocale(LC_TIME, $locale.'.UTF-8', $locale.'.utf8');
-setlocale(LC_NUMERIC, 'en_US.UTF-8', 'en_US.utf8');
+$locale = strtolower(Configuration::get('PS_LOCALE_LANGUAGE')).'_'.strtoupper(Configuration::get('PS_LOCALE_COUNTRY').'.UTF-8');
+setlocale(LC_COLLATE, $locale);
+setlocale(LC_CTYPE, $locale);
+setlocale(LC_TIME, $locale);
+setlocale(LC_NUMERIC, 'en_US.UTF-8');
 
 /* Instantiate cookie */
+
+
 $cookie_lifetime = (int)(defined('_PS_ADMIN_DIR_') ? Configuration::get('PS_COOKIE_LIFETIME_BO') : Configuration::get('PS_COOKIE_LIFETIME_FO'));
-if ($cookie_lifetime > 0)
-	$cookie_lifetime = time() + (max($cookie_lifetime, 1) * 3600);
+$cookie_lifetime = time() + (max($cookie_lifetime, 1) * 3600);
 
 if (defined('_PS_ADMIN_DIR_'))
 	$cookie = new Cookie('psAdmin', '', $cookie_lifetime);
@@ -184,11 +166,12 @@ if (!defined('_PS_ADMIN_DIR_'))
 	if (isset($cookie->id_customer) && (int)$cookie->id_customer)
 	{
 		$customer = new Customer($cookie->id_customer);
-		if (!Validate::isLoadedObject($customer))
-			$context->cookie->logout();
+		if(!Validate::isLoadedObject($customer))
+			$customer->logout();
 		else
 		{
-			$customer->logged = true;
+			$customer->logged = $cookie->logged;
+
 			if ($customer->id_lang != $context->language->id)
 			{
 				$customer->id_lang = $context->language->id;
@@ -203,7 +186,7 @@ if (!defined('_PS_ADMIN_DIR_'))
 		
 		// Change the default group
 		if (Group::isFeatureActive())
-			$customer->id_default_group = (int)Configuration::get('PS_UNIDENTIFIED_GROUP');
+			$customer->id_default_group = Configuration::get('PS_UNIDENTIFIED_GROUP');
 	}
 	$customer->id_guest = $cookie->id_guest;
 	$context->customer = $customer;
@@ -215,7 +198,7 @@ $context->link = new Link($https_link, $https_link);
 
 /**
  * @deprecated : these defines are going to be deleted on 1.6 version of Prestashop
- * USE : Configuration::get() method in order to getting the id of order status
+ * USE : Configuration::get() method in order to getting the id of order state
  */
 define('_PS_OS_CHEQUE_',      Configuration::get('PS_OS_CHEQUE'));
 define('_PS_OS_PAYMENT_',     Configuration::get('PS_OS_PAYMENT'));

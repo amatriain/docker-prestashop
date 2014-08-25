@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -40,7 +40,7 @@ abstract class ModuleCore
 	public $registered_version;
 
 	/** @var array filled with known compliant PS versions */
-	public $ps_versions_compliancy = array();
+	public $ps_versions_compliancy = array('min' => '1.4', 'max' => '1.6');
 
 	/** @var array filled with modules needed for install */
 	public $dependencies = array();
@@ -57,21 +57,6 @@ abstract class ModuleCore
 	/** @var string author of the module */
 	public $author;
 
-	/** @var string Module key provided by addons.prestashop.com */
-	public $module_key = '';
-
-	public $description_full;
-
-	public $additional_description;
-
-	public $compatibility;
-
-	public $nb_rates;
-
-	public $avg_rate;
-
-	public $badges;
-
 	/** @var int need_instance */
 	public $need_instance = 1;
 
@@ -81,19 +66,11 @@ abstract class ModuleCore
 	/** @var boolean Status */
 	public $active = false;
 
-	/** @var boolean Is the module certified by addons.prestashop.com */
-	public $trusted = false;
-
 	/** @var string Fill it if the module is installed but not yet set up */
 	public $warning;
 
-	public $enable_device = 7;
-
 	/** @var array to store the limited country */
 	public $limited_countries = array();
-
-	/** @var array names of the controllers */
-	public $controllers = array();
 
 	/** @var array used by AdminTab to determine which lang file to use (admin.php or module lang file) */
 	public static $classInModule = array();
@@ -141,33 +118,18 @@ abstract class ModuleCore
 
 	/** @var Smarty_Data */
 	protected $smarty;
-
-	/** @var currentSmartySubTemplate */	
-	protected $current_subtemplate = null;
 	
-	protected static $update_translations_after_install = true;
-
-	/** @var allow push */
-	public $allow_push;
-	
-	public $push_time_limit = 180;
 	
 	const CACHE_FILE_MODULES_LIST = '/config/xml/modules_list.xml';
 	
 	const CACHE_FILE_TAB_MODULES_LIST = '/config/xml/tab_modules_list.xml';
 	
-	const CACHE_FILE_ALL_COUNTRY_MODULES_LIST     = '/config/xml/modules_native_addons.xml';
 	const CACHE_FILE_DEFAULT_COUNTRY_MODULES_LIST = '/config/xml/default_country_modules_list.xml';
 	
 	const CACHE_FILE_CUSTOMER_MODULES_LIST = '/config/xml/customer_modules_list.xml';
 	
 	const CACHE_FILE_MUST_HAVE_MODULES_LIST = '/config/xml/must_have_modules_list.xml';
-
-	const CACHE_FILE_TRUSTED_MODULES_LIST = '/config/xml/trusted_modules_list.xml';
-	const CACHE_FILE_UNTRUSTED_MODULES_LIST = '/config/xml/untrusted_modules_list.xml';
-
-	public static $hosted_modules_blacklist = array('autoupgrade');
-
+	
 	/**
 	 * Constructor
 	 *
@@ -176,18 +138,6 @@ abstract class ModuleCore
 	 */
 	public function __construct($name = null, Context $context = null)
 	{
-		if (isset($this->ps_versions_compliancy) && !isset($this->ps_versions_compliancy['min']))
-			$this->ps_versions_compliancy['min'] = '1.4.0.0';
-		
-		if (isset($this->ps_versions_compliancy) && !isset($this->ps_versions_compliancy['max']))
-			$this->ps_versions_compliancy['max'] = _PS_VERSION_;
-		
-		if (strlen($this->ps_versions_compliancy['min']) == 3)
-			$this->ps_versions_compliancy['min'] .= '.0.0';
-		
-		if (strlen($this->ps_versions_compliancy['max']) == 3)
-			$this->ps_versions_compliancy['max'] .= '.999.999';
-		
 		// Load context and smarty
 		$this->context = $context ? $context : Context::getContext();				
 		if (is_object($this->context->smarty))				
@@ -203,22 +153,18 @@ abstract class ModuleCore
 			// If cache is not generated, we generate it
 			if (self::$modules_cache == null && !is_array(self::$modules_cache))
 			{
-				$id_shop = (Validate::isLoadedObject($this->context->shop) ? $this->context->shop->id : 1);
+				// Join clause is done to check if the module is activated in current shop context												
+				$sql_limit_shop = 'SELECT COUNT(*) FROM `'._DB_PREFIX_.'module_shop` ms WHERE m.`id_module` = ms.`id_module` AND ms.`id_shop` = '.((is_object(Context::getContext()->shop) && $id = (int)Context::getContext()->shop->id) ? $id : 1);
+									
+				$sql = 'SELECT m.`id_module`, m.`name`, ('.$sql_limit_shop.') as total FROM `'._DB_PREFIX_.'module` m';
+
+				// Result is cached
 				self::$modules_cache = array();
-				// Join clause is done to check if the module is activated in current shop context
-				$result = Db::getInstance()->executeS('
-				SELECT m.`id_module`, m.`name`, (
-					SELECT id_module
-					FROM `'._DB_PREFIX_.'module_shop` ms
-					WHERE m.`id_module` = ms.`id_module`
-					AND ms.`id_shop` = '.(int)$id_shop.'
-					LIMIT 1
-				) as mshop
-				FROM `'._DB_PREFIX_.'module` m');
+				$result = Db::getInstance()->executeS($sql);
 				foreach ($result as $row)
 				{
 					self::$modules_cache[$row['name']] = $row;
-					self::$modules_cache[$row['name']]['active'] = ($row['mshop'] > 0) ? 1 : 0;
+					self::$modules_cache[$row['name']]['active'] = ($row['total'] > 0) ? 1 : 0;
 				}
 			}
 
@@ -228,7 +174,7 @@ abstract class ModuleCore
 				if (isset(self::$modules_cache[$this->name]['id_module']))
 					$this->id = self::$modules_cache[$this->name]['id_module'];
 				foreach (self::$modules_cache[$this->name] as $key => $value)
-					if (array_key_exists($key, $this))
+					if (key_exists($key, $this))
 						$this->{$key} = $value;
 				$this->_path = __PS_BASE_URI__.'modules/'.$this->name.'/';
 			}
@@ -250,7 +196,7 @@ abstract class ModuleCore
 		}
 
 		// Check PS version compliancy
-		if (!$this->checkCompliancy())
+		if (version_compare(_PS_VERSION_, $this->ps_versions_compliancy['min']) < 0 || version_compare(_PS_VERSION_, $this->ps_versions_compliancy['max']) >= 0)
 		{
 			$this->_errors[] = $this->l('The version of your module is not compliant with your PrestaShop version.');
 			return false;
@@ -261,7 +207,7 @@ abstract class ModuleCore
 			foreach ($this->dependencies as $dependency)
 				if (!Db::getInstance()->getRow('SELECT `id_module` FROM `'._DB_PREFIX_.'module` WHERE `name` = \''.pSQL($dependency).'\''))
 				{
-					$error = $this->l('Before installing this module, you have to install this/these module(s) first:').'<br />';
+					$error = $this->l('Before installing this module, you have to installed these/this module(s) first :').'<br />';
 					foreach ($this->dependencies as $d)
 						$error .= '- '.$d.'<br />';
 					$this->_errors[] = $error;
@@ -269,7 +215,7 @@ abstract class ModuleCore
 				}
 
 		// Check if module is installed
-		$result = Module::isInstalled($this->name);
+		$result = Db::getInstance()->getRow('SELECT `id_module` FROM `'._DB_PREFIX_.'module` WHERE `name` = \''.pSQL($this->name).'\'');
 		if ($result)
 		{
 			$this->_errors[] = $this->l('This module has already been installed.');
@@ -281,18 +227,15 @@ abstract class ModuleCore
 			$this->installOverrides();
 		} catch (Exception $e) {
 			$this->_errors[] = sprintf(Tools::displayError('Unable to install override: %s'), $e->getMessage());
-			$this->uninstallOverrides();
+			//$this->uninstallOverrides(); remove this line because if module a install an override, then module b install same override, this line will remove override of module a (if you find a bug related to this line please don't forget what i say before)
 			return false;
 		}
-
-		if (!$this->installControllers())
-			return false;
 
 		// Install module and retrieve the installation id
 		$result = Db::getInstance()->insert($this->table, array('name' => $this->name, 'active' => 1, 'version' => $this->version));
 		if (!$result)
 		{
-			$this->_errors[] = $this->l('Technical error: PrestaShop could not installed this module.');
+			$this->_errors[] = $this->l('Technical error : PrestaShop could not installed this module.');
 			return false;
 		}
 		$this->id = Db::getInstance()->Insert_ID();
@@ -324,29 +267,7 @@ abstract class ModuleCore
 		// Adding Restrictions for client groups
 		Group::addRestrictionsForModule($this->id, Shop::getShops(true, null, true));
 		Hook::exec('actionModuleInstallAfter', array('object' => $this));
-
-		if (Module::$update_translations_after_install)
-			$this->updateModuleTranslations();
-
 		return true;
-	}
-	
-	public function checkCompliancy()
-	{
-		if (version_compare(_PS_VERSION_, $this->ps_versions_compliancy['min'], '<') || version_compare(_PS_VERSION_, $this->ps_versions_compliancy['max'], '>'))
-			return false;
-		else
-			return true;
-	}
-	
-	public static function updateTranslationsAfterInstall($update = true)
-	{
-		Module::$update_translations_after_install = (bool)$update;
-	}
-
-	public function updateModuleTranslations()
-	{
-		return Language::updateModulesTranslations(array($this->name));
 	}
 
 	/**
@@ -361,23 +282,21 @@ abstract class ModuleCore
 		{
 			if ($upgrade_detail['success'])
 			{
-				$this->_confirmations[] = sprintf($this->l('Current version: %s'), $this->version);
+				$this->_confirmations[] = $this->l('Current version: ').$this->version;
 				$this->_confirmations[] = $upgrade_detail['number_upgraded'].' '.$this->l('file upgrade applied');
 			}
 			else
 			{
 				if (!$upgrade_detail['number_upgraded'])
-					$this->_errors[] = $this->l('No upgrade has been applied');
+					$this->_errors[] = $this->l('None upgrades have been applied');
 				else
 				{
-					$this->_errors[] = sprintf($this->l('Upgraded from: %S to %s'), $upgrade_detail['upgraded_from'], $upgrade_detail['upgraded_to']);
+					$this->_errors[] = $this->l('Upgraded from: ').$upgrade_detail['upgraded_from'].$this->l(' to ').
+						$upgrade_detail['upgraded_to'];
 					$this->_errors[] = $upgrade_detail['number_upgrade_left'].' '.$this->l('upgrade left');
 				}
 
-				if (isset($upgrade_detail['duplicate']) && $upgrade_detail['duplicate'])
-					$this->_errors[] = sprintf(Tools::displayError('Module %s cannot be upgraded this time: please refresh this page to update it.'), $this->name);
-				else
-					$this->_errors[] = $this->l('To prevent any problem, this module has been turned off');
+				$this->_errors[] = $this->l('To prevent any problem, this module has been turned off');
 			}
 		}
 	}
@@ -392,12 +311,6 @@ abstract class ModuleCore
 	 */
 	public static function initUpgradeModule($module)
 	{
-		if (((int)$module->installed == 1) & (empty($module->database_version) === true))
-		{
-			Module::upgradeModuleVersion($module->name, $module->version);
-			$module->database_version = $module->version;
-		}
-		
 		// Init cache upgrade details
 		self::$modules_cache[$module->name]['upgrade'] = array(
 			'success' => false, // bool to know if upgrade succeed or not
@@ -425,21 +338,19 @@ abstract class ModuleCore
 		$upgrade = &self::$modules_cache[$this->name]['upgrade'];
 		foreach ($upgrade['upgrade_file_left'] as $num => $file_detail)
 		{
-			if (function_exists($file_detail['upgrade_function']))
-			{
-				$upgrade['success'] = false;
-				$upgrade['duplicate'] = true;
-				break;
-			}
+			// Default variable required in the included upgrade file need to be set by default there:
+			// upgrade_version, success_upgrade
+			$upgrade_result = false;
 			include($file_detail['file']);
 
 			// Call the upgrade function if defined
-			$upgrade['success'] = false;
 			if (function_exists($file_detail['upgrade_function']))
-				$upgrade['success'] = $file_detail['upgrade_function']($this);
+				$upgrade_result = $file_detail['upgrade_function']($this);
+
+			$upgrade['success'] = $upgrade_result;
 
 			// Set detail when an upgrade succeed or failed
-			if ($upgrade['success'])
+			if ($upgrade_result)
 			{
 				$upgrade['number_upgraded'] += 1;
 				$upgrade['upgraded_to'] = $file_detail['version'];
@@ -457,7 +368,6 @@ abstract class ModuleCore
 		}
 
 		$upgrade['number_upgrade_left'] = count($upgrade['upgrade_file_left']);
-
 		// Update module version in DB with the last succeed upgrade
 		if ($upgrade['upgraded_to'])
 			Module::upgradeModuleVersion($this->name, $upgrade['upgraded_to']);
@@ -476,9 +386,9 @@ abstract class ModuleCore
 	public static function upgradeModuleVersion($name, $version)
 	{
 		return Db::getInstance()->execute('
-		UPDATE `'._DB_PREFIX_.'module` m
-		SET m.version = \''.bqSQL($version).'\'
-		WHERE m.name = \''.bqSQL($name).'\'');
+				UPDATE `'._DB_PREFIX_.'module` m
+				SET m.version = \''.bqSQL($version).'\'
+				WHERE m.name = \''.bqSQL($name).'\'');
 	}
 
 	/**
@@ -525,13 +435,9 @@ abstract class ModuleCore
 		{
 			// Read each file name
 			foreach ($files as $file)
-				if (!in_array($file, array('.', '..', '.svn', 'index.php')) && preg_match('/\.php$/', $file))
+				if (!in_array($file, array('.', '..', '.svn', 'index.php')))
 				{
 					$tab = explode('-', $file);
-
-					if (!isset($tab[1]))
-						continue;
-
 					$file_version = basename($tab[1], '.php');
 					// Compare version, if minor than actual, we need to upgrade the module
 					if (count($tab) == 2 &&
@@ -601,18 +507,6 @@ abstract class ModuleCore
 			$this->unregisterExceptions((int)$row['id_hook']);
 		}
 
-		foreach ($this->controllers as $controller)
-		{
-			$page_name = 'module-'.$this->name.'-'.$controller;
-			$meta = Db::getInstance()->getValue('SELECT id_meta FROM `'._DB_PREFIX_.'meta` WHERE page="'.pSQL($page_name).'"');
-			if ((int)$meta > 0)
-			{
-				Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'theme_meta` WHERE id_meta='.(int)$meta);
-				Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'meta_lang` WHERE id_meta='.(int)$meta);
-				Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'meta` WHERE id_meta='.(int)$meta);
-			}
-		}
-
 		// Disable the module for all shops
 		$this->disable(true);
 
@@ -626,7 +520,6 @@ abstract class ModuleCore
 		if (Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'module` WHERE `id_module` = '.(int)$this->id))
 		{
 			Cache::clean('Module::isInstalled'.$this->name);
-			Cache::clean('Module::getModuleIdByName_'.pSQL($this->name));
 			return true;
 		}
 		
@@ -663,10 +556,8 @@ abstract class ModuleCore
 	{
 		// Retrieve all shops where the module is enabled
 		$list = Shop::getContextListShopID();
-		if (!$this->id || !is_array($list))
-			return false;
 		$sql = 'SELECT `id_shop` FROM `'._DB_PREFIX_.'module_shop`
-				WHERE `id_module` = '.(int)$this->id.
+				WHERE `id_module` = '.$this->id.
 				((!$forceAll) ? ' AND `id_shop` IN('.implode(', ', $list).')' : '');
 
 		// Store the results in an array
@@ -684,30 +575,6 @@ abstract class ModuleCore
 				));
 
 		return true;
-	}
-	
-	public function enableDevice($device)
-	{
-		Db::getInstance()->execute('
-			UPDATE '._DB_PREFIX_.'module_shop
-			SET enable_device = enable_device + '.(int)$device.'
-			WHERE enable_device &~ '.(int)$device.' AND id_module='.(int)$this->id.
-			Shop::addSqlRestriction()
-		);
-
-		return true;
-	}
-	
-	public function disableDevice($device)
-	{
-		Db::getInstance()->execute('
-			UPDATE '._DB_PREFIX_.'module_shop
-			SET enable_device = enable_device - '.(int)$device.'
-			WHERE enable_device & '.(int)$device.' AND id_module='.(int)$this->id.
-			Shop::addSqlRestriction()
-		);
-
-		return true;		
 	}
 
 	/**
@@ -785,76 +652,62 @@ abstract class ModuleCore
 	 */
 	public function registerHook($hook_name, $shop_list = null)
 	{
-		$return = true;
-		if (is_array($hook_name))
-			$hook_names = $hook_name;
-		else
-			$hook_names = array($hook_name);
-		
-		foreach ($hook_names as $hook_name)
+		// Check hook name validation and if module is installed
+		if (!Validate::isHookName($hook_name))
+			throw new PrestaShopException('Invalid hook name');
+		if (!isset($this->id) || !is_numeric($this->id))
+			return false;
+
+		// Retrocompatibility
+		if ($alias = Hook::getRetroHookName($hook_name))
+			$hook_name = $alias;
+
+		// Get hook id
+		$id_hook = Hook::getIdByName($hook_name);
+
+		// If hook does not exist, we create it
+		if (!$id_hook)
 		{
-			// Check hook name validation and if module is installed
-			if (!Validate::isHookName($hook_name))
-				throw new PrestaShopException('Invalid hook name');
-			if (!isset($this->id) || !is_numeric($this->id))
-				return false;
-
-			// Retrocompatibility
-			$hook_name_bak = $hook_name;
-			if ($alias = Hook::getRetroHookName($hook_name))
-				$hook_name = $alias;
-
-			Hook::exec('actionModuleRegisterHookBefore', array('object' => $this, 'hook_name' => $hook_name));
-			// Get hook id
-			$id_hook = Hook::getIdByName($hook_name);
-			$live_edit = Hook::getLiveEditById((int)Hook::getIdByName($hook_name_bak));
-
-			// If hook does not exist, we create it
+			$new_hook = new Hook();
+			$new_hook->name = pSQL($hook_name);
+			$new_hook->title = pSQL($hook_name);
+			$new_hook->add();
+			$id_hook = $new_hook->id;
 			if (!$id_hook)
-			{
-				$new_hook = new Hook();
-				$new_hook->name = pSQL($hook_name);
-				$new_hook->title = pSQL($hook_name);
-				$new_hook->live_edit = (bool)preg_match('/^display/i', $new_hook->name);
-				$new_hook->position = (bool)$new_hook->live_edit;
-				$new_hook->add();
-				$id_hook = $new_hook->id;
-				if (!$id_hook)
-					return false;
-			}
-
-			// If shop lists is null, we fill it with all shops
-			if (is_null($shop_list))
-				$shop_list = Shop::getShops(true, null, true);
-
-			foreach ($shop_list as $shop_id)
-			{
-				// Check if already register
-				$sql = 'SELECT hm.`id_module`
-					FROM `'._DB_PREFIX_.'hook_module` hm, `'._DB_PREFIX_.'hook` h
-					WHERE hm.`id_module` = '.(int)($this->id).' AND h.`id_hook` = '.$id_hook.'
-					AND h.`id_hook` = hm.`id_hook` AND `id_shop` = '.(int)$shop_id;
-				if (Db::getInstance()->getRow($sql))
-					continue;
-
-				// Get module position in hook
-				$sql = 'SELECT MAX(`position`) AS position
-					FROM `'._DB_PREFIX_.'hook_module`
-					WHERE `id_hook` = '.(int)$id_hook.' AND `id_shop` = '.(int)$shop_id;
-				if (!$position = Db::getInstance()->getValue($sql))
-					$position = 0;
-
-				// Register module in hook
-				$return &= Db::getInstance()->insert('hook_module', array(
-					'id_module' => (int)$this->id,
-					'id_hook' => (int)$id_hook,
-					'id_shop' => (int)$shop_id,
-					'position' => (int)($position + 1),
-				));
-			}
-
-			Hook::exec('actionModuleRegisterHookAfter', array('object' => $this, 'hook_name' => $hook_name));
+				return false;
 		}
+
+		// If shop lists is null, we fill it with all shops
+		if (is_null($shop_list))
+			$shop_list = Shop::getShops(true, null, true);
+
+		$return = true;
+		foreach ($shop_list as $shop_id)
+		{
+			// Check if already register
+			$sql = 'SELECT hm.`id_module`
+				FROM `'._DB_PREFIX_.'hook_module` hm, `'._DB_PREFIX_.'hook` h
+				WHERE hm.`id_module` = '.(int)($this->id).' AND h.`id_hook` = '.$id_hook.'
+				AND h.`id_hook` = hm.`id_hook` AND `id_shop` = '.(int)$shop_id;
+			if (Db::getInstance()->getRow($sql))
+				continue;
+
+			// Get module position in hook
+			$sql = 'SELECT MAX(`position`) AS position
+				FROM `'._DB_PREFIX_.'hook_module`
+				WHERE `id_hook` = '.(int)$id_hook.' AND `id_shop` = '.(int)$shop_id;
+			if (!$position = Db::getInstance()->getValue($sql))
+				$position = 0;
+
+			// Register module in hook
+			$return &= Db::getInstance()->insert('hook_module', array(
+				'id_module' => (int)$this->id,
+				'id_hook' => (int)$id_hook,
+				'id_shop' => (int)$shop_id,
+				'position' => (int)($position + 1),
+			));
+		}
+
 		return $return;
 	}
 
@@ -870,27 +723,20 @@ abstract class ModuleCore
 		// Get hook id if a name is given as argument
 		if (!is_numeric($hook_id))
 		{
-			$hook_name = (int)$hook_id;
 			// Retrocompatibility
 			$hook_id = Hook::getIdByName($hook_id);
 			if (!$hook_id)
 				return false;
 		}
-		else
-			$hook_name = Hook::getNameById((int)$hook_id);
-
-		Hook::exec('actionModuleUnRegisterHookBefore', array('object' => $this, 'hook_name' => $hook_name));
 
 		// Unregister module on hook by id
 		$sql = 'DELETE FROM `'._DB_PREFIX_.'hook_module`
 			WHERE `id_module` = '.(int)$this->id.' AND `id_hook` = '.(int)$hook_id
-			.(($shop_list) ? ' AND `id_shop` IN('.implode(', ', array_map('intval', $shop_list)).')' : '');
+			.(($shop_list) ? ' AND `id_shop` IN('.implode(', ', $shop_list).')' : '');
 		$result = Db::getInstance()->execute($sql);
 
 		// Clean modules position
 		$this->cleanPositions($hook_id, $shop_list);
-
-		Hook::exec('actionModuleUnRegisterHookAfter', array('object' => $this, 'hook_name' => $hook_name));
 
 		return $result;
 	}
@@ -906,7 +752,7 @@ abstract class ModuleCore
 	{
 		$sql = 'DELETE FROM `'._DB_PREFIX_.'hook_module_exceptions`
 			WHERE `id_module` = '.(int)$this->id.' AND `id_hook` = '.(int)$hook_id
-			.(($shop_list) ? ' AND `id_shop` IN('.implode(', ', array_map('intval', $shop_list)).')' : '');
+			.(($shop_list) ? ' AND `id_shop` IN('.implode(', ', $shop_list).')' : '');
 		return Db::getInstance()->execute($sql);
 	}
 
@@ -1017,13 +863,13 @@ abstract class ModuleCore
 		if (!Validate::isModuleName($module_name))
 		{
 			if (_PS_MODE_DEV_)
-				die(Tools::displayError(Tools::safeOutput($module_name).' is not a valid module name.'));
+				die(Tools::displayError($module_name.' is not a valid module name.'));
 			return false;
 		}
 
 		if (!isset(self::$_INSTANCE[$module_name]))
 		{
-			if (Tools::file_exists_no_cache(_PS_MODULE_DIR_.$module_name.'/'.$module_name.'.php'))
+			if (Tools::file_exists_cache(_PS_MODULE_DIR_.$module_name.'/'.$module_name.'.php'))
 			{
 				include_once(_PS_MODULE_DIR_.$module_name.'/'.$module_name.'.php');
 
@@ -1062,23 +908,16 @@ abstract class ModuleCore
 
 	public static function configXmlStringFormat($string)
 	{
-		return Tools::htmlentitiesDecodeUTF8($string);
+		return str_replace('\'', '\\\'', Tools::htmlentitiesDecodeUTF8($string));
 	}
 
 
 	public static function getModuleName($module)
 	{
-		$iso = substr(Context::getContext()->language->iso_code, 0, 2);
-
 		// Config file
-		$configFile = _PS_MODULE_DIR_.$module.'/config_'.$iso.'.xml';
-		// For "en" iso code, we keep the default config.xml name
-		if ($iso == 'en' || !file_exists($configFile))
-		{
-			$configFile = _PS_MODULE_DIR_.$module.'/config.xml';
-			if (!file_exists($configFile))
-				return 'Module '.ucfirst($module);
-		}
+		$configFile = _PS_MODULE_DIR_.$module.'/config.xml';
+		if (!file_exists($configFile))
+			return 'Module '.ucfirst($module);
 
 		// Load config.xml
 		libxml_use_internal_errors(true);
@@ -1101,20 +940,6 @@ abstract class ModuleCore
 		return Translate::getModuleTranslation((string)$xml_module->name, Module::configXmlStringFormat($xml_module->displayName), (string)$xml_module->name);
 	}
 
-	protected static function useTooMuchMemory()
-	{
-		$memory_limit = Tools::getMemoryLimit();
-		if (function_exists('memory_get_usage') && $memory_limit != '-1')
-		{
-			$current_memory = memory_get_usage(true);
-			$memory_threshold = (int)max($memory_limit * 0.15, Tools::isX86_64arch() ? 4194304 : 2097152);
-			$memory_left = $memory_limit - $current_memory;
-			
-			if ($memory_left <= $memory_threshold)
-				return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Return available modules
@@ -1134,38 +959,41 @@ abstract class ModuleCore
 
 		// Get modules directory list and memory limit
 		$modules_dir = Module::getModulesDirOnDisk();
+		$memory_limit = Tools::getMemoryLimit();
 		
 		$modules_installed = array();
 		$result = Db::getInstance()->executeS('
-		SELECT m.name, m.version, mp.interest, module_shop.enable_device
-		FROM `'._DB_PREFIX_.'module` m
-		'.Shop::addSqlAssociation('module', 'm').'
-		LEFT JOIN `'._DB_PREFIX_.'module_preference` mp ON (mp.`module` = m.`name` AND mp.`id_employee` = '.(int)$id_employee.')');
+		SELECT name, version, interest
+		FROM `'._DB_PREFIX_.'module`
+		LEFT JOIN `'._DB_PREFIX_.'module_preference` ON (`module` = `name` AND `id_employee` = '.(int)$id_employee.')');
 		foreach ($result as $row)
 			$modules_installed[$row['name']] = $row;
 
 		foreach ($modules_dir as $module)
 		{
-			if (Module::useTooMuchMemory())
+			// Memory usage checking
+			if (function_exists('memory_get_usage') && $memory_limit != '-1')
 			{
-				$errors[] = Tools::displayError('All modules cannot be loaded due to memory limit restrictions, please increase your memory_limit value on your server configuration');
-				break;
+				$current_memory = memory_get_usage(true);
+				// memory_threshold in MB
+				$memory_threshold = (Tools::isX86_64arch() ? 3 : 1.5);
+				if (($memory_limit - $current_memory) <= ($memory_threshold * 1024 * 1024))
+				{
+					$errors[] = Tools::displayError('All modules cannot be loaded due to memory limit restrictions, please increase your memory_limit value on your server configuration');
+					break;
+				}
 			}
 
-			$iso = substr(Context::getContext()->language->iso_code, 0, 2);
-
 			// Check if config.xml module file exists and if it's not outdated
-
-			if ($iso == 'en')
-				$configFile = _PS_MODULE_DIR_.$module.'/config.xml';
+			$configFile = _PS_MODULE_DIR_.$module.'/config.xml';
+			$xml_exist = file_exists($configFile);
+			if ($xml_exist)
+				$needNewConfigFile = (filemtime($configFile) < filemtime(_PS_MODULE_DIR_.$module.'/'.$module.'.php'));
 			else
-				$configFile = _PS_MODULE_DIR_.$module.'/config_'.$iso.'.xml';
-
-			$xml_exist = (file_exists($configFile));
-			$needNewConfigFile = $xml_exist ? (@filemtime($configFile) < @filemtime(_PS_MODULE_DIR_.$module.'/'.$module.'.php')) : true;
+				$needNewConfigFile = true;
 
 			// If config.xml exists and that the use config flag is at true
-			if ($useConfig && $xml_exist && !$needNewConfigFile)
+			if ($useConfig && $xml_exist)
 			{
 				// Load config.xml
 				libxml_use_internal_errors(true);
@@ -1175,7 +1003,7 @@ abstract class ModuleCore
 				libxml_clear_errors();
 
 				// If no errors in Xml, no need instand and no need new config.xml file, we load only translations
-				if (!count($errors) && (int)$xml_module->need_instance == 0)
+				if (!count($errors) && (int)$xml_module->need_instance == 0 && !$needNewConfigFile)
 				{
 					$file = _PS_MODULE_DIR_.$module.'/'.Context::getContext()->language->iso_code.'.php';
 					if (Tools::file_exists_cache($file) && include_once($file))
@@ -1192,12 +1020,10 @@ abstract class ModuleCore
 					$item->author = stripslashes(Translate::getModuleTranslation((string)$xml_module->name, Module::configXmlStringFormat($xml_module->author), (string)$xml_module->name));
 
 					if (isset($xml_module->confirmUninstall))
-						$item->confirmUninstall = Translate::getModuleTranslation((string)$xml_module->name, html_entity_decode(Module::configXmlStringFormat($xml_module->confirmUninstall)), (string)$xml_module->name);
+						$item->confirmUninstall = Translate::getModuleTranslation((string)$xml_module->name, Module::configXmlStringFormat($xml_module->confirmUninstall), (string)$xml_module->name);
 
 					$item->active = 0;
 					$item->onclick_option = false;
-
-					$item->trusted = Module::isModuleTrusted($item->name);
 					
 					$module_list[] = $item;
 					$module_name_list[] = '\''.pSQL($item->name).'\'';
@@ -1230,7 +1056,6 @@ abstract class ModuleCore
 				// If class exists, we just instanciate it
 				if (class_exists($module, false))
 				{
-
 					$tmp_module = new $module;
 
 					$item = new stdClass();
@@ -1247,18 +1072,10 @@ abstract class ModuleCore
 					$item->is_configurable = $tmp_module->is_configurable = method_exists($tmp_module, 'getContent') ? 1 : 0;
 					$item->need_instance = isset($tmp_module->need_instance) ? $tmp_module->need_instance : 0;
 					$item->active = $tmp_module->active;
-					$item->trusted = Module::isModuleTrusted($tmp_module->name);
 					$item->currencies = isset($tmp_module->currencies) ? $tmp_module->currencies : null;
 					$item->currencies_mode = isset($tmp_module->currencies_mode) ? $tmp_module->currencies_mode : null;
-					$item->confirmUninstall = isset($tmp_module->confirmUninstall) ? html_entity_decode($tmp_module->confirmUninstall) : null;
-					$item->description_full = stripslashes($tmp_module->description_full);
-					$item->additional_description = isset($tmp_module->additional_description) ? stripslashes($tmp_module->additional_description) : null;
-					$item->compatibility = isset($tmp_module->compatibility) ? (array)$tmp_module->compatibility : null;
-					$item->nb_rates = isset($tmp_module->nb_rates) ? (array)$tmp_module->nb_rates : null;
-					$item->avg_rate = isset($tmp_module->avg_rate) ? (array)$tmp_module->avg_rate : null;
-					$item->badges = isset($tmp_module->badges) ? (array)$tmp_module->badges : null;
-					$item->url = isset($tmp_module->url) ? $tmp_module->url : null;
-
+					$item->confirmUninstall = isset($tmp_module->confirmUninstall) ? $tmp_module->confirmUninstall : null;
+					
 					$item->onclick_option  = method_exists($module, 'onclickOption') ? true : false;
 					if ($item->onclick_option)
 					{
@@ -1312,12 +1129,6 @@ abstract class ModuleCore
 		foreach ($files_list as $f)
 			if (file_exists($f['file']) && ($f['loggedOnAddons'] == 0 || $loggedOnAddons))
 			{
-				if (Module::useTooMuchMemory())
-				{
-					$errors[] = Tools::displayError('All modules cannot be loaded due to memory limit restrictions, please increase your memory_limit value on your server configuration');
-					break;
-				}
-
 				$file = $f['file'];
 				$content = Tools::file_get_contents($file);
 				$xml = @simplexml_load_string($content, null, LIBXML_NOCDATA);
@@ -1325,14 +1136,13 @@ abstract class ModuleCore
 					foreach ($xml->module as $modaddons)
 					{
 						$flag_found = 0;
-						foreach ($module_list as $k => &$m)
+						foreach ($module_list as $k => $m)
 							if ($m->name == $modaddons->name && !isset($m->available_on_addons))
 							{
 								$flag_found = 1;
 								if ($m->version != $modaddons->version && version_compare($m->version, $modaddons->version) === -1)
 									$module_list[$k]->version_addons = $modaddons->version;
 							}
- 
 						if ($flag_found == 0)
 						{
 							$item = new stdClass();
@@ -1342,9 +1152,8 @@ abstract class ModuleCore
 							$item->name = strip_tags((string)$modaddons->name);
 							$item->version = strip_tags((string)$modaddons->version);
 							$item->tab = strip_tags((string)$modaddons->tab);
-							$item->displayName = strip_tags((string)$modaddons->displayName);
+							$item->displayName = strip_tags((string)$modaddons->displayName).' (Addons)';
 							$item->description = stripslashes(strip_tags((string)$modaddons->description));
-							$item->description_full = stripslashes(strip_tags((string)$modaddons->description_full));
 							$item->author = strip_tags((string)$modaddons->author);
 							$item->limited_countries = array();
 							$item->parent_class = '';
@@ -1353,15 +1162,7 @@ abstract class ModuleCore
 							$item->need_instance = 0;
 							$item->not_on_disk = 1;
 							$item->available_on_addons = 1;
-							$item->trusted = Module::isModuleTrusted($item->name);
 							$item->active = 0;
-							$item->description_full = stripslashes($modaddons->description_full);
-							$item->additional_description = isset($modaddons->additional_description) ? stripslashes($modaddons->additional_description) : null;
-							$item->compatibility = isset($modaddons->compatibility) ? (array)$modaddons->compatibility : null;
-							$item->nb_rates = isset($modaddons->nb_rates) ? (array)$modaddons->nb_rates : null;
-							$item->avg_rate = isset($modaddons->avg_rate) ? (array)$modaddons->avg_rate : null;
-							$item->badges = isset($modaddons->badges) ? (array)$modaddons->badges : null;
-							$item->url = isset($modaddons->url) ? $modaddons->url : null;
 							if (isset($modaddons->img))
 							{
 								if (!file_exists(_PS_TMP_IMG_DIR_.md5($modaddons->name).'.jpg'))
@@ -1388,16 +1189,13 @@ abstract class ModuleCore
 						}
 					}
 			}
-
-		foreach ($module_list as $key => &$module)
-			if (defined('_PS_HOST_MODE_') && in_array($module->name, self::$hosted_modules_blacklist))
-				unset($module_list[$key]);
-			elseif (isset($modules_installed[$module->name]))
+			
+		foreach ($module_list as &$module)
+			if (isset($modules_installed[$module->name]))
 			{
 				$module->installed = true;
 				$module->database_version = $modules_installed[$module->name]['version'];
 				$module->interest = $modules_installed[$module->name]['interest'];
-				$module->enable_device = $modules_installed[$module->name]['enable_device'];
 			}
 			else
 			{
@@ -1406,19 +1204,18 @@ abstract class ModuleCore
 				$module->interest = 0;
 			}
 
-		usort($module_list, create_function('$a,$b', 'return strnatcasecmp($a->displayName, $b->displayName);'));
+		usort($module_list, create_function('$a,$b', '
+			if ($a->displayName == $b->displayName)
+				return 0;
+			return ($a->displayName < $b->displayName) ? -1 : 1;
+		'));
+
 		if ($errors)
 		{
-			if (!isset(Context::getContext()->controller) && !Context::getContext()->controller->controller_name)
-			{
-				echo '<div class="alert error"><h3>'.Tools::displayError('The following module(s) could not be loaded').':</h3><ol>';
-				foreach ($errors as $error)
-					echo '<li>'.$error.'</li>';
-				echo '</ol></div>';
-			}
-			else
-				foreach ($errors as $error)
-					Context::getContext()->controller->errors[] = $error;
+			echo '<div class="alert error"><h3>'.Tools::displayError('The following module(s) could not be loaded').':</h3><ol>';
+			foreach ($errors as $error)
+				echo '<li>'.$error.'</li>';
+			echo '</ol></div>';
 		}
 
 		return $module_list;
@@ -1435,16 +1232,13 @@ abstract class ModuleCore
 		$modules = scandir(_PS_MODULE_DIR_);
 		foreach ($modules as $name)
 		{
-			if (is_file(_PS_MODULE_DIR_.$name))
-				continue;
-			elseif (is_dir(_PS_MODULE_DIR_.$name.DIRECTORY_SEPARATOR) && Tools::file_exists_cache(_PS_MODULE_DIR_.$name.'/'.$name.'.php'))
+			if (is_dir(_PS_MODULE_DIR_.$name) && Tools::file_exists_cache(_PS_MODULE_DIR_.$name.'/'.$name.'.php'))
 			{
 				if (!Validate::isModuleName($name))
 					throw new PrestaShopException(sprintf('Module %s is not a valid module name', $name));
 				$module_list[] = $name;
 			}
 		}
-
 		return $module_list;
 	}
 
@@ -1473,25 +1267,6 @@ abstract class ModuleCore
 		return $db->executeS('SELECT * FROM `'._DB_PREFIX_.'module` m WHERE `name` NOT IN ('.implode(',', $arr_native_modules).') ');
 	}
 
-	public static function getNativeModuleList()
-	{
-		$module_list_xml = _PS_ROOT_DIR_.self::CACHE_FILE_MODULES_LIST;
-		if (!file_exists($module_list_xml))
-			return false;
-
-		$native_modules = simplexml_load_file($module_list_xml);
-		$native_modules = $native_modules->modules;
-		$modules = array();
-		foreach ($native_modules as $native_modules_type)
-			if (in_array($native_modules_type['type'], array('native', 'partner')))
-			{
-				foreach ($native_modules_type->module as $module)
-					$modules[] = $module['name'];
-			}
-
-		return $modules;
-	}
-
 	/**
 	 * Return installed modules
 	 *
@@ -1507,156 +1282,6 @@ abstract class ModuleCore
 				 WHERE k.`position` = 1
 				 GROUP BY m.id_module';
 		return Db::getInstance()->executeS($sql);
-	}
-
-	/**
-	 * Return if the module is provided by addons.prestashop.com or not
-	 *
-	 * @param string $name The module name (the folder name)
-	 * @param string $key The key provided by addons
-	 * @return integer
-	 */
-	public static function isModuleTrusted($module_name)
-	{
-		$context = Context::getContext();
-		$theme = new Theme($context->shop->id_theme);
-		// If the xml file exist, isn't empty, isn't too old
-		// and if the theme hadn't change
-		// we use the file, otherwise we regenerate it 
-		if (!(file_exists(_PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST)
-			&& filesize(_PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST) > 0 
-			&& ((time() - filemtime(_PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST)) < 86400)
-			&& strpos(Tools::file_get_contents(_PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST), $theme->name) !== false))
-			self::generateTrustedXml();
-
-		// If the module is trusted, which includes both partner modules and modules bought on Addons	
-		if (strpos(Tools::file_get_contents(_PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST), $module_name) !== false)
-		{
-			// If the module is not a partner, then return 1 (which means the module is "trusted")
-			if (strpos(Tools::file_get_contents(_PS_ROOT_DIR_.self::CACHE_FILE_MODULES_LIST), '<module name="'.$module_name.'"/>')== false)
-				return 1;
-			// The module is a parter. If the module is in the file that contains module for this country then return 1 (which means the module is "trusted")
-			elseif (strpos(Tools::file_get_contents(_PS_ROOT_DIR_.self::CACHE_FILE_DEFAULT_COUNTRY_MODULES_LIST), '<name><![CDATA['.$module_name.']]></name>') !== false)
-				return 1;
-			// The module seems to be trusted, but it does not seem to be dedicated to this country
-			return 2;
-		}
-		// If the module is already in the untrusted list, then return 0 (untrusted)
-		elseif (strpos(Tools::file_get_contents(_PS_ROOT_DIR_.self::CACHE_FILE_UNTRUSTED_MODULES_LIST), $module_name) !== false)
-			return 0;
-		else
-		{
-			// If the module isn't in one of the xml files
-			// It might have been uploaded recenlty so we check
-			// Addons API and clear XML files to be regenerated next time
-			Tools::deleteFile(_PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST);
-			Tools::deleteFile(_PS_ROOT_DIR_.self::CACHE_FILE_UNTRUSTED_MODULES_LIST);
-
-			return (int)Module::checkModuleFromAddonsApi($module_name);
-		}
-	}
-
-	/**
-	 * Generate XML files for trusted and untrusted modules
-	 *
-	 */
-	public static function generateTrustedXml()
-	{
-		$modules_on_disk = Module::getModulesDirOnDisk();
-		$trusted   = array();
-		$untrusted = array();
-
-		$trusted_modules_xml = array(
-									_PS_ROOT_DIR_.self::CACHE_FILE_ALL_COUNTRY_MODULES_LIST,
-									_PS_ROOT_DIR_.self::CACHE_FILE_MUST_HAVE_MODULES_LIST,
-								);
-
-		// Create 2 arrays with trusted and untrusted modules
-		foreach ($trusted_modules_xml as $file)
-		{
-			$content  = Tools::file_get_contents($file);
-			$xml = @simplexml_load_string($content, null, LIBXML_NOCDATA);
-
-			if ($xml && isset($xml->module))
-				foreach ($xml->module as $modaddons)
-					$trusted[] = (string)$modaddons->name;
-		}
-
-		foreach (glob(_PS_ROOT_DIR_.'/config/xml/themes/*.xml') as $theme_xml)
-			if(file_exists($theme_xml))
-			{
-				$content  = Tools::file_get_contents($theme_xml);
-				$xml = @simplexml_load_string($content, null, LIBXML_NOCDATA);
-				foreach ($xml->modules->module as $modaddons)
-					if((string)$modaddons['action'] == 'install')
-						$trusted[] = (string)$modaddons['name'];
-			}
-
-		foreach ($modules_on_disk as $name)
-		{
-			if (!in_array($name, $trusted))
-			{
-				if (Module::checkModuleFromAddonsApi($name))
-					$trusted[] = $name;
-				else
-					$untrusted[] = $name;
-			}
-		}
-
-		$context = Context::getContext();
-		$theme = new Theme($context->shop->id_theme);
-
-		// Save the 2 arrays into XML files
-		$trusted_xml = new SimpleXMLElement('<modules_list/>');
-		$trusted_xml->addAttribute('theme', $theme->name);
-		$modules = $trusted_xml->addChild('modules');
-		$modules->addAttribute('type', 'trusted');
-		foreach ($trusted as $key => $name)
-		{
-			$module = $modules->addChild('module');
-			$module->addAttribute('name', $name);
-		}
-		$success = file_put_contents( _PS_ROOT_DIR_.self::CACHE_FILE_TRUSTED_MODULES_LIST, $trusted_xml->asXML());
-
-		$untrusted_xml = new SimpleXMLElement('<modules_list/>');
-		$modules = $untrusted_xml->addChild('modules');
-		$modules->addAttribute('type', 'untrusted');
-		foreach ($untrusted as $key => $name)
-		{
-			$module = $modules->addChild('module');
-			$module->addAttribute('name', $name);
-		}
-		$success &= file_put_contents( _PS_ROOT_DIR_.self::CACHE_FILE_UNTRUSTED_MODULES_LIST, $untrusted_xml->asXML());
-
-		if ($success)
-			return true;
-		else
-			Tools::displayError('Trusted and Untrusted XML have not been generated properly');
-	}
-
-	/**
-	 * Create the Addons API call from the module name only
-	 *
-	 * @param string $name Module dir name
-	 * @return boolean Returns if the module is trusted by addons.prestashop.com
-	 */
-	public static function checkModuleFromAddonsApi($module_name)
-	{
-		$obj = Module::getInstanceByName($module_name);
-
-		if (!is_object($obj))
-			return false;
-		elseif ($obj->module_key === '')
-			return false;
-		else
-		{
-			$params = array(
-				'module_name' => $obj->name,
-				'module_key' => $obj->module_key,
-			);
-			$xml = Tools::addonsRequest('check_module', $params);
-			return (stristr($xml, 'success'));
-		}
 	}
 
 	/**
@@ -1682,13 +1307,13 @@ abstract class ModuleCore
 	{
 		return true;
 	}
-
-	/*
-		@deprecated since 1.6.0.2
-	*/
+	
 	public static function getPaypalIgnore()
 	{
-		Tools::displayAsDeprecated();
+		$iso_code = Country::getIsoById((int)Configuration::get('PS_COUNTRY_DEFAULT'));
+		$paypal_countries = array('ES', 'FR', 'PL', 'IT');
+		if (Context::getContext()->getMobileDevice() && Context::getContext()->shop->getTheme() == 'default' && in_array($iso_code, $paypal_countries))
+			return 'm.`name` = \'paypal\'';
 	}
 
 	/**
@@ -1703,16 +1328,14 @@ abstract class ModuleCore
 		if (isset($context->cart))
 			$billing = new Address((int)$context->cart->id_address_invoice);
 
-		$use_groups = Group::isFeatureActive();
-
 		$frontend = true;
 		$groups = array();
 		if (isset($context->employee))
 			$frontend = false;
-		elseif (isset($context->customer) && $use_groups)
+		elseif (isset($context->customer))
 		{
 			$groups = $context->customer->getGroups();
-			if (!count($groups))
+			if (empty($groups))
 				$groups = array(Configuration::get('PS_UNIDENTIFIED_GROUP'));
 		}
 
@@ -1721,19 +1344,21 @@ abstract class ModuleCore
 			$hookPayment = 'displayPayment';
 
 		$list = Shop::getContextListShopID();
+		if ($paypal_condition = Module::getPaypalIgnore())
+			$paypal_condition = ' AND '.$paypal_condition;
 			
 		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT DISTINCT m.`id_module`, h.`id_hook`, m.`name`, hm.`position`
 		FROM `'._DB_PREFIX_.'module` m
 		'.($frontend ? 'LEFT JOIN `'._DB_PREFIX_.'module_country` mc ON (m.`id_module` = mc.`id_module` AND mc.id_shop = '.(int)$context->shop->id.')' : '').'
-		'.($frontend && $use_groups ? 'INNER JOIN `'._DB_PREFIX_.'module_group` mg ON (m.`id_module` = mg.`id_module` AND mg.id_shop = '.(int)$context->shop->id.')' : '').'
-		'.($frontend && isset($context->customer) && $use_groups ? 'INNER JOIN `'._DB_PREFIX_.'customer_group` cg on (cg.`id_group` = mg.`id_group`AND cg.`id_customer` = '.(int)$context->customer->id.')' : '').'
+		'.($frontend ? 'INNER JOIN `'._DB_PREFIX_.'module_group` mg ON (m.`id_module` = mg.`id_module` AND mg.id_shop = '.(int)$context->shop->id.')' : '').'
+		'.($frontend && isset($context->customer) ? 'INNER JOIN `'._DB_PREFIX_.'customer_group` cg on (cg.`id_group` = mg.`id_group`AND cg.`id_customer` = '.(int)$context->customer->id.')' : '').'
 		LEFT JOIN `'._DB_PREFIX_.'hook_module` hm ON hm.`id_module` = m.`id_module`
 		LEFT JOIN `'._DB_PREFIX_.'hook` h ON hm.`id_hook` = h.`id_hook`
 		WHERE h.`name` = \''.pSQL($hookPayment).'\'
 		'.(isset($billing) && $frontend ? 'AND mc.id_country = '.(int)$billing->id_country : '').'
 		AND (SELECT COUNT(*) FROM '._DB_PREFIX_.'module_shop ms WHERE ms.id_module = m.id_module AND ms.id_shop IN('.implode(', ', $list).')) = '.count($list).'
 		AND hm.id_shop IN('.implode(', ', $list).')
-		'.((count($groups) && $frontend && $use_groups) ? 'AND (mg.`id_group` IN ('.implode(', ', $groups).'))' : '').'
+		'.(count($groups) && $frontend ? 'AND (mg.`id_group` IN('.implode(', ', $groups).'))' : '').$paypal_condition.'
 		GROUP BY hm.id_hook, hm.id_module
 		ORDER BY hm.`position`, m.`name` DESC');
 	}
@@ -1769,7 +1394,7 @@ abstract class ModuleCore
 	 * Reposition module
 	 *
 	 * @param boolean $id_hook Hook ID
-	 * @param boolean $way Up (0) or Down (1)
+	 * @param boolean $way Up (1) or Down (0)
 	 * @param int $position
 	 */
 	public function updatePosition($id_hook, $way, $position = null)
@@ -1826,7 +1451,7 @@ abstract class ModuleCore
 		$sql = 'SELECT `id_module`, `id_shop`
 			FROM `'._DB_PREFIX_.'hook_module`
 			WHERE `id_hook` = '.(int)$id_hook.'
-			'.((!is_null($shop_list) && $shop_list) ? ' AND `id_shop` IN('.implode(', ', array_map('intval', $shop_list)).')' : '').'
+			'.((!is_null($shop_list) && $shop_list) ? ' AND `id_shop` IN('.implode(', ', $shop_list).')' : '').'
 			ORDER BY `position`';
 		$results = Db::getInstance()->executeS($sql);
 		$position = array();
@@ -1849,11 +1474,8 @@ abstract class ModuleCore
 	public function displayError($error)
 	{
 	 	$output = '
-	 	<div class="bootstrap">
-		<div class="module_error alert alert-danger" >
-			<button type="button" class="close" data-dismiss="alert">&times;</button>
+		<div class="module_error alert error">
 			'.$error.'
-		</div>
 		</div>';
 		$this->error = true;
 		return $output;
@@ -1862,11 +1484,8 @@ abstract class ModuleCore
 	public function displayConfirmation($string)
 	{
 	 	$output = '
-	 	<div class="bootstrap">
-		<div class="module_confirmation conf confirm alert alert-success">
-			<button type="button" class="close" data-dismiss="alert">&times;</button>
+		<div class="module_confirmation conf confirm">
 			'.$string.'
-		</div>
 		</div>';
 		return $output;
 	}
@@ -1877,70 +1496,57 @@ abstract class ModuleCore
 	 * @param int $id_hook Hook ID
 	 * @return array Exceptions
 	 */
-	public function getExceptions($id_hook, $dispatch = false)
+	protected static $exceptionsCache = null;
+	public function getExceptions($hookID, $dispatch = false)
 	{
-		$cache_id = 'exceptionsCache';
-		if (!Cache::isStored($cache_id))
+		if (self::$exceptionsCache === null)
 		{
-			$exceptionsCache = array();
+			self::$exceptionsCache = array();
 			$sql = 'SELECT * FROM `'._DB_PREFIX_.'hook_module_exceptions`
 				WHERE `id_shop` IN ('.implode(', ', Shop::getContextListShopID()).')';
-			$db = Db::getInstance();
-			$result = $db->executeS($sql, false);
-			while ($row = $db->nextRow($result))
+			$result = Db::getInstance()->executeS($sql);
+			foreach ($result as $row)
 			{
 				if (!$row['file_name'])
 					continue;
 				$key = $row['id_hook'].'-'.$row['id_module'];
-				if (!isset($exceptionsCache[$key]))
-					$exceptionsCache[$key] = array();
-				if (!isset($exceptionsCache[$key][$row['id_shop']]))
-					$exceptionsCache[$key][$row['id_shop']] = array();
-				$exceptionsCache[$key][$row['id_shop']][] = $row['file_name'];
+				if (!isset(self::$exceptionsCache[$key]))
+					self::$exceptionsCache[$key] = array();
+				if (!isset(self::$exceptionsCache[$key][$row['id_shop']]))
+					self::$exceptionsCache[$key][$row['id_shop']] = array();
+				self::$exceptionsCache[$key][$row['id_shop']][] = $row['file_name'];
 			}
-			Cache::store($cache_id, $exceptionsCache);
 		}
-		else
-			$exceptionsCache = Cache::retrieve($cache_id);
 
-		$key = $id_hook.'-'.$this->id;
-		$array_return = array();
-		if ($dispatch)
+		$key = $hookID.'-'.$this->id;
+		if (!$dispatch)
 		{
+			$files = array();
 			foreach (Shop::getContextListShopID() as $shop_id)
-				if (isset($exceptionsCache[$key], $exceptionsCache[$key][$shop_id]))
-					$array_return[$shop_id] = $exceptionsCache[$key][$shop_id];
+				if (isset(self::$exceptionsCache[$key], self::$exceptionsCache[$key][$shop_id]))
+					foreach (self::$exceptionsCache[$key][$shop_id] as $file)
+						if (!in_array($file, $files))
+							$files[] = $file;
+			return $files;
 		}
 		else
 		{
+			$list = array();
 			foreach (Shop::getContextListShopID() as $shop_id)
-				if (isset($exceptionsCache[$key], $exceptionsCache[$key][$shop_id]))
-					foreach ($exceptionsCache[$key][$shop_id] as $file)
-						if (!in_array($file, $array_return))
-							$array_return[] = $file;
+				if (isset(self::$exceptionsCache[$key], self::$exceptionsCache[$key][$shop_id]))
+					$list[$shop_id] = self::$exceptionsCache[$key][$shop_id];
+			return $list;
 		}
-		return $array_return;
 	}
 
 	public static function isInstalled($module_name)
 	{
 		if (!Cache::isStored('Module::isInstalled'.$module_name))
 		{
-			$id_module = Module::getModuleIdByName($module_name);
+			$id_module = Db::getInstance()->getValue('SELECT `id_module` FROM `'._DB_PREFIX_.'module` WHERE `name` = \''.pSQL($module_name).'\'');
 			Cache::store('Module::isInstalled'.$module_name, (bool)$id_module);
 		}
 		return Cache::retrieve('Module::isInstalled'.$module_name);
-	}
-
-	public function isEnabledForShopContext()
-	{
-		return (bool)Db::getInstance()->getValue('
-			SELECT COUNT(*) n
-			FROM `'._DB_PREFIX_.'module_shop`
-			WHERE id_module='.(int)$this->id.' AND id_shop IN ('.implode(',', array_map('intval', Shop::getContextListShopID())).')
-			GROUP BY id_module
-			HAVING n='.(int)count(Shop::getContextListShopID())
-		);
 	}
 
 	public static function isEnabled($module_name)
@@ -1948,7 +1554,7 @@ abstract class ModuleCore
 		if (!Cache::isStored('Module::isEnabled'.$module_name))
 		{
 			$active = false;
-			$id_module = Module::getModuleIdByName($module_name);
+			$id_module = Db::getInstance()->getValue('SELECT `id_module` FROM `'._DB_PREFIX_.'module` WHERE `name` = \''.pSQL($module_name).'\'');
 			if (Db::getInstance()->getValue('SELECT `id_module` FROM `'._DB_PREFIX_.'module_shop` WHERE `id_module` = '.(int)$id_module.' AND `id_shop` = '.(int)Context::getContext()->shop->id))
 				$active = true;
 			Cache::store('Module::isEnabled'.$module_name, (bool)$active);
@@ -1974,14 +1580,8 @@ abstract class ModuleCore
 	protected static function _isTemplateOverloadedStatic($module_name, $template)
 	{
 		if (Tools::file_exists_cache(_PS_THEME_DIR_.'modules/'.$module_name.'/'.$template))
-			return _PS_THEME_DIR_.'modules/'.$module_name.'/'.$template;
-		elseif (Tools::file_exists_cache(_PS_THEME_DIR_.'modules/'.$module_name.'/views/templates/hook/'.$template))
-			return _PS_THEME_DIR_.'modules/'.$module_name.'/views/templates/hook/'.$template;
-		elseif (Tools::file_exists_cache(_PS_THEME_DIR_.'modules/'.$module_name.'/views/templates/front/'.$template))
-			return _PS_THEME_DIR_.'modules/'.$module_name.'/views/templates/front/'.$template;
+			return true;
 		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$module_name.'/views/templates/hook/'.$template))
-			return false;
-		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$module_name.'/views/templates/front/'.$template))
 			return false;
 		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$module_name.'/'.$template))
 			return false;
@@ -1995,20 +1595,9 @@ abstract class ModuleCore
 	
 	protected function getCacheId($name = null)
 	{
-		$cache_array = array();
-		$cache_array[] = $name !== null ? $name : $this->name;
-		if (Configuration::get('PS_SSL_ENABLED'))
-			$cache_array[] = (int)Tools::usingSecureMode();
-		if (Shop::isFeatureActive())
-			$cache_array[] = (int)$this->context->shop->id;
-		if (Group::isFeatureActive())
-			$cache_array[] = (int)Group::getCurrent()->id;
-		if (Language::isMultiLanguageActivated())
-			$cache_array[] = (int)$this->context->language->id;
-		if (Currency::isMultiCurrencyActivated())
-			$cache_array[] = (int)$this->context->currency->id;
-		$cache_array[] = (int)$this->context->country->id;
-		return implode('|', $cache_array);
+		if ($name === null)
+			$name = $this->name;
+		return $name.'|'.(int)Tools::usingSecureMode().'|'.(int)$this->context->shop->id.'|'.(int)Group::getCurrent()->id.'|'.(int)$this->context->language->id;
 	}
 
 	public function display($file, $template, $cacheId = null, $compileId = null)
@@ -2017,46 +1606,27 @@ abstract class ModuleCore
 			return Tools::displayError('No template found for module').' '.basename($file, '.php');
 		else
 		{
-			if (Tools::getIsset('live_edit'))
-				$cacheId = null;
-		
 			$this->smarty->assign(array(
-				'module_dir' =>	__PS_BASE_URI__.'modules/'.basename($file, '.php').'/',
-				'module_template_dir' => ($overloaded ? _THEME_DIR_ : __PS_BASE_URI__).'modules/'.basename($file, '.php').'/',
-				'allow_push' => $this->allow_push
+				'module_dir' =>				__PS_BASE_URI__.'modules/'.basename($file, '.php').'/',
+				'module_template_dir' =>	($overloaded ? _THEME_DIR_ : __PS_BASE_URI__).'modules/'.basename($file, '.php').'/'
 			));
 
 			if ($cacheId !== null)
 				Tools::enableCache();
 
-			$result = $this->getCurrentSubTemplate($template, $cacheId, $compileId)->fetch();
+			$smarty_subtemplate = $this->context->smarty->createTemplate(
+				$this->getTemplatePath($template),
+				$cacheId,
+				$compileId,
+				$this->smarty
+			);
+			$result = $smarty_subtemplate->fetch();
 
 			if ($cacheId !== null)
 				Tools::restoreCacheSettings();
 
-			$this->resetCurrentSubTemplate($template, $cacheId, $compileId);
-
 			return $result;
 		}
-	}
-	
-	protected function getCurrentSubTemplate($template, $cache_id = null, $compile_id = null)
-	{
-		if (!isset($this->current_subtemplate[$template.'_'.$cache_id.'_'.$compile_id]))
-		{
-			$this->current_subtemplate[$template.'_'.$cache_id.'_'.$compile_id] = $this->context->smarty->createTemplate(
-				$this->getTemplatePath($template),
-				$cache_id,
-				$compile_id,
-				$this->smarty
-			);
-		}
-		return $this->current_subtemplate[$template.'_'.$cache_id.'_'.$compile_id];
-	}
-	
-	protected function resetCurrentSubTemplate($template, $cache_id, $compile_id)
-	{
-		$this->current_subtemplate[$template.'_'.$cache_id.'_'.$compile_id] = null;
 	}
 
 	/**
@@ -2071,17 +1641,12 @@ abstract class ModuleCore
 		$overloaded = $this->_isTemplateOverloaded($template);
 		if ($overloaded === null)
 			return null;
-		
 		if ($overloaded)
-			return $overloaded;
-		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$this->name.'/views/templates/hook/'.$template))
+			return _PS_THEME_DIR_.'modules/'.$this->name.'/'.$template;
+		else if (file_exists(_PS_MODULE_DIR_.$this->name.'/views/templates/hook/'.$template))
 			return _PS_MODULE_DIR_.$this->name.'/views/templates/hook/'.$template;
-		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$this->name.'/views/templates/front/'.$template))
- 			return _PS_MODULE_DIR_.$this->name.'/views/templates/front/'.$template;
-		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$this->name.'/'.$template))
-			return _PS_MODULE_DIR_.$this->name.'/'.$template;
 		else
-			return null;
+			return _PS_MODULE_DIR_.$this->name.'/'.$template;
 	}
 
 	protected function _getApplicableTemplateDir($template)
@@ -2091,61 +1656,37 @@ abstract class ModuleCore
 
 	public function isCached($template, $cacheId = null, $compileId = null)
 	{
-		if (Tools::getIsset('live_edit'))
-			return false;
+		$context = Context::getContext();
 
 		Tools::enableCache();
-		$is_cached = $this->getCurrentSubTemplate($this->getTemplatePath($template), $cacheId, $compileId)->isCached($this->getTemplatePath($template), $cacheId, $compileId);
+		$is_cached =  $context->smarty->isCached($this->getTemplatePath($template), $cacheId, $compileId);
 		Tools::restoreCacheSettings();
 
 		return $is_cached;
 	}
 
-
-	/*
-	 * Clear template cache
-	 *
-	 * @param string $template Template name
-	 * @param int null $cache_id
-	 * @param int null $compile_id
-	 * @return int Number of template cleared
-	 */
 	protected function _clearCache($template, $cache_id = null, $compile_id = null)
 	{
 		Tools::enableCache();
-		if ($cache_id === null)
-			$cache_id = $this->name;
-		$number_of_template_cleared = Tools::clearCache(Context::getContext()->smarty, $this->getTemplatePath($template), $cache_id, $compile_id);
+		Tools::clearCache(Context::getContext()->smarty, $this->getTemplatePath($template), $cache_id, $compile_id);
 		Tools::restoreCacheSettings();
-
-		return $number_of_template_cleared;
 	}
 
 	protected function _generateConfigXml()
 	{
 		$xml = '<?xml version="1.0" encoding="UTF-8" ?>
-<module>
-	<name>'.$this->name.'</name>
-	<displayName><![CDATA['.Tools::htmlentitiesUTF8($this->displayName).']]></displayName>
-	<version><![CDATA['.$this->version.']]></version>
-	<description><![CDATA['.Tools::htmlentitiesUTF8($this->description).']]></description>
-	<author><![CDATA['.Tools::htmlentitiesUTF8($this->author).']]></author>
-	<tab><![CDATA['.Tools::htmlentitiesUTF8($this->tab).']]></tab>'.(isset($this->confirmUninstall) ? "\n\t".'<confirmUninstall><![CDATA['.$this->confirmUninstall.']]></confirmUninstall>' : '').'
-	<is_configurable>'.(isset($this->is_configurable) ? (int)$this->is_configurable : 0).'</is_configurable>
-	<need_instance>'.(int)$this->need_instance.'</need_instance>'.(isset($this->limited_countries) ? "\n\t".'<limited_countries>'.(count($this->limited_countries) == 1 ? $this->limited_countries[0] : '').'</limited_countries>' : '').'
-</module>';
+        <module>
+            <name>'.$this->name.'</name>
+            <displayName><![CDATA['.Tools::htmlentitiesUTF8($this->displayName).']]></displayName>
+            <version><![CDATA['.$this->version.']]></version>
+            <description><![CDATA['.Tools::htmlentitiesUTF8($this->description).']]></description>
+            <author><![CDATA['.Tools::htmlentitiesUTF8($this->author).']]></author>
+            <tab><![CDATA['.Tools::htmlentitiesUTF8($this->tab).']]></tab>'.(isset($this->confirmUninstall) ? "\n\t".'<confirmUninstall>'.$this->confirmUninstall.'</confirmUninstall>' : '').'
+            <is_configurable>'.(isset($this->is_configurable) ? (int)$this->is_configurable : 0).'</is_configurable>
+            <need_instance>'.(int)$this->need_instance.'</need_instance>'.(isset($this->limited_countries) ? "\n\t".'<limited_countries>'.(count($this->limited_countries) == 1 ? $this->limited_countries[0] : '').'</limited_countries>' : '').'
+        </module>';
 		if (is_writable(_PS_MODULE_DIR_.$this->name.'/'))
-		{
-			$iso = substr(Context::getContext()->language->iso_code, 0, 2);
-			$file = _PS_MODULE_DIR_.$this->name.'/'.($iso == 'en' ? 'config.xml' : 'config_'.$iso.'.xml');
-			if (!@file_put_contents($file, $xml))
-				if (!is_writable($file))
-				{
-					@unlink($file);
-					@file_put_contents($file, $xml);
-				}
-			@chmod($file, 0664);
-		}
+			file_put_contents(_PS_MODULE_DIR_.$this->name.'/config.xml', $xml);
 	}
 
 	/**
@@ -2223,13 +1764,7 @@ abstract class ModuleCore
 	 */
 	public static function getModuleIdByName($name)
 	{
-		$cache_id = 'Module::getModuleIdByName_'.pSQL($name);
-		if (!Cache::isStored($cache_id))
-		{
-			$result = (int)Db::getInstance()->getValue('SELECT `id_module` FROM `'._DB_PREFIX_.'module` WHERE `name` = "'.pSQL($name).'"');
-			Cache::store($cache_id, $result);
-		}
-		return Cache::retrieve($cache_id);
+		return Db::getInstance()->getValue('SELECT `id_module` FROM `'._DB_PREFIX_.'module` WHERE `name` = "'.pSQL($name).'"');
 	}
 
 	/**
@@ -2325,48 +1860,6 @@ abstract class ModuleCore
 	}
 
 	/**
-	 * Install module's controllers using public property $controllers
-	 * @return bool
-	 */
-	private function installControllers()
-	{
-		$themes = Theme::getThemes();
-		$theme_meta_value = array();
-		foreach ($this->controllers as $controller)
-		{
-			$page = 'module-'.$this->name.'-'.$controller;
-			$result = Db::getInstance()->getValue('SELECT * FROM '._DB_PREFIX_.'meta WHERE page="'.pSQL($page).'"');
-			if ((int)$result > 0)
-				continue;
-
-			$meta = New Meta();
-			$meta->page = $page;
-			$meta->configurable = 0;
-			$meta->save();
-			if ((int)$meta->id > 0)
-			{
-				foreach ($themes as $theme)
-				{
-					$theme_meta_value[] = array(
-						'id_theme' => $theme->id,
-						'id_meta' => $meta->id,
-						'left_column' => (int)$theme->default_left_column,
-						'right_column' => (int)$theme->default_right_column
-					);
-
-				}
-			}
-			else
-				$this->_errors[] = sprintf(Tools::displayError('Unable to install controller: %s'), $controller);
-
-		}
-		if (count($theme_meta_value) > 0)
-			return Db::getInstance()->insert('theme_meta', $theme_meta_value);
-
-		return true;
-	}
-
-	/**
 	 * Install overrides files for the module
 	 *
 	 * @return bool
@@ -2380,7 +1873,7 @@ abstract class ModuleCore
 		foreach (Tools::scandir($this->getLocalPath().'override', 'php', '', true) as $file)
 		{
 			$class = basename($file, '.php');
-			if (PrestaShopAutoload::getInstance()->getClassPath($class.'Core'))
+			if (Autoload::getInstance()->getClassPath($class.'Core'))
 				$result &= $this->addOverride($class);
 		}
 
@@ -2401,10 +1894,9 @@ abstract class ModuleCore
 		foreach (Tools::scandir($this->getLocalPath().'override', 'php', '', true) as $file)
 		{
 			$class = basename($file, '.php');
-			if (PrestaShopAutoload::getInstance()->getClassPath($class.'Core'))
+			if (Autoload::getInstance()->getClassPath($class.'Core'))
 				$result &= $this->removeOverride($class);
 		}
-
 		return $result;
 	}
 
@@ -2416,46 +1908,10 @@ abstract class ModuleCore
 	 */
 	public function addOverride($classname)
 	{
-		$path = PrestaShopAutoload::getInstance()->getClassPath($classname.'Core');
+		$path = Autoload::getInstance()->getClassPath($classname.'Core');
 
 		// Check if there is already an override file, if not, we just need to copy the file
-		if (PrestaShopAutoload::getInstance()->getClassPath($classname))
-		{
-			// Check if override file is writable
-			$override_path = _PS_ROOT_DIR_.'/'.PrestaShopAutoload::getInstance()->getClassPath($classname);
-			if ((!file_exists($override_path) && !is_writable(dirname($override_path))) || (file_exists($override_path) && !is_writable($override_path)))
-				throw new Exception(sprintf(Tools::displayError('file (%s) not writable'), $override_path));
-
-			// Get a uniq id for the class, because you can override a class (or remove the override) twice in the same session and we need to avoid redeclaration
-			do $uniq = uniqid();
-			while (class_exists($classname.'OverrideOriginal_remove', false));
-				
-			// Make a reflection of the override class and the module override class
-			$override_file = file($override_path);
-			eval(preg_replace(array('#^\s*<\?(?:php)?#', '#class\s+'.$classname.'\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?#i'), array(' ', 'class '.$classname.'OverrideOriginal'.$uniq), implode('', $override_file)));
-			$override_class = new ReflectionClass($classname.'OverrideOriginal'.$uniq);
-
-			$module_file = file($this->getLocalPath().'override'.DIRECTORY_SEPARATOR.$path);
-			eval(preg_replace(array('#^\s*<\?(?:php)?#', '#class\s+'.$classname.'(\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?)?#i'), array(' ', 'class '.$classname.'Override'.$uniq), implode('', $module_file)));
-			$module_class = new ReflectionClass($classname.'Override'.$uniq);
-
-			// Check if none of the methods already exists in the override class
-			foreach ($module_class->getMethods() as $method)
-				if ($override_class->hasMethod($method->getName()))
-					throw new Exception(sprintf(Tools::displayError('The method %1$s in the class %2$s is already overridden.'), $method->getName(), $classname));
-
-			// Check if none of the properties already exists in the override class
-			foreach ($module_class->getProperties() as $property)
-				if ($override_class->hasProperty($property->getName()))
-					throw new Exception(sprintf(Tools::displayError('The property %1$s in the class %2$s is already defined.'), $property->getName(), $classname));
-
-			// Insert the methods from module override in override
-			$copy_from = array_slice($module_file, $module_class->getStartLine() + 1, $module_class->getEndLine() - $module_class->getStartLine() - 2);
-			array_splice($override_file, $override_class->getEndLine() - 1, 0, $copy_from);
-			$code = implode('', $override_file);
-			file_put_contents($override_path, $code);
-		}
-		else
+		if (!($classpath = Autoload::getInstance()->getClassPath($classname)))
 		{
 			$override_src = $this->getLocalPath().'override'.DIRECTORY_SEPARATOR.$path;
 			$override_dest = _PS_ROOT_DIR_.DIRECTORY_SEPARATOR.'override'.DIRECTORY_SEPARATOR.$path;
@@ -2463,8 +1919,40 @@ abstract class ModuleCore
 				throw new Exception(sprintf(Tools::displayError('directory (%s) not writable'), dirname($override_dest)));
 			copy($override_src, $override_dest);
 			// Re-generate the class index
-			Tools::generateIndex();
+			Autoload::getInstance()->generateIndex();
+			return true;
 		}
+		
+		// Check if override file is writable
+		$override_path = _PS_ROOT_DIR_.'/'.Autoload::getInstance()->getClassPath($classname);
+		if ((!file_exists($override_path) && !is_writable(dirname($override_path))) || (file_exists($override_path) && !is_writable($override_path)))
+			throw new Exception(sprintf(Tools::displayError('file (%s) not writable'), $override_path));
+			
+		// Make a reflection of the override class and the module override class
+		$override_file = file($override_path);
+		eval(preg_replace(array('#^\s*<\?php#', '#class\s+'.$classname.'\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?#i'), array('', 'class '.$classname.'OverrideOriginal'), implode('', $override_file)));
+		$override_class = new ReflectionClass($classname.'OverrideOriginal');
+
+		$module_file = file($this->getLocalPath().'override'.DIRECTORY_SEPARATOR.$path);
+		eval(preg_replace(array('#^\s*<\?php#', '#class\s+'.$classname.'(\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?)?#i'), array('', 'class '.$classname.'Override'), implode('', $module_file)));
+		$module_class = new ReflectionClass($classname.'Override');
+
+		// Check if none of the methods already exists in the override class
+		foreach ($module_class->getMethods() as $method)
+			if ($override_class->hasMethod($method->getName()))
+				throw new Exception(sprintf(Tools::displayError('The method %1$s in the class %2$s is already overriden.'), $method->getName(), $classname));
+
+		// Check if none of the properties already exists in the override class
+		foreach ($module_class->getProperties() as $property)
+			if ($override_class->hasProperty($property->getName()))
+				throw new Exception(sprintf(Tools::displayError('The property %1$s in the class %2$s is already defined.'), $property->getName(), $classname));
+
+		// Insert the methods from module override in override
+		$copy_from = array_slice($module_file, $module_class->getStartLine() + 1, $module_class->getEndLine() - $module_class->getStartLine() - 2);
+		array_splice($override_file, $override_class->getEndLine() - 1, 0, $copy_from);
+		$code = implode('', $override_file);
+		file_put_contents($override_path, $code);
+
 		return true;
 	}
 
@@ -2476,28 +1964,24 @@ abstract class ModuleCore
 	 */
 	public function removeOverride($classname)
 	{
-		$path = PrestaShopAutoload::getInstance()->getClassPath($classname.'Core');
+		$path = Autoload::getInstance()->getClassPath($classname.'Core');
 
-		if (!PrestaShopAutoload::getInstance()->getClassPath($classname))
+		if (!Autoload::getInstance()->getClassPath($classname))
 			return true;
 
 		// Check if override file is writable
-		$override_path = _PS_ROOT_DIR_.'/'.PrestaShopAutoload::getInstance()->getClassPath($classname);
+		$override_path = _PS_ROOT_DIR_.'/'.Autoload::getInstance()->getClassPath($classname);
 		if (!is_writable($override_path))
 			return false;
 
-		// Get a uniq id for the class, because you can override a class (or remove the override) twice in the same session and we need to avoid redeclaration
-		do $uniq = uniqid();
-		while (class_exists($classname.'OverrideOriginal_remove', false));
-			
 		// Make a reflection of the override class and the module override class
 		$override_file = file($override_path);
-		eval(preg_replace(array('#^\s*<\?(?:php)?#', '#class\s+'.$classname.'\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?#i'), array(' ', 'class '.$classname.'OverrideOriginal_remove'.$uniq), implode('', $override_file)));
-		$override_class = new ReflectionClass($classname.'OverrideOriginal_remove'.$uniq);
+		eval(preg_replace(array('#^\s*<\?php#', '#class\s+'.$classname.'\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?#i'), array('', 'class '.$classname.'OverrideOriginal_remove'), implode('', $override_file)));
+		$override_class = new ReflectionClass($classname.'OverrideOriginal_remove');
 
 		$module_file = file($this->getLocalPath().'override/'.$path);
-		eval(preg_replace(array('#^\s*<\?(?:php)?#', '#class\s+'.$classname.'(\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?)?#i'), array(' ', 'class '.$classname.'Override_remove'.$uniq), implode('', $module_file)));
-		$module_class = new ReflectionClass($classname.'Override_remove'.$uniq);
+		eval(preg_replace(array('#^\s*<\?php#', '#class\s+'.$classname.'(\s+extends\s+([a-z0-9_]+)(\s+implements\s+([a-z0-9_]+))?)?#i'), array('', 'class '.$classname.'Override_remove'), implode('', $module_file)));
+		$module_class = new ReflectionClass($classname.'Override_remove');
 
 		// Remove methods from override file
 		$override_file = file($override_path);
@@ -2508,17 +1992,7 @@ abstract class ModuleCore
 
 			$method = $override_class->getMethod($method->getName());
 			$length = $method->getEndLine() - $method->getStartLine() + 1;
-			
-			$module_method = $module_class->getMethod($method->getName());
-			$module_length = $module_method->getEndLine() - $module_method->getStartLine() + 1;
-
-			$override_file_orig = $override_file;
-
-			$orig_content = preg_replace("/\s/", '', implode('', array_splice($override_file, $method->getStartLine() - 1, $length, array_pad(array(), $length, '#--remove--#'))));
-			$module_content = preg_replace("/\s/", '', implode('', array_splice($module_file, $module_method->getStartLine() - 1, $length, array_pad(array(), $length, '#--remove--#'))));
-
-			if (md5($module_content) != md5($orig_content))
-				$override_file = $override_file_orig;
+			array_splice($override_file, $method->getStartLine() - 1, $length, array_pad(array(), $length, '#--remove--#'));
 		}
 
 		// Remove properties from override file
@@ -2529,7 +2003,7 @@ abstract class ModuleCore
 
 			// Remplacer la ligne de declaration par "remove"
 			foreach ($override_file as $line_number => &$line_content)
-				if (preg_match('/(public|private|protected|const)\s+(static\s+)?(\$)?'.$property->getName().'/i', $line_content))
+				if (preg_match('/(public|private|protected)\s+(static\s+)?\$'.$property->getName().'/i', $line_content))
 				{
 					$line_content = '#--remove--#';
 					break;
@@ -2546,9 +2020,6 @@ abstract class ModuleCore
 			$code .= $line;
 		}
 		file_put_contents($override_path, $code);
-
-		// Re-generate the class index
-		Tools::generateIndex();
 
 		return true;
 	}

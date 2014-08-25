@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -144,7 +144,6 @@ class OrderReturnCore extends ObjectModel
 			$data[$k]['type'] = 'Return';
 			$data[$k]['tracking_number'] = $or['id_order_return'];
 			$data[$k]['can_edit'] = false;
-			$data[$k]['reference'] = Order::getUniqReferenceOf($or['id_order']);
 		}
 		return $data;
 	}
@@ -185,14 +184,12 @@ class OrderReturnCore extends ObjectModel
 		if (!Validate::isLoadedObject($order))
 			die(Tools::displayError());
 		$products = $order->getProducts();
-
 		foreach ($returns as &$return)
 		{
 			$return['product_id'] = (int)($products[(int)($return['id_order_detail'])]['product_id']);
 			$return['product_attribute_id'] = (int)($products[(int)($return['id_order_detail'])]['product_attribute_id']);
 			$return['name'] = $products[(int)($return['id_order_detail'])]['product_name'];
 			$return['reference'] = $products[(int)($return['id_order_detail'])]['product_reference'];
-			$return['id_address_delivery'] = $products[(int)($return['id_order_detail'])]['id_address_delivery'];
 		}
 		return $returns;
 	}

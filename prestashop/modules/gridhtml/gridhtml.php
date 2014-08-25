@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -40,14 +40,14 @@ class GridHtml extends ModuleGridEngine
 		{
 			$this->name = 'gridhtml';
 			$this->tab = 'administration';
-			$this->version = '1.2.1';
+			$this->version = 1.0;
 			$this->author = 'PrestaShop';
 			$this->need_instance = 0;
 			
 			Module::__construct();
 			
-			$this->displayName = $this->l('Simple HTML table display');
-			$this->description = $this->l('Allows the statistics system to display data in a grid.');
+			$this->displayName = $this->l('Simple HTML table display.');
+			$this->description = '';
 		}
 	}
 	
@@ -62,24 +62,23 @@ class GridHtml extends ModuleGridEngine
 		if (!isset($params['emptyMsg']))
 			$params['emptyMsg'] = 'Empty';
 
-		$html = '
-			<table class="table" id="grid_1">
-				<thead>
-					<tr>';
-					foreach ($params['columns'] as $column)
-						$html .= '<th class="center">
-									<span class="title_box active">'.$column['header'].'</span>
-								</th>';
-					$html .= '
-					</tr>
-				</thead>
+		$html = '<div style="width:'.$params['width'].'px;height:'.$params['height'].'px;overflow:scroll">
+			<table class="table" cellpadding="0" cellspacing="0" id="grid_1"><thead><tr>';
+		foreach ($params['columns'] as $column)
+			$html .= '<th style="width:'.$column['width'].'px;cursor:pointer">
+						'.$column['header'].'<br />
+						<a href="javascript:getGridData(\''.$grider.'&sort='.$column['dataIndex'].'&dir=ASC\');">
+							<img src="../img/admin/up.gif" />
+						</a>
+						<a href="javascript:getGridData(\''.$grider.'&sort='.$column['dataIndex'].'&dir=DESC\');">
+							<img src="../img/admin/down.gif" />
+						</a>
+					</th>';
+		$html .= '</tr></thead>
 				<tbody></tbody>
-				<tfoot>
-					<tr>
-						<th colspan="'.count($params['columns']).'"></th>
-					</tr>
-				</tfoot>
+				<tfoot><tr><th colspan="'.count($params['columns']).'"></th></tr></tfoot>
 			</table>
+		</div>
 		<script type="text/javascript">
 			function getGridData(url)
 			{
@@ -101,7 +100,7 @@ class GridHtml extends ModuleGridEngine
 						$.each(values, function(index, row){
 							var newLine = "<tr>";';
 			foreach ($params['columns'] as $column)
-				$html .= '	newLine += "<td'.(isset($column['align']) ? ' align=\"'.$column['align'].'\"' : '').'>" + row["'.$column['dataIndex'].'"] + "</td>";';
+				$html .= '	newLine += "<td'.(isset($column['align']) ? ' style=\"text-align:'.$column['align'].'\"' : '').'>" + row["'.$column['dataIndex'].'"] + "</td>";';
 			if (!isset($params['defaultSortColumn']))
 				$params['defaultSortColumn'] = false;
 			if (!isset($params['defaultSortDirection']))
@@ -109,7 +108,7 @@ class GridHtml extends ModuleGridEngine
 			$html .= '		$("#grid_1 tbody").append(newLine);
 						});
 					else
-						$("#grid_1 tbody").append("<tr><td class=\"center\" colspan=\"" + '.count($params['columns']).' + "\">'.$params['emptyMsg'].'</td></tr>");
+						$("#grid_1 tbody").append("<tr><td style=\"text-align:center\" colspan=\"" + '.count($params['columns']).' + "\">'.$params['emptyMsg'].'</td></tr>");
 				});
 			}
 			

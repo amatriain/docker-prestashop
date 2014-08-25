@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,12 +19,14 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 /**
+ * This class is currently only here for tests
+ *
  * @since 1.5.0
  */
 class DbPDOCore extends Db
@@ -44,23 +46,10 @@ class DbPDOCore extends Db
 		return new PDO($dsn, $user, $password, array(PDO::ATTR_TIMEOUT => $timeout, PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true));
 	}
 	
-	public static function createDatabase($host, $user, $password, $dbname, $dropit = false)
-	{
-		try {
-			$link = DbPDO::_getPDO($host, $user, $password, false);
-			$success = $link->exec('CREATE DATABASE `'.str_replace('`', '\\`', $dbname).'`');
-			if ($dropit && ($link->exec('DROP DATABASE `'.str_replace('`', '\\`', $dbname).'`') !== false))
-				return true;
-		} catch (PDOException $e) {
-			return false;
-		}
-		return $success;
-	}
-	
 	/**
 	 * @see DbCore::connect()
 	 */
-	public function connect()
+	public function	connect()
 	{
 		try {
 			$this->link = $this->_getPDO($this->server, $this->user, $this->password, $this->database, 5);
@@ -78,7 +67,7 @@ class DbPDOCore extends Db
 	/**
 	 * @see DbCore::disconnect()
 	 */
-	public function disconnect()
+	public function	disconnect()
 	{
 		unset($this->link);
 	}
@@ -98,8 +87,6 @@ class DbPDOCore extends Db
 	{
 		if (!$result)
 			$result = $this->result;
-		if (!is_object($result))
-			return false;
 		return $result->fetch(PDO::FETCH_ASSOC);
 	}
 
@@ -114,7 +101,7 @@ class DbPDOCore extends Db
 	/**
 	 * @see DbCore::Insert_ID()
 	 */
-	public function Insert_ID()
+	public function	Insert_ID()
 	{
 		return $this->link->lastInsertId();
 	}
@@ -122,7 +109,7 @@ class DbPDOCore extends Db
 	/**
 	 * @see DbCore::Affected_Rows()
 	 */
-	public function Affected_Rows()
+	public function	Affected_Rows()
 	{
 		return $this->result->rowCount();
 	}
@@ -187,7 +174,7 @@ class DbPDOCore extends Db
 		return (bool)$result->fetch();
 	}
 
-	public static function checkCreatePrivilege($server, $user, $pwd, $db, $prefix, $engine = null)
+	public static function checkCreatePrivilege($server, $user, $pwd, $db, $prefix, $engine)
 	{
 		try {
 			$link = DbPDO::_getPDO($server, $user, $pwd, $db, 5);
@@ -219,33 +206,19 @@ class DbPDOCore extends Db
 		} catch (PDOException $e) {
 			return ($e->getCode() == 1049) ? 2 : 1;
 		}
+
+		if (strtolower($engine) == 'innodb')
+		{
+			$sql = 'SHOW VARIABLES WHERE Variable_name = \'have_innodb\'';
+			$result = $link->query($sql);
+			if (!$result)
+				return 4;
+			$row = $result->fetch();
+			if (!$row || strtolower($row['Value']) != 'yes')
+				return 4;
+		}
 		unset($link);
 		return 0;
-	}
-	
-	public function getBestEngine()
-	{
-		$value = 'InnoDB';
-		
-		$sql = 'SHOW VARIABLES WHERE Variable_name = \'have_innodb\'';
-		$result = $this->link->query($sql);
-		if (!$result)
-			$value = 'MyISAM';
-		$row = $result->fetch();
-		if (!$row || strtolower($row['Value']) != 'yes')
-			$value = 'MyISAM';
-		
-		/* MySQL >= 5.6 */
-		$sql = 'SHOW ENGINES';
-		$result = $this->link->query($sql);
-		while ($row = $result->fetch())
-			if ($row['Engine'] == 'InnoDB')
-			{
-				if (in_array($row['Support'], array('DEFAULT', 'YES')))
-					$value = 'InnoDB';
-				break;
-			}
-		return $value;
 	}
 
 	/**

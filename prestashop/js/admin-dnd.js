@@ -1,5 +1,5 @@
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -58,21 +58,19 @@ function initTableDnD(table)
 				var ids = row.id.split('_');
 				var tableDrag = table;
 				var params = '';
-				table.id = table.id.replace('table-', '');
+
 				if (table.id == 'cms_block_0' || table.id == 'cms_block_1')
 					params = {
 						updatePositions: true,
 						configure: 'blockcms'
 					};
 				else if (table.id == 'category')
-				{
 					params = {
 						action: 'updatePositions',
 						id_category_parent: ids[1],
 						id_category_to_move: ids[2],
 						way: way
 					};
-				}
 				else if (table.id == 'cms_category')
 					params = {
 						action: 'updateCmsCategoriesPositions',
@@ -137,6 +135,7 @@ function initTableDnD(table)
 					data: $.tableDnD.serialize() + '&' + objToString(params) ,
 					success: function(data) {
 						var nodrag_lines = $(tableDrag).find('tr:not(".nodrag")');
+
 						if (come_from == 'AdminModulesPositions')
 						{
 							nodrag_lines.each(function(i) {
@@ -157,23 +156,27 @@ function initTableDnD(table)
 							var up_reg  = new RegExp('position=[-]?[0-9]+&');
 							nodrag_lines.each(function(i) {
 								$(this).attr('id', $(this).attr('id').replace(reg, '_' + i));
-								$(this).find('.positions').text(i);
+								// Update link position
+								// Up links
+								$(this).find('td.dragHandle a:odd').attr('href', $(this).find('td.dragHandle a:odd').attr('href').replace(up_reg, 'position='+ (i - 1) +'&'));
+								// Down links
+								$(this).find('td.dragHandle a:even').attr('href', $(this).find('td.dragHandle a:even').attr('href').replace(up_reg, 'position='+ (i + 1) +'&'));
 							});
 						}
 
-						nodrag_lines.removeClass('odd');
-						nodrag_lines.filter(':odd').addClass('odd');
-						nodrag_lines.children('td.dragHandle').find('a').attr('disabled',false);
+						nodrag_lines.removeClass('alt_row').removeClass('not_alt_row');
+						nodrag_lines.filter(':odd').addClass('alt_row');
+						nodrag_lines.filter(':even').addClass('not_alt_row');
+						nodrag_lines.children('td.dragHandle').children('a:hidden').show();
 
 						if (typeof alternate !== 'undefined' && alternate) {
-							nodrag_lines.children('td.dragHandle:first').find('a:odd').attr('disabled',true);
-							nodrag_lines.children('td.dragHandle:last').find('a:even').attr('disabled',true);
+							nodrag_lines.children('td.dragHandle:first').children('a:odd').hide();
+							nodrag_lines.children('td.dragHandle:last').children('a:even').hide();
 						}
 						else {
-							nodrag_lines.children('td.dragHandle:first').find('a:even').attr('disabled',true);
-							nodrag_lines.children('td.dragHandle:last').find('a:odd').attr('disabled',true);
+							nodrag_lines.children('td.dragHandle:first').children('a:even').hide();
+							nodrag_lines.children('td.dragHandle:last').children('a:odd').hide();
 						}
-						showSuccessMessage(update_success_msg);
 					}
 				});
 			}

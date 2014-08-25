@@ -5,7 +5,7 @@
     <template>cheque</template>
   </order_state>
   <order_state id="Payment_accepted">
-    <name>Pago aceptado</name>
+    <name>Pago aceptamos</name>
     <template>payment</template>
   </order_state>
   <order_state id="Preparation_in_progress">
@@ -45,7 +45,7 @@
     <template/>
   </order_state>
   <order_state id="Payment_remotely_accepted">
-    <name>Remote payment accepted</name>
+    <name>Payment remotely accepted</name>
     <template>payment</template>
   </order_state>
 </entity_order_state>

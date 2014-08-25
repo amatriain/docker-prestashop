@@ -1,70 +1,28 @@
+﻿Hi {firstname} {lastname},
 
-[{shop_url}] 
+Thank you for your order on {shop_name}!
 
-Hi {firstname} {lastname},
+	Order: {order_name} placed on {date}
+	Payment: {payment}
 
-Thank you for shopping with {shop_name}! 
+	Products: {total_products}
+	Discounts: {total_discounts}
+	Shipping: {total_shipping}
+	Gift-wrapping: {total_wrapping}
+	Total paid: {total_paid}
 
-ORDER: {order_name} Placed on {date}
+	Carrier: {carrier}
 
-PAYMENT: {payment} 		 
+	Delivery address:
 
-REFERENCE
+	{delivery_block_txt}
 
-PRODUCT
+	Billing address:
 
-UNIT PRICE
+	{invoice_block_txt}
 
-QUANTITY
+You can review your order and download your invoice from the "Order history" section of your customer account by clicking "My account" on our shop.
 
-TOTAL PRICE
+If you have guest account, you can follow your order using this link: {guest_tracking_url}
 
-{products_txt} 
-
-{discounts} 
-
-PRODUCTS 
-
-{total_products} 
-
-DISCOUNTS 
-
-{total_discounts} 
-
-GIFT-WRAPPING 
-
-{total_wrapping} 
-
-SHIPPING 
-
-{total_shipping} 
-
-TOTAL TAX PAID 
-
-{total_tax_paid} 
-
-TOTAL PAID 
-
-{total_paid} 
-
-CARRIER: {carrier}
-
-PAYMENT: {payment} 		 
-
-{delivery_block_txt} 
-
-{invoice_block_txt} 
-
-You can review your order and download your invoice from the
-"Order history" [{history_url}] section of your
-customer account by clicking "My account"
-[{my_account_url}] on our shop. 
-
-If you have a guest account, you can follow your order via the
-"Guest Tracking"
-[{guest_tracking_url}?id_order={order_name}] section
-on our shop. 
-
-{shop_name} [{shop_url}] powered by
-PrestaShop(tm) [http://www.prestashop.com/] 
-
+{shop_url} powered by PrestaShop™

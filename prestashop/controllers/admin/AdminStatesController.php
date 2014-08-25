@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,7 +28,6 @@ class AdminStatesControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 		$this->table = 'state';
 		$this->className = 'State';
 		$this->lang = false;
@@ -44,27 +43,16 @@ class AdminStatesControllerCore extends AdminController
 		
 		$this->bulk_actions = array(
 			'delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')),
+			'enableSelection' => array('text' => $this->l('Enable selection')),
+			'disableSelection' => array('text' => $this->l('Disable selection')),
 			'affectzone' => array('text' => $this->l('Affect a new zone'))
-		);
-
-		$this->_select = 'z.`name` AS zone, cl.`name` AS country';
-		$this->_join = '
-		LEFT JOIN `'._DB_PREFIX_.'zone` z ON (z.`id_zone` = a.`id_zone`)
-		LEFT JOIN `'._DB_PREFIX_.'country_lang` cl ON (cl.`id_country` = a.`id_country` AND cl.id_lang = '.(int)$this->context->language->id.')';
-		
-		$countries_array = $zones_array = array();
-		$this->zones = Zone::getZones();
-		$this->countries = Country::getCountries($this->context->language->id, false, true, false);
-		foreach ($this->zones as $zone)
-			$zones_array[$zone['id_zone']] = $zone['name'];
-		foreach ($this->countries as $country)
-			$countries_array[$country['id_country']] = $country['name'];
+			);
 		
 		$this->fields_list = array(
 			'id_state' => array(
 				'title' => $this->l('ID'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 25
 			),
 			'name' => array(
 				'title' => $this->l('Name'),
@@ -73,48 +61,34 @@ class AdminStatesControllerCore extends AdminController
 			'iso_code' => array(
 				'title' => $this->l('ISO code'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 75
 			),
 			'zone' => array(
 				'title' => $this->l('Zone'),
-				'type' => 'select',
-				'list' => $zones_array,
-				'filter_key' => 'z!id_zone',
-				'filter_type' => 'int',
-				'order_key' => 'zone'
-			),
-			'country' => array(
-				'title' => $this->l('Country'),
-				'type' => 'select',
-				'list' => $countries_array,
-				'filter_key' => 'cl!id_country',
-				'filter_type' => 'int',
-				'order_key' => 'country'
+				'width' => 100,
+				'filter_key' => 'z!name'
 			),
 			'active' => array(
 				'title' => $this->l('Enabled'),
+				'width' => 70,
 				'active' => 'status',
 				'filter_key' => 'a!active',
 				'align' => 'center',
 				'type' => 'bool',
-				'orderby' => false,
-				'class' => 'fixed-width-sm'
+				'orderby' => false
 			)
 		);
 
 		parent::__construct();
 	}
 
-	public function initPageHeaderToolbar()
+	public function renderList()
 	{
-		if (empty($this->display))
-			$this->page_header_toolbar_btn['new_state'] = array(
-				'href' => self::$currentIndex.'&addstate&token='.$this->token,
-				'desc' => $this->l('Add new state', null, null, false),
-				'icon' => 'process-icon-new'
-			);
+		$this->_select = 'z.`name` AS zone';
+		$this->_join = 'LEFT JOIN `'._DB_PREFIX_.'zone` z ON (z.`id_zone` = a.`id_zone`)';
 
-		parent::initPageHeaderToolbar();
+				$this->tpl_list_vars['zones'] = Zone::getZones();
+		return parent::renderList();
 	}
 
 	public function renderForm()
@@ -122,59 +96,62 @@ class AdminStatesControllerCore extends AdminController
 		$this->fields_form = array(
 			'legend' => array(
 				'title' => $this->l('States'),
-				'icon' => 'icon-globe'
+				'image' => '../img/admin/world.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
+					'size' => 30,
 					'maxlength' => 32,
 					'required' => true,
-					'hint' => $this->l('Provide the State name to be display in addresses and on invoices.')
+					'desc' => $this->l('Provide the State name to be display in addresses and on invoices.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('ISO code'),
+					'label' => $this->l('ISO code:'),
 					'name' => 'iso_code',
+					'size' => 7,
 					'maxlength' => 7,
 					'required' => true,
 					'class' => 'uppercase',
-					'hint' => $this->l('1 to 4 letter ISO code.').' '.$this->l('You can prefix it with the country ISO code if needed.')
+					'desc' => $this->l('1 to 4 letter ISO code')
 				),
 				array(
 					'type' => 'select',
-					'label' => $this->l('Country'),
+					'label' => $this->l('Country:'),
 					'name' => 'id_country',
-					'required' => true,
+					'required' => false,
 					'default_value' => (int)$this->context->country->id,
 					'options' => array(
 						'query' => Country::getCountries($this->context->language->id, false, true),
 						'id' => 'id_country',
 						'name' => 'name',
 					),
-					'hint' => $this->l('Country where the state is located.').' '.$this->l('Only the countries with the option "contains states" enabled are displayed.')
+					'desc' => $this->l('Country where the state, region or city is located')
 				),
 				array(
 					'type' => 'select',
-					'label' => $this->l('Zone'),
+					'label' => $this->l('Zone:'),
 					'name' => 'id_zone',
-					'required' => true,
+					'required' => false,
 					'options' => array(
 						'query' => Zone::getZones(),
 						'id' => 'id_zone',
 						'name' => 'name'
 					),
-					'hint' => array(
+					'desc' => array(
 						$this->l('Geographical region where this state is located.'),
 						$this->l('Used for shipping')
 					)
 				),
 				array(
-					'type' => 'switch',
-					'label' => $this->l('Status'),
+					'type' => 'radio',
+					'label' => $this->l('Status:'),
 					'name' => 'active',
-					'required' => true,
+					'required' => false,
+					'class' => 't',
 					'values' => array(
 						array(
 							'id' => 'active_on',
@@ -186,11 +163,13 @@ class AdminStatesControllerCore extends AdminController
 							'value' => 0,
 							'label' => '<img src="../img/admin/disabled.gif" alt="'.$this->l('Disabled').'" title="'.$this->l('Disabled').'" />'
 						)
-					)
+					),
+					'desc' => $this->l('Enabled or disabled')
 				)
 			),
 			'submit' => array(
-				'title' => $this->l('Save'),
+				'title' => $this->l('   Save   '),
+				'class' => 'button'
 			)
 		);
 
@@ -201,32 +180,49 @@ class AdminStatesControllerCore extends AdminController
 	{
 		if (Tools::isSubmit($this->table.'Orderby') || Tools::isSubmit($this->table.'Orderway'))
 			$this->filter = true;
-
-		// Idiot-proof controls
+		
+		if (!isset($this->table))
+			return false;
+			
 		if (!Tools::getValue('id_'.$this->table))
 		{
 			if (Validate::isStateIsoCode(Tools::getValue('iso_code')) && State::getIdByIso(Tools::getValue('iso_code'), Tools::getValue('id_country')))
 				$this->errors[] = Tools::displayError('This ISO code already exists. You cannot create two states with the same ISO code.');
 		}
-		elseif (Validate::isStateIsoCode(Tools::getValue('iso_code')))
+		else if (Validate::isStateIsoCode(Tools::getValue('iso_code')))
 		{
 			$id_state = State::getIdByIso(Tools::getValue('iso_code'), Tools::getValue('id_country'));
 			if ($id_state && $id_state != Tools::getValue('id_'.$this->table))
 				$this->errors[] = Tools::displayError('This ISO code already exists. You cannot create two states with the same ISO code.');
 		}
 
-		/* Delete state */
-		if (Tools::isSubmit('delete'.$this->table))
+		/* Delete object */
+		if (isset($_GET['delete'.$this->table]))
 		{
+			// set token
+			$token = Tools::getValue('token') ? Tools::getValue('token') : $this->token;
+
 			if ($this->tabAccess['delete'] === '1')
 			{
-				if (Validate::isLoadedObject($object = $this->loadObject()))
+				if (Validate::isLoadedObject($object = $this->loadObject()) && isset($this->fieldImageSettings))
 				{
 					if (!$object->isUsed())
 					{
-						if ($object->delete())
-							Tools::redirectAdmin(self::$currentIndex.'&conf=1&token='.(Tools::getValue('token') ? Tools::getValue('token') : $this->token));
-						$this->errors[] = Tools::displayError('An error occurred during deletion.');
+						// check if request at least one object with noZeroObject
+						if (isset($object->noZeroObject) && count($taxes = call_user_func(array($this->className, $object->noZeroObject))) <= 1)
+							$this->errors[] = Tools::displayError('You need at least one object.').' <b>'.$this->table.'</b><br />'.Tools::displayError('You cannot delete all of the items.');
+						else
+						{
+							if ($this->deleted)
+							{
+								$object->deleted = 1;
+								if ($object->update())
+									Tools::redirectAdmin(self::$currentIndex.'&conf=1&token='.$token);
+							}
+							else if ($object->delete())
+								Tools::redirectAdmin(self::$currentIndex.'&conf=1&token='.$token);
+							$this->errors[] = Tools::displayError('An error occurred during deletion.');
+						}
 					}
 					else
 						$this->errors[] = Tools::displayError('This state was used in at least one address. It cannot be removed.');
@@ -237,39 +233,9 @@ class AdminStatesControllerCore extends AdminController
 			else
 				$this->errors[] = Tools::displayError('You do not have permission to delete this.');
 		}
-
-		if (!count($this->errors))
+		else
 			parent::postProcess();
 	}
-
-	protected function displayAjaxStates()
-	{
-		if ($this->tabAccess['view'] === '1')
-		{
-			$states = Db::getInstance()->executeS('
-			SELECT s.id_state, s.name
-			FROM '._DB_PREFIX_.'state s
-			LEFT JOIN '._DB_PREFIX_.'country c ON (s.`id_country` = c.`id_country`)
-			WHERE s.id_country = '.(int)(Tools::getValue('id_country')).' AND s.active = 1 AND c.`contains_states` = 1
-			ORDER BY s.`name` ASC');
-
-			if (is_array($states) AND !empty($states))
-			{
-				$list = '';
-				if ((bool)Tools::getValue('no_empty') != true)
-				{
-					$empty_value = (Tools::isSubmit('empty_value')) ? Tools::getValue('empty_value') : '-';
-					$list = '<option value="0">'.Tools::htmlentitiesUTF8($empty_value).'</option>'."\n";
-				}
-
-				foreach ($states AS $state)
-					$list .= '<option value="'.(int)($state['id_state']).'"'.((isset($_GET['id_state']) AND $_GET['id_state'] == $state['id_state']) ? ' selected="selected"' : '').'>'.$state['name'].'</option>'."\n";
-			}
-			else
-				$list = 'false';
-
-			die($list);
-		}
-	}
-
 }
+
+

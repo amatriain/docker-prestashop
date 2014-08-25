@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,7 +28,6 @@ class AdminRangeWeightControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'range_weight';
 	 	$this->className = 'RangeWeight';
 	 	$this->lang = false;
@@ -50,18 +49,6 @@ class AdminRangeWeightControllerCore extends AdminController
 		parent::__construct();
 	}
 
-	public function initPageHeaderToolbar()
-	{
-		$this->page_header_toolbar_title = $this->l('Weight ranges');
-		$this->page_header_toolbar_btn['new_weight_range'] = array(
-			'href' => self::$currentIndex.'&addrange_weight&token='.$this->token,
-			'desc' => $this->l('Add new weight range', null, null, false),
-			'icon' => 'process-icon-new'
-		);
-
-		parent::initPageHeaderToolbar();
-	}
-
 	public function renderForm()
 	{
 		$carriers = Carrier::getCarriers($this->context->language->id, true, false, false, null, Carrier::PS_CARRIERS_AND_CARRIER_MODULES_NEED_RANGE);
@@ -72,42 +59,44 @@ class AdminRangeWeightControllerCore extends AdminController
 		$this->fields_form = array(
 			'legend' => array(
 				'title' => $this->l('Weight ranges'),
-				'icon' => 'icon-suitcase'
+				'image' => '../img/t/AdminRangeWeight.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'select',
-					'label' => $this->l('Carrier'),
+					'label' => $this->l('Carrier:'),
 					'name' => 'id_carrier',
 					'required' => false,
-					'hint' => $this->l('You can apply this range to a different carrier by selecting its name.'),
+					'desc' => $this->l('You can apply this range to a different carrier by selecting its name.'),
 					'options' => array(
 						'query' => $carriers,
 						'id' => 'id_carrier',
 						'name' => 'name'
 					),
-					'empty_message' => '<p class="alert alert-block">'.$this->l('There is no carrier available for this weight range.').'</p>'
+					'empty_message' => '<div style="margin:5px 0 10px 0">'.$this->l('There is no carrier available for this weight range.').'</div>'
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('From'),
+					'label' => $this->l('From:'),
 					'name' => 'delimiter1',
+					'size' => 5,
 					'required' => true,
 					'suffix' => Configuration::get('PS_WEIGHT_UNIT'),
-					'hint' => $this->l('Start range (included).'),
+					'desc' => $this->l('Start range (included)'),
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('To'),
+					'label' => $this->l('To:'),
 					'name' => 'delimiter2',
+					'size' => 5,
 					'required' => true,
 					'suffix' => Configuration::get('PS_WEIGHT_UNIT'),
-					'hint' => $this->l('End range (excluded).'),
+					'desc' => $this->l('End range (excluded)'),
 				),
 			),
 			'submit' => array(
 				'title' => $this->l('   Save   '),
-				'class' => 'btn btn-default'
+				'class' => 'button'
 			)
 		);
 

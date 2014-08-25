@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -116,12 +116,19 @@ class SceneCore extends ObjectModel
 	}
 
 	public function deleteImage($force_delete = false)
-	{	
-		if (file_exists($this->image_dir.'thumbs/'.$this->id.'-m_scene_default.'.$this->image_format) 
-			&& !unlink($this->image_dir.'thumbs/'.$this->id.'-m_scene_default.'.$this->image_format))
+	{
+		// Hack to prevent the main scene image from being deleted in AdminController::uploadImage() when a thumb image is uploaded
+		if (isset($_FILES['thumb']) && (!isset($_FILES['image']) || empty($_FILES['image']['name'])))
+			return true;
+
+		if (parent::deleteImage())
+		{
+			if (file_exists($this->image_dir.'thumbs/'.$this->id.'-thumb_scene.'.$this->image_format)
+				&& !unlink($this->image_dir.'thumbs/'.$this->id.'-thumb_scene.'.$this->image_format))
+				return false;
+		}
+		else
 			return false;
-		if (!(isset($_FILES) && count($_FILES)))
-			return parent::deleteImage();		
 		return true;
 	}
 
@@ -198,30 +205,24 @@ class SceneCore extends ObjectModel
 		if (!Scene::isFeatureActive())
 			return array();
 
-		$cache_key = 'Scene::getScenes'.$id_category.(int)$lite_result;
-		if (!Cache::isStored($cache_key))
-		{
-			if (!$context)
-				$context = Context::getContext();
-			$id_lang = is_null($id_lang) ? $context->language->id : $id_lang;
-	
-			$sql = 'SELECT s.*
-					FROM `'._DB_PREFIX_.'scene_category` sc
-					LEFT JOIN `'._DB_PREFIX_.'scene` s ON (sc.id_scene = s.id_scene)
-					'.Shop::addSqlAssociation('scene', 's').'
-					LEFT JOIN `'._DB_PREFIX_.'scene_lang` sl ON (sl.id_scene = s.id_scene)
-					WHERE sc.id_category = '.(int)$id_category.'
-						AND sl.id_lang = '.(int)$id_lang
-						.($only_active ? ' AND s.active = 1' : '').'
-					ORDER BY sl.name ASC';
-			$scenes = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
-	
-			if (!$lite_result && $scenes)
-				foreach ($scenes as &$scene)
-					$scene = new Scene($scene['id_scene'], $id_lang, false, $hide_scene_position);
-			Cache::store($cache_key, $scenes);
-		}
-		$scenes = Cache::retrieve($cache_key);
+		if (!$context)
+			$context = Context::getContext();
+		$id_lang = is_null($id_lang) ? $context->language->id : $id_lang;
+
+		$sql = 'SELECT s.*
+				FROM `'._DB_PREFIX_.'scene_category` sc
+				LEFT JOIN `'._DB_PREFIX_.'scene` s ON (sc.id_scene = s.id_scene)
+				'.Shop::addSqlAssociation('scene', 's').'
+				LEFT JOIN `'._DB_PREFIX_.'scene_lang` sl ON (sl.id_scene = s.id_scene)
+				WHERE sc.id_category = '.(int)$id_category.'
+					AND sl.id_lang = '.(int)$id_lang
+					.($only_active ? ' AND s.active = 1' : '').'
+				ORDER BY sl.name ASC';
+		$scenes = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
+
+		if (!$lite_result && $scenes)
+			foreach ($scenes as &$scene)
+				$scene = new Scene($scene['id_scene'], $id_lang, false, $hide_scene_position);
 		return $scenes;
 	}
 
@@ -250,18 +251,15 @@ class SceneCore extends ObjectModel
 			foreach ($products as &$product)
 			{
 				$product['details'] = new Product($product['id_product'], !$lite_result, $id_lang);
-				if (Validate::isLoadedObject($product['details']))
-				{
-					$product['link'] = $context->link->getProductLink(
-						$product['details']->id,
-						$product['details']->link_rewrite,
-						$product['details']->category,
-						$product['details']->ean13
-					);
-					$cover = Product::getCover($product['details']->id);
-					if (is_array($cover))
-						$product = array_merge($cover, $product);
-				}
+				$product['link'] = $context->link->getProductLink(
+					$product['details']->id,
+					$product['details']->link_rewrite,
+					$product['details']->category,
+					$product['details']->ean13
+				);
+				$cover = Product::getCover($product['details']->id);
+				if (is_array($cover))
+					$product = array_merge($cover, $product);
 			}
 		return $products;
 	}
@@ -301,3 +299,5 @@ class SceneCore extends ObjectModel
 		return Configuration::get('PS_SCENE_FEATURE_ACTIVE');
 	}
 }
+
+

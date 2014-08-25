@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -36,11 +36,10 @@ class PasswordControllerCore extends FrontController
 	{
 		if (Tools::isSubmit('email'))
 		{
-			if (!($email = trim(Tools::getValue('email'))) || !Validate::isEmail($email))
+			if (!($email = Tools::getValue('email')) || !Validate::isEmail($email))
 				$this->errors[] = Tools::displayError('Invalid email address.');
 			else
 			{
-
 				$customer = new Customer();
 				$customer->getByemail($email);
 				if (!Validate::isLoadedObject($customer))
@@ -58,7 +57,7 @@ class PasswordControllerCore extends FrontController
 						'{url}' => $this->context->link->getPageLink('password', true, null, 'token='.$customer->secure_key.'&id_customer='.(int)$customer->id)
 					);
 					if (Mail::Send($this->context->language->id, 'password_query', Mail::l('Password query confirmation'), $mail_params, $customer->email, $customer->firstname.' '.$customer->lastname))
-						$this->context->smarty->assign(array('confirmation' => 2, 'customer_email' => $customer->email));
+						$this->context->smarty->assign(array('confirmation' => 2, 'email' => $customer->email));
 					else
 						$this->errors[] = Tools::displayError('An error occurred while sending the email.');
 				}
@@ -91,12 +90,12 @@ class PasswordControllerCore extends FrontController
 							'{passwd}' => $password
 						);
 						if (Mail::Send($this->context->language->id, 'password', Mail::l('Your new password'), $mail_params, $customer->email, $customer->firstname.' '.$customer->lastname))
-							$this->context->smarty->assign(array('confirmation' => 1, 'customer_email' => $customer->email));
+							$this->context->smarty->assign(array('confirmation' => 1, 'email' => $customer->email));
 						else
 							$this->errors[] = Tools::displayError('An error occurred while sending the email.');
 					}
 					else
-						$this->errors[] = Tools::displayError('An error occurred with your account, which prevents us from sending you a new password. Please report this issue using the contact form.');
+						$this->errors[] = Tools::displayError('An error occurred with your account, which prevents us from sending you a new password. Please report your this issue using the contact form.');
 				}
 			}
 			else

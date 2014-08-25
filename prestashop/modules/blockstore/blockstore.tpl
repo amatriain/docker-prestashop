@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,33 +18,18 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <!-- Block stores module -->
 <div id="stores_block_left" class="block">
-	<h4 class="title_block">
-		<a href="{$link->getPageLink('stores')|escape:'html'}" title="{l s='Our store(s)!' mod='blockstore'}">
-			{l s='Our store(s)!' mod='blockstore'}
-		</a>
-	</h4>
+	<h4 class="title_block"><a href="{$link->getPageLink('stores')}" title="{l s='Our store(s)!' mod='blockstore'}">{l s='Our store(s)!' mod='blockstore'}</a></h4>
 	<div class="block_content blockstore">
-		<p class="store_image">
-			<a href="{$link->getPageLink('stores')|escape:'html'}" title="{l s='Our store(s)!' mod='blockstore'}">
-				<img src="{$link->getMediaLink("`$module_dir``$store_img|escape:'htmlall':'UTF-8'`")}" alt="{l s='Our store(s)!' mod='blockstore'}" width="174" height="115" />
-			</a>
-		</p>
-		{if !empty($store_text)}
-        <p class="store-description">
-        	{$store_text}
-        </p>
-        {/if}
+		<p class="store_image"><a href="{$link->getPageLink('stores')}" title="{l s='Our store(s)!' mod='blockstore'}"><img src="{$module_dir}{$store_img}" alt="{l s='Our store(s)!' mod='blockstore'}" width="174" height="115" /></a></p>
 		<p>
-			<a href="{$link->getPageLink('stores')|escape:'html'}" title="{l s='Our store(s)!' mod='blockstore'}">
-				&raquo; {l s='Discover our store(s)!' mod='blockstore'}
-			</a>
+			<a href="{$link->getPageLink('stores')}" title="{l s='Our store(s)!' mod='blockstore'}">&raquo; {l s='Discover our store(s)d!' mod='blockstore'}</a>
 		</p>
 	</div>
 </div>

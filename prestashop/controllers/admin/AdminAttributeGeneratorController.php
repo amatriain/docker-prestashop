@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,11 +33,10 @@ class AdminAttributeGeneratorControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'product_attribute';
 		$this->className = 'Product';
 		$this->multishop_context_group = false;
-
+		
 		parent::__construct();
 	}
 
@@ -118,12 +117,10 @@ class AdminAttributeGeneratorControllerCore extends AdminController
 					foreach ($attributes as $attribute)
 						StockAvailable::removeProductFromStockAvailable($this->product->id, $attribute['id_product_attribute'], Context::getContext()->shop);
 				}
-
-				SpecificPriceRule::disableAnyApplication();
-
+		
 				$this->product->deleteProductAttributes();
 				$this->product->generateMultipleCombinations($values, $this->combinations);
-
+		
 				// @since 1.5.0
 				if ($this->product->depends_on_stock == 0)
 				{
@@ -134,15 +131,34 @@ class AdminAttributeGeneratorControllerCore extends AdminController
 				}
 				else
 					StockAvailable::synchronize($this->product->id);
-
-				SpecificPriceRule::enableAnyApplication();
-				SpecificPriceRule::applyAllRules(array((int)$this->product->id));
-
 				Tools::redirectAdmin($this->context->link->getAdminLink('AdminProducts').'&id_product='.(int)Tools::getValue('id_product').'&addproduct&key_tab=Combinations&conf=4');
 			}
 			else
 				$this->errors[] = Tools::displayError('Unable to initialize these parameters. A combination is missing or an object cannot be loaded.');
 		}
+	}
+
+	protected static function displayAndReturnAttributeJs()
+	{
+		$attributes = Attribute::getAttributes(Context::getContext()->language->id, true);
+		$attribute_js = array();
+		foreach ($attributes as $k => $attribute)
+			$attribute_js[$attribute['id_attribute_group']][$attribute['id_attribute']] = $attribute['name'];
+		echo '
+		<script type="text/javascript">
+			var attrs = new Array();
+			attrs[0] = new Array(0, \'---\');';
+		foreach ($attribute_js as $idgrp => $group)
+		{
+			echo '
+				attrs['.$idgrp.'] = new Array(0, \'---\' ';
+			foreach ($group as $idattr => $attrname)
+				echo ', '.$idattr.', \''.addslashes(($attrname)).'\'';
+			echo ');';
+		}
+		echo '
+		</script>';
+		return $attribute_js;
 	}
 
     protected static function setAttributesImpacts($id_product, $tab)
@@ -162,11 +178,29 @@ class AdminAttributeGeneratorControllerCore extends AdminController
 		ON DUPLICATE KEY UPDATE `price` = VALUES(price), `weight` = VALUES(weight)');
     }
 
+	protected static function getAttributesImpacts($id_product)
+	{
+		$tab = array();
+		$result = Db::getInstance()->executeS(
+			'SELECT ai.`id_attribute`, ai.`price`, ai.`weight`
+			FROM `'._DB_PREFIX_.'attribute_impact` ai
+			WHERE ai.`id_product` = '.(int)$id_product);
+
+		if (!$result)
+			return array();
+		foreach ($result as $impact)
+		{
+			$tab[$impact['id_attribute']]['price'] = (float)$impact['price'];
+			$tab[$impact['id_attribute']]['weight'] = (float)$impact['weight'];
+		}
+		return $tab;
+    }
+
 	public function initGroupTable()
 	{
 		$combinations_groups = $this->product->getAttributesGroups($this->context->language->id);
 		$attributes = array();
-		$impacts = Product::getAttributesImpacts($this->product->id);
+		$impacts = AdminAttributeGeneratorController::getAttributesImpacts($this->product->id);
 		foreach ($combinations_groups as &$combination)
 		{
 			$target = &$attributes[$combination['id_attribute_group']][$combination['id_attribute']];
@@ -184,43 +218,31 @@ class AdminAttributeGeneratorControllerCore extends AdminController
 		));
 	}
 
-	public function initPageHeaderToolbar()
+	public function initToolbar()
 	{
-		parent::initPageHeaderToolbar();
-
-		$this->page_header_toolbar_title = $this->l('Attributes generator', null, null, false);
-		$this->page_header_toolbar_btn['back'] = array(
+		$this->toolbar_btn['back'] = array(
 			'href' => $this->context->link->getAdminLink('AdminProducts').'&id_product='.(int)Tools::getValue('id_product').'&addproduct&key_tab=Combinations',
-			'desc' => $this->l('Back to the product', null, null, false)
+			'desc' => $this->l('Back to the product')
 		);
-	}
-
-	public function initBreadcrumbs($tab_id = null, $tabs = null)
-	{
-		$this->display = 'generator';
-		return parent::initBreadcrumbs();
 	}
 
 	public function initContent()
 	{
 		if (!Combination::isFeatureActive())
 		{
-			$url = '<a href="index.php?tab=AdminPerformance&token='.Tools::getAdminTokenLite('AdminPerformance').'#featuresDetachables">'.
-					$this->l('Performance').'</a>';
-			$this->displayWarning(sprintf($this->l('This feature has been disabled. You can activate it here: %s.'), $url));
+			$this->displayWarning($this->l('This feature has been disabled. You can activate it at:').'
+				<a href="index.php?tab=AdminPerformance&token='.Tools::getAdminTokenLite('AdminPerformance').'#featuresDetachables">'.
+					$this->l('Performance').'</a>');
 			return;
 		}
 
 		// Init toolbar
-		$this->initPageHeaderToolbar();
+		$this->initToolbarTitle();
+		$this->initToolbar();
+
 		$this->initGroupTable();
 
-		$attributes = Attribute::getAttributes(Context::getContext()->language->id, true);
-		$attribute_js = array();
-
-		foreach ($attributes as $k => $attribute)
-			$attribute_js[$attribute['id_attribute_group']][$attribute['id_attribute']] = $attribute['name'];
-		
+		$js_attributes = AdminAttributeGeneratorController::displayAndReturnAttributeJs();
 		$attribute_groups = AttributeGroup::getAttributesGroups($this->context->language->id);
 		$this->product = new Product((int)Tools::getValue('id_product'));
 
@@ -232,12 +254,10 @@ class AdminAttributeGeneratorControllerCore extends AdminController
 			'product_reference' => $this->product->reference,
 			'url_generator' => self::$currentIndex.'&id_product='.(int)Tools::getValue('id_product').'&attributegenerator&token='.Tools::getValue('token'),
 			'attribute_groups' => $attribute_groups,
-			'attribute_js' => $attribute_js,
+			'attribute_js' => $js_attributes,
 			'toolbar_btn' => $this->toolbar_btn,
 			'toolbar_scroll' => true,
-			'show_page_header_toolbar' => $this->show_page_header_toolbar,
-			'page_header_toolbar_title' => $this->page_header_toolbar_title,
-			'page_header_toolbar_btn' => $this->page_header_toolbar_btn
+			'title' => $this->toolbar_title,
 		));
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -37,16 +37,13 @@ class ModuleFrontControllerCore extends FrontController
 	public function __construct()
 	{
 		$this->controller_type = 'modulefront';
-
+		
 		$this->module = Module::getInstanceByName(Tools::getValue('module'));
 		if (!$this->module->active)
 			Tools::redirect('index');
 		$this->page_name = 'module-'.$this->module->name.'-'.Dispatcher::getInstance()->getController();
 
 		parent::__construct();
-
-		$this->display_column_left = ((isset($this->page_name) && is_object(Context::getContext()->theme)) ? Context::getContext()->theme->hasLeftColumn($this->page_name) : true);
-		$this->display_column_right = ((isset($this->page_name) && is_object(Context::getContext()->theme)) ? Context::getContext()->theme->hasRightColumn($this->page_name) : true);
 	}
 
 	/**
@@ -56,10 +53,12 @@ class ModuleFrontControllerCore extends FrontController
 	 */
 	public function setTemplate($template)
 	{
-		if (!$path = $this->getTemplatePath($template))
-			throw new PrestaShopException("Template '$template' not found");
-
-		$this->template = $path;
+		if (Tools::file_exists_cache(_PS_THEME_DIR_.'modules/'.$this->module->name.'/'.$template))
+			$this->template = _PS_THEME_DIR_.'modules/'.$this->module->name.'/'.$template;
+		elseif (Tools::file_exists_cache($this->getTemplatePath().$template))
+			$this->template = $this->getTemplatePath().$template;
+		else
+			throw new PrestaShopException("Template '$template'' not found");
 	}
 
 	/**
@@ -67,15 +66,8 @@ class ModuleFrontControllerCore extends FrontController
 	 *
 	 * @return string
 	 */
-	public function getTemplatePath($template)
+	public function getTemplatePath()
 	{
-		if (Tools::file_exists_cache(_PS_THEME_DIR_.'modules/'.$this->module->name.'/'.$template))
-			return _PS_THEME_DIR_.'modules/'.$this->module->name.'/'.$template;
-		elseif (Tools::file_exists_cache(_PS_THEME_DIR_.'modules/'.$this->module->name.'/views/templates/front/'.$template))
-			return _PS_THEME_DIR_.'modules/'.$this->module->name.'/views/templates/front/'.$template;
-		elseif (Tools::file_exists_cache(_PS_MODULE_DIR_.$this->module->name.'/views/templates/front/'.$template))
-			return _PS_MODULE_DIR_.$this->module->name.'/views/templates/front/'.$template;
-
-		return false;
+		return _PS_MODULE_DIR_.$this->module->name.'/views/templates/front/';
 	}
 }

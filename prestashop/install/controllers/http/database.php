@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -56,9 +56,16 @@ class InstallControllerHttpDatabase extends InstallControllerHttp
 		$this->session->database_login = trim(Tools::getValue('dbLogin'));
 		$this->session->database_password = trim(Tools::getValue('dbPassword'));
 		$this->session->database_prefix = trim(Tools::getValue('db_prefix'));
+		$this->session->database_engine = Tools::getValue('dbEngine');
 		$this->session->database_clear = Tools::getValue('database_clear');
-		
-		$this->session->rewrite_engine = Tools::getValue('rewrite_engine');
+
+		// Save email config
+		$this->session->use_smtp = (bool)Tools::getValue('smtpChecked');
+		$this->session->smtp_server = trim(Tools::getValue('smtpSrv'));
+		$this->session->smtp_encryption = Tools::getValue('smtpEnc');
+		$this->session->smtp_port = (int)Tools::getValue('smtpPort');
+		$this->session->smtp_login = trim(Tools::getValue('smtpLogin'));
+		$this->session->smtp_password = trim(Tools::getValue('smtpPassword'));
 	}
 
 	/**
@@ -74,23 +81,21 @@ class InstallControllerHttpDatabase extends InstallControllerHttp
 			$this->session->database_login,
 			$this->session->database_password,
 			$this->session->database_prefix,
+			$this->session->database_engine,
+
 			// We do not want to validate table prefix if we are already in install process
 			($this->session->step == 'process') ? true : $this->session->database_clear
 		);
-		if (count($this->errors))
-			return false;
-		
-		if (!isset($this->session->database_engine))
-			$this->session->database_engine = $this->model_database->getBestEngine($this->session->database_server, $this->session->database_name, $this->session->database_login, $this->session->database_password);
-		return true;
+
+		return count($this->errors) ? false : true;
 	}
 
 	public function process()
 	{
 		if (Tools::getValue('checkDb'))
 			$this->processCheckDb();
-		elseif (Tools::getValue('createDb'))
-			$this->processCreateDb();
+		else if (Tools::getValue('sendMail'))
+			$this->processSendMail();
 	}
 
 	/**
@@ -103,9 +108,10 @@ class InstallControllerHttpDatabase extends InstallControllerHttp
 		$login = Tools::getValue('dbLogin');
 		$password = Tools::getValue('dbPassword');
 		$prefix = Tools::getValue('db_prefix');
+		$engine = Tools::getValue('dbEngine');
 		$clear = Tools::getValue('clear');
 
-		$errors = $this->model_database->testDatabaseSettings($server, $database, $login, $password, $prefix, $clear);
+		$errors = $this->model_database->testDatabaseSettings($server, $database, $login, $password, $prefix, $engine, $clear);
 
 		$this->ajaxJsonAnswer(
 			(count($errors)) ? false : true,
@@ -114,20 +120,28 @@ class InstallControllerHttpDatabase extends InstallControllerHttp
 	}
 
 	/**
-	 * Attempt to create the database
+	 * Send a test email
 	 */
-	public function processCreateDb()
+	public function processSendMail()
 	{
-		$server = Tools::getValue('dbServer');
-		$database = Tools::getValue('dbName');
-		$login = Tools::getValue('dbLogin');
-		$password = Tools::getValue('dbPassword');
+		$smtp_checked = (Tools::getValue('smtpChecked') == 'true');
+		$server = Tools::getValue('smtpSrv');
+		$encryption = Tools::getValue('smtpEnc');
+		$port = Tools::getValue('smtpPort');
+		$login = Tools::getValue('smtpLogin');
+		$password = Tools::getValue('smtpPassword');
+		$email = Tools::getValue('testEmail');
 
-		$success = $this->model_database->createDatabase($server, $database, $login, $password);
+		require_once _PS_INSTALL_MODELS_PATH_.'mail.php';
+		$this->model_mail = new InstallModelMail($smtp_checked, $server, $login, $password, $port, $encryption, $email);
+		$result = $this->model_mail->send(
+			$this->l('Test message from PrestaShop'),
+			$this->l('This is a test message, your server is now available to send email')
+		);
 
 		$this->ajaxJsonAnswer(
-			$success,
-			$success ? $this->l('Database is created') : $this->l('Cannot create the database automatically')
+			$result === false,
+			($result === false) ? $this->l('A test e-mail has been sent to %s', $email) : $this->l('An error occurred while sending email, please verify your parameters')
 		);
 	}
 
@@ -160,8 +174,11 @@ class InstallControllerHttpDatabase extends InstallControllerHttp
 
 			$this->database_clear = true;
 			$this->use_smtp = false;
+			$this->smtp_server = 'smtp.';
 			$this->smtp_encryption = 'off';
 			$this->smtp_port = 25;
+			$this->smtp_login = '';
+			$this->smtp_password = '';
 		}
 		else
 		{
@@ -174,8 +191,11 @@ class InstallControllerHttpDatabase extends InstallControllerHttp
 			$this->database_clear = $this->session->database_clear;
 
 			$this->use_smtp = $this->session->use_smtp;
+			$this->smtp_server = $this->session->smtp_server;
 			$this->smtp_encryption = $this->session->smtp_encryption;
 			$this->smtp_port = $this->session->smtp_port;
+			$this->smtp_login = $this->session->smtp_login;
+			$this->smtp_password = $this->session->smtp_password;
 		}
 
 		$this->displayTemplate('database');

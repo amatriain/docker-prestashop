@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,13 +28,13 @@ abstract class ModuleGraphCore extends Module
 {
 	protected $_employee;
 
-	/** @var array of integers graph data */
+	/** @var integer array graph data */
 	protected	$_values = array();
 
-	/** @var array of strings graph legends (X axis) */
+	/** @var string array graph legends (X axis) */
 	protected	$_legend = array();
 
-	/**@var array string graph titles */
+	/**@var string graph titles */
 	protected	$_titles = array('main' => null, 'x' => null, 'y' => null);
 
 	/** @var ModuleGraphEngine graph engine */
@@ -222,8 +222,7 @@ abstract class ModuleGraphCore extends Module
 
 	protected function _displayCsv()
 	{
-		if (ob_get_level() && ob_get_length() > 0)
-			ob_end_clean();
+		ob_end_clean();
 		header('Content-Type: application/octet-stream');
 		header('Content-Disposition: attachment; filename="'.$this->displayName.' - '.time().'.csv"');
 		echo $this->_csv;

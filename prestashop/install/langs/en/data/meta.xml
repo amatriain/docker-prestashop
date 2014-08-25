@@ -3,61 +3,61 @@
   <meta id="404" id_shop="1">
     <title>404 error</title>
     <description>This page cannot be found</description>
-    <keywords/>
+    <keywords>error, 404, not found</keywords>
     <url_rewrite>page-not-found</url_rewrite>
   </meta>
   <meta id="best-sales" id_shop="1">
     <title>Best sales</title>
     <description>Our best sales</description>
-    <keywords/>
+    <keywords>best sales</keywords>
     <url_rewrite>best-sales</url_rewrite>
   </meta>
   <meta id="contact" id_shop="1">
     <title>Contact us</title>
     <description>Use our form to contact us</description>
-    <keywords/>
+    <keywords>contact, form, e-mail</keywords>
     <url_rewrite>contact-us</url_rewrite>
   </meta>
   <meta id="index" id_shop="1">
     <title/>
     <description>Shop powered by PrestaShop</description>
-    <keywords/>
+    <keywords>shop, prestashop</keywords>
     <url_rewrite/>
   </meta>
   <meta id="manufacturer" id_shop="1">
     <title>Manufacturers</title>
     <description>Manufacturers list</description>
-    <keywords/>
+    <keywords>manufacturer</keywords>
     <url_rewrite>manufacturers</url_rewrite>
   </meta>
   <meta id="new-products" id_shop="1">
     <title>New products</title>
     <description>Our new products</description>
-    <keywords/>
+    <keywords>new, products</keywords>
     <url_rewrite>new-products</url_rewrite>
   </meta>
   <meta id="password" id_shop="1">
     <title>Forgot your password</title>
     <description>Enter your e-mail address used to register in goal to get e-mail with your new password</description>
-    <keywords/>
+    <keywords>forgot, password, e-mail, new, reset</keywords>
     <url_rewrite>password-recovery</url_rewrite>
   </meta>
   <meta id="prices-drop" id_shop="1">
     <title>Prices drop</title>
     <description>Our special products</description>
-    <keywords/>
+    <keywords>special, prices drop</keywords>
     <url_rewrite>prices-drop</url_rewrite>
   </meta>
   <meta id="sitemap" id_shop="1">
     <title>Sitemap</title>
     <description>Lost ? Find what your are looking for</description>
-    <keywords/>
+    <keywords>sitemap</keywords>
     <url_rewrite>sitemap</url_rewrite>
   </meta>
   <meta id="supplier" id_shop="1">
     <title>Suppliers</title>
     <description>Suppliers list</description>
-    <keywords/>
+    <keywords>supplier</keywords>
     <url_rewrite>supplier</url_rewrite>
   </meta>
   <meta id="address" id_shop="1">
@@ -73,10 +73,10 @@
     <url_rewrite>addresses</url_rewrite>
   </meta>
   <meta id="authentication" id_shop="1">
-    <title>Login</title>
+    <title>Authentication</title>
     <description/>
     <keywords/>
-    <url_rewrite>login</url_rewrite>
+    <url_rewrite>authentication</url_rewrite>
   </meta>
   <meta id="cart" id_shop="1">
     <title>Cart</title>
@@ -155,11 +155,5 @@
     <description/>
     <keywords/>
     <url_rewrite>order-confirmation</url_rewrite>
-  </meta>
-  <meta id="products-comparison" id_shop="1">
-    <title>Products Comparison</title>
-    <description/>
-    <keywords/>
-    <url_rewrite>products-comparison</url_rewrite>
   </meta>
 </entity_meta>

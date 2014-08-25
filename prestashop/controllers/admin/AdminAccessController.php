@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -31,8 +31,6 @@ class AdminAccessControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
-		$this->show_toolbar = false;
 		$this->table = 'access';
 		$this->className = 'Profile';
 		$this->multishop_context = Shop::CONTEXT_ALL;
@@ -81,17 +79,15 @@ class AdminAccessControllerCore extends AdminController
 				WHERE id_profile = '.(int)$profile['id_profile'].'
 				ORDER BY m.name
 			');
-			foreach ($modules[$profile['id_profile']] as $k => &$module)
+			foreach ($modules[$profile['id_profile']] as &$module)
 			{
 				$m = Module::getInstanceById($module['id_module']);
 				// the following condition handles invalid modules
 				if ($m)
 					$module['name'] = $m->displayName;
 				else
-					unset($modules[$profile['id_profile']][$k]);
+					$this->warnings[] = sprintf($this->l('%s module is installed in the database but its files are missing/incompatible.'), '<b>'.$module['name'].'</b>');
 			}
-
-			uasort($modules[$profile['id_profile']], array($this, 'sortModuleByName'));
 		}
 
 		$this->fields_form = array('');
@@ -117,31 +113,20 @@ class AdminAccessControllerCore extends AdminController
 	public function initContent()
 	{
 		$this->display = 'edit';
-		$this->initTabModuleList();
+		// toolbar (save, cancel, new, ..)
+		$this->initToolbar();
+		unset($this->toolbar_btn['save']);
+		unset($this->toolbar_btn['cancel']);
+
 		if (!$this->loadObject(true))
 			return;
 
-		$this->initPageHeaderToolbar();
-
 		$this->content .= $this->renderForm();
+
 		$this->context->smarty->assign(array(
 			'content' => $this->content,
 			'url_post' => self::$currentIndex.'&token='.$this->token,
-			'show_page_header_toolbar' => $this->show_page_header_toolbar,
-			'page_header_toolbar_title' => $this->page_header_toolbar_title,
-			'page_header_toolbar_btn' => $this->page_header_toolbar_btn
 		));
-	}
-
-	public function initToolbarTitle()
-	{
-		$this->toolbar_title = array_unique($this->breadcrumbs);
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		parent::initPageHeaderToolbar();
-		unset($this->page_header_toolbar_btn['cancel']);
 	}
 
 	public function ajaxProcessUpdateAccess()
@@ -155,7 +140,7 @@ class AdminAccessControllerCore extends AdminController
 		{
 			$perm = Tools::getValue('perm');
 			if (!in_array($perm, array('view', 'add', 'edit', 'delete', 'all')))
-				throw new PrestaShopException('permission does not exist');
+				throw new PrestaShopException('permission not exists');
 
 			$enabled = (int)Tools::getValue('enabled');
 			$id_tab = (int)Tools::getValue('id_tab');
@@ -168,32 +153,35 @@ class AdminAccessControllerCore extends AdminController
 				$join = 'LEFT JOIN `'._DB_PREFIX_.'tab` t ON (t.`id_tab` = a.`id_tab`)';
 			}
 
-			if ($id_tab == -1)
-			{
-				if ($perm == 'all')
-					$sql = '
+			if ($id_tab == -1 && $perm == 'all' && $enabled == 0)
+				$sql = '
+					UPDATE `'._DB_PREFIX_.'access` a
+					SET `view` = '.(int)$enabled.', `add` = '.(int)$enabled.', `edit` = '.(int)$enabled.', `delete` = '.(int)$enabled.'
+					WHERE `id_profile` = '.(int)$id_profile.' AND `id_tab` != '.(int)$this->id_tab_access;
+			else if ($id_tab == -1 && $perm == 'all')
+				$sql = '
 					UPDATE `'._DB_PREFIX_.'access` a
 					SET `view` = '.(int)$enabled.', `add` = '.(int)$enabled.', `edit` = '.(int)$enabled.', `delete` = '.(int)$enabled.'
 					WHERE `id_profile` = '.(int)$id_profile;
-				else
-					$sql = '
+			else if ($id_tab == -1)
+				$sql = '
 					UPDATE `'._DB_PREFIX_.'access` a
 					SET `'.bqSQL($perm).'` = '.(int)$enabled.'
 					WHERE `id_profile` = '.(int)$id_profile;
-			}
+			else if ($perm == 'all')
+				$sql = '
+					UPDATE `'._DB_PREFIX_.'access` a
+					'.$join.'
+					SET `view` = '.(int)$enabled.', `add` = '.(int)$enabled.', `edit` = '.(int)$enabled.', `delete` = '.(int)$enabled.'
+					WHERE '.$where.'  = '.(int)$id_tab.'
+						AND `id_profile` = '.(int)$id_profile;
 			else
-			{
-				if ($perm == 'all')
-					$sql = '
-					UPDATE `'._DB_PREFIX_.'access` a '.$join.'
-					SET `view` = '.(int)$enabled.', `add` = '.(int)$enabled.', `edit` = '.(int)$enabled.', `delete` = '.(int)$enabled.'
-					WHERE '.$where.' = '.(int)$id_tab.' AND `id_profile` = '.(int)$id_profile;
-				else
-					$sql = '
-					UPDATE `'._DB_PREFIX_.'access` a '.$join.'
+				$sql = '
+					UPDATE `'._DB_PREFIX_.'access` a
+					'.$join.'
 					SET `'.bqSQL($perm).'` = '.(int)$enabled.'
-					WHERE '.$where.' = '.(int)$id_tab.' AND `id_profile` = '.(int)$id_profile;
-			}
+					WHERE '.$where.' = '.(int)$id_tab.'
+						AND `id_profile` = '.(int)$id_profile;
 
 			$res = Db::getInstance()->execute($sql) ? 'ok' : 'error';
 
@@ -216,7 +204,7 @@ class AdminAccessControllerCore extends AdminController
 			$id_profile = (int)Tools::getValue('id_profile');
 
 			if (!in_array($perm, array('view', 'configure')))
-				throw new PrestaShopException('permission does not exist');
+				throw new PrestaShopException('permission not exists');
 
 			if ($id_module == -1)
 				$sql = '
@@ -244,10 +232,5 @@ class AdminAccessControllerCore extends AdminController
 	public function getCurrentProfileId()
 	{
 		return (isset($_GET['id_profile']) && !empty($_GET['id_profile']) && is_numeric($_GET['id_profile'])) ? (int)$_GET['id_profile'] : 1;
-	}
-
-	private function sortModuleByName($a, $b)
-	{
-		return strnatcmp($a['name'], $b['name']);
 	}
 }

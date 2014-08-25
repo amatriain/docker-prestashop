@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -38,15 +38,14 @@ class StatsNewsletter extends ModuleGraph
 	{
 		$this->name = 'statsnewsletter';
 		$this->tab = 'analytics_stats';
-		$this->version = '1.2';
+		$this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		parent::__construct();
 
 		$this->displayName = $this->l('Newsletter');
-		$this->description = $this->l('Adds a tab with a graph showing newsletter registrations to the Stats dashboard.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+		$this->description = $this->l('Display newsletter registrations.');
 	}
 
 	public function install()
@@ -62,30 +61,17 @@ class StatsNewsletter extends ModuleGraph
 			if (Tools::getValue('export'))
 				$this->csvExport(array('type' => 'line', 'layers' => 3));
 			$this->_html = '
-			<div class="panel-heading">
-				'.$this->displayName.'
-			</div>
-			<div class="row row-margin-bottom">
-				<div class="col-lg-12">
-					<div class="col-lg-8">
-						'.$this->engine(array('type' => 'line', 'layers' => 3)).'
-					</div>
-					<div class="col-lg-4">
-						<ul class="list-unstyled">
-							<li>'.$this->l('Customer registrations:').' '.(int)$totals['customers'].'</li>
-							<li>'.$this->l('Visitor registrations: ').' '.(int)$totals['visitors'].'</li>
-							<li>'.$this->l('Both:').' '.(int)$totals['both'].'</li>
-						</ul>
-						<hr/>
-						<a class="btn btn-default export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1">
-							<i class="icon-cloud-upload"></i> '.$this->l('CSV Export').'
-						</a>
-					</div>
-				</div>
+			<div class="blocStats">
+				<h2><img src="../modules/'.$this->name.'/logo.gif" /> '.$this->displayName.'</h2>
+				<p>'.$this->l('Customer registrations:').' '.(int)$totals['customers'].'</p>
+				<p>'.$this->l('Visitor registrations: ').' '.(int)$totals['visitors'].'</p>
+				<p>'.$this->l('Both:').' '.(int)$totals['both'].'</p>
+				<div>'.$this->engine(array('type' => 'line', 'layers' => 3)).'</div>
+				<p><a class="button export-csv" href="'.Tools::safeOutput($_SERVER['REQUEST_URI']).'&export=1"><span>'.$this->l('CSV Export').'</span></a></p>
 			</div>';
 		}
 		else
-			$this->_html = '<p>'.$this->l('The "Newsletter block" module must be installed.').'</p>';
+			$this->_html = '<p>'.$this->l('The "Newsletter Block" module must be installed.').'</p>';
 
 		return $this->_html;
 	}

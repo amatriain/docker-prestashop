@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -56,7 +56,6 @@ class AdminReferrersControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'referrer';
 		$this->className = 'Referrer';
 		$this->fields_list = array(
@@ -90,7 +89,7 @@ class AdminReferrersControllerCore extends AdminController
 				'align' => 'center'
 			),
 			'cache_orders' => array(
-				'title' => $this->l('Orders'),
+				'title' => $this->l('Ord.'),
 				'width' => 30,
 				'align' => 'center'
 			),
@@ -142,13 +141,7 @@ class AdminReferrersControllerCore extends AdminController
 			)
 		);
 
-	 	$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
+	 	$this->bulk_actions = array('delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')));
 
 		parent::__construct();
 	}
@@ -157,18 +150,6 @@ class AdminReferrersControllerCore extends AdminController
 	{
 		parent::setMedia();
 		$this->context->controller->addJqueryUI('ui.datepicker');
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		if(empty($this->display))
-			$this->page_header_toolbar_btn['new_referrer'] = array(
-				'href' => self::$currentIndex.'&addreferrer&token='.$this->token,
-				'desc' => $this->l('Add new referrer', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-		
-		parent::initPageHeaderToolbar();
 	}
 
 	public function renderList()
@@ -204,107 +185,102 @@ class AdminReferrersControllerCore extends AdminController
 		$this->fields_form[0] = array('form' => array(
 			'legend' => array(
 				'title' => $this->l('Affiliate'),
-				'icon' => 'icon-group'
+				'image' => '../img/admin/affiliation.png'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
-					'required' => true,
-					'autocomplete' => false
+					'size' => 20,
+					'required' => true
 				),
 				array(
 					'type' => 'password',
-					'label' => $this->l('Password'),
+					'label' => $this->l('Password:'),
 					'name' => 'passwd',
-					'desc' => $this->l('Leave blank if no change.'),
-					'autocomplete' => false
+					'size' => 20,
+					'desc' => $this->l('Leave blank if no change')
 				)
 			),
-			'submit' => array('title' => $this->l('Save')),
-		));
-
-		if (Module::isInstalled('trackingfront'))
-			$this->fields_form[0]['form']['desc'] = array(
+			'desc' => array(
 				$this->l('Affiliates can access their data with this name and password.'),
-				$this->l('Front access:').' <a class="btn btn-link" href="'.$uri.'modules/trackingfront/stats.php" onclick="return !window.open(this.href);"><i class="icon-external-link-sign"></i> '.$uri.'modules/trackingfront/stats.php</a>'
-			);
-		else
-			$this->fields_form[0]['form']['desc'] = array(
-				sprintf($this->l('Please install the "%s" module in order to give your affiliates access their own statistics.'), Module::getModuleName('trackingfront'))
-			);
+				$this->l('Front access:').' <a href="'.$uri.'modules/trackingfront/stats.php" style="font-style: italic;">'.$uri.'modules/trackingfront/stats.php</a>'
+			)
+		));
 
 		$this->fields_form[1] = array('form' => array(
 			'legend' => array(
 				'title' => $this->l('Commission plan'),
-				'icon' => 'icon-dollar'
+				'image' => '../img/admin/money.png'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Click fee'),
+					'label' => $this->l('Click fee:'),
 					'name' => 'click_fee',
+					'size' => 8,
 					'desc' => $this->l('Fee given for each visit.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Base fee'),
+					'label' => $this->l('Base fee:'),
 					'name' => 'base_fee',
+					'size' => 8,
 					'desc' => $this->l('Fee given for each order placed.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Percent fee'),
+					'label' => $this->l('Percent fee:'),
 					'name' => 'percent_fee',
+					'size' => 8,
 					'desc' => $this->l('Percent of the sales.')
 				)
-			),
-			'submit' => array('title' => $this->l('Save'))
+			)
 		));
 
 		if (Shop::isFeatureActive())
 		{
 			$this->fields_form[1]['form']['input'][] = array(
 				'type' => 'shop',
-				'label' => $this->l('Shop association'),
+				'label' => $this->l('Shop association:'),
 				'name' => 'checkBoxShopAsso',
 			);
 		}
 
 		$this->fields_form[2] = array('form' => array(
 			'legend' => array(
-				'title' => $this->l('Technical information -- Simple mode'),
-				'icon' => 'icon-cogs'
+				'title' => $this->l('Technical information -- Simple mode.'),
+				'image' => '../img/admin/affiliation.png'
 			),
 			'help' => true,
 			'input' => array(
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Include'),
+					'label' => $this->l('Include:'),
 					'name' => 'http_referer_like',
 					'cols' => 40,
 					'rows' => 1,
-					'legend' => $this->l('HTTP referrer')
+					'h3' => $this->l('HTTP referrer')
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Exclude'),
+					'label' => $this->l('Exclude:'),
 					'name' => 'http_referer_like_not',
 					'cols' => 40,
 					'rows' => 1
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Include'),
+					'label' => $this->l('Include:'),
 					'name' => 'request_uri_like',
 					'cols' => 40,
 					'rows' => 1,
-					'legend' => $this->l('Request URI')
+					'h3' => $this->l('Request URI')
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Exclude'),
+					'label' => $this->l('Exclude:'),
 					'name' => 'request_uri_like_not',
 					'cols' => 40,
 					'rows' => 1
@@ -313,42 +289,43 @@ class AdminReferrersControllerCore extends AdminController
 			'desc' => $this->l('If you know how to use MySQL regular expressions, you can use the').' 
 					<a style="cursor: pointer; font-weight: bold;" onclick="$(\'#tracking_expert\').slideToggle();">'.$this->l('expert mode').'.</a>',
 			'submit' => array(
-				'title' => $this->l('Save'),
+				'title' => $this->l('   Save   '),
+				'class' => 'button'
 			)
 		));
 
 		$this->fields_form[3] = array('form' => array(
 			'legend' => array(
 				'title' => $this->l('Technical information -- Expert mode'),
-				'icon' => 'icon-cogs'
+				'image' => '../img/admin/affiliation.png'
 			),
 			'input' => array(
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Include'),
+					'label' => $this->l('Include:'),
 					'name' => 'http_referer_regexp',
 					'cols' => 40,
 					'rows' => 1,
-					'legend' => $this->l('HTTP referrer')
+					'h3' => $this->l('HTTP referrer')
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Exclude'),
+					'label' => $this->l('Exclude:'),
 					'name' => 'http_referer_regexp_not',
 					'cols' => 40,
 					'rows' => 1
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Include'),
+					'label' => $this->l('Include:'),
 					'name' => 'request_uri_regexp',
 					'cols' => 40,
 					'rows' => 1,
-					'legend' => $this->l('Request URI')
+					'h3' => $this->l('Request URI')
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Exclude'),
+					'label' => $this->l('Exclude:'),
 					'name' => 'request_uri_regexp_not',
 					'cols' => 40,
 					'rows' => 1
@@ -414,13 +391,7 @@ class AdminReferrersControllerCore extends AdminController
 		{
 			$tpl = $this->createTemplate('form_settings.tpl');
 
-			$statsdata = Module::getInstanceByName('statsdata');
-
-			$statsdata_name = false;
-			if (Validate::isLoadedObject($statsdata))
-				$statsdata_name = $statsdata->displayName;
 			$tpl->assign(array(
-				'statsdata_name' => $statsdata_name,
 				'current' => self::$currentIndex,
 				'token' => $this->token,
 				'tracking_dt' => (int)Tools::getValue('tracking_dt', Configuration::get('TRACKING_DIRECT_TRAFFIC'))
@@ -439,11 +410,8 @@ class AdminReferrersControllerCore extends AdminController
 	{
 		if ($this->enableCalendar())
 		{
-			// Warning, instantiating a controller here changes the controller in the Context...
 			$calendar_tab = new AdminStatsController();
 			$calendar_tab->postProcess();
-			// ...so we set it back to the correct one here
-			$this->context->controller = $this;
 		}
 
 		if (Tools::isSubmit('submitSettings'))

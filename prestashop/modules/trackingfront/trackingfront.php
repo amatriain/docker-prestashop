@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,39 +33,35 @@ class TrackingFront extends Module
 	{
 		$this->name = 'trackingfront';
 		$this->tab = 'shipping_logistics';
-		$this->version = '1.7';
+		$this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		parent::__construct();
 
 		$this->displayName = $this->l('Tracking - Front office');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
-		$this->description = $this->l('Enables your affiliates to access their own statistics. See Stats/Referrers.');
+		$this->description = $this->l('Enable your affiliates to access their own statistics.');
 	}
-
+	
 	public function postProcess()
 	{
 		if (Tools::isSubmit('ajaxProductFilter'))
 		{
-			$fake_employee = new Employee();
-			$fake_employee->stats_date_from = $this->context->cookie->stats_date_from;
-			$fake_employee->stats_date_to = $this->context->cookie->stats_date_to;
-
+			$fakeEmployee = new Employee();
+			$fakeEmployee->stats_date_from = $this->context->cookie->stats_date_from;
+			$fakeEmployee->stats_date_to = $this->context->cookie->stats_date_to;
 			$result = Db::getInstance()->getRow('
 			SELECT `id_referrer`
 			FROM `'._DB_PREFIX_.'referrer`
-			WHERE `id_referrer` = '.(int)Tools::getValue('id_referrer').' AND `passwd` = \''.pSQL(Tools::getValue('token')).'\'');
-
-			if (isset($result['id_referrer']) && (int)$result['id_referrer'] > 0)
-				Referrer::getAjaxProduct((int)$result['id_referrer'], (int)Tools::getValue('id_product'), $fake_employee);
-
+			WHERE `id_referrer` = '.(int)(Tools::getValue('id_referrer')).' AND `passwd` = \''.pSQL(Tools::getValue('token')).'\'');
+			if (isset($result['id_referrer']) ? $result['id_referrer'] : false)
+				Referrer::getAjaxProduct((int)(Tools::getValue('id_referrer')), (int)(Tools::getValue('id_product')), $fakeEmployee);
 		}
 		elseif (Tools::isSubmit('logout_tracking'))
 		{
 			unset($this->context->cookie->tracking_id);
 			unset($this->context->cookie->tracking_passwd);
-			Tools::redirect(Tools::getShopDomain(true, false).__PS_BASE_URI__.'modules/trackingfront/stats.php');
+			Tools::redirect('modules/trackingfront/stats.php');
 		}
 		elseif (Tools::isSubmit('submitLoginTracking'))
 		{
@@ -78,7 +74,7 @@ class TrackingFront extends Module
 				$errors[] = $this->l('invalid login');
 			elseif (empty($passwd))
 				$errors[] = $this->l('password is required');
-			elseif (!Validate::isPasswd($passwd, 1))
+			elseif (!Validate::isPasswd($passwd,1))
 				$errors[] = $this->l('invalid password');
 			else
 			{
@@ -87,25 +83,22 @@ class TrackingFront extends Module
 				SELECT `id_referrer`
 				FROM `'._DB_PREFIX_.'referrer`
 				WHERE `name` = \''.pSQL($login).'\' AND `passwd` = \''.pSQL($passwd).'\'');
-				if (!isset($result['id_referrer']) || !($tracking_id = (int)$result['id_referrer']))
+				if (!isset($result['id_referrer']) OR !($tracking_id = (int)($result['id_referrer'])))
 					$errors[] = $this->l('authentication failed');
 				else
 				{
 					$this->context->cookie->tracking_id = $tracking_id;
 					$this->context->cookie->tracking_passwd = $passwd;
-					Tools::redirect(Tools::getShopDomain(true, false).__PS_BASE_URI__.'modules/trackingfront/stats.php');
+					Tools::redirect('modules/trackingfront/stats.php');
 				}
 			}
 			$this->smarty->assign('errors', $errors);
 		}
 
-		$from = date('Y-m-d');
-		$to = date('Y-m-d');
-
 		if (Tools::isSubmit('submitDatePicker'))
 		{
-			$from = Tools::getValue('datepickerFrom');
-			$to = Tools::getValue('datepickerTo');
+			$this->context->cookie->stats_date_from = Tools::getValue('datepickerFrom');
+			$this->context->cookie->stats_date_to = Tools::getValue('datepickerTo');
 		}
 		if (Tools::isSubmit('submitDateDay'))
 		{
@@ -114,7 +107,7 @@ class TrackingFront extends Module
 		}
 		if (Tools::isSubmit('submitDateDayPrev'))
 		{
-			$yesterday = time() - 60 * 60 * 24;
+			$yesterday = time() - 60*60*24;
 			$from = date('Y-m-d', $yesterday);
 			$to = date('Y-m-d', $yesterday);
 		}
@@ -140,27 +133,24 @@ class TrackingFront extends Module
 			$from = (date('Y') - 1).date('-01-01');
 			$to = (date('Y') - 1).date('-12-31');
 		}
-		$this->context->cookie->stats_date_from = $from;
-		$this->context->cookie->stats_date_to = $to;
 	}
-
+	
 	public function isLogged()
 	{
-		if (!$this->context->cookie->tracking_id || !$this->context->cookie->tracking_passwd)
+		if (!$this->context->cookie->tracking_id OR !$this->context->cookie->tracking_passwd)
 			return false;
 		$result = Db::getInstance()->getRow('
 		SELECT `id_referrer`
 		FROM `'._DB_PREFIX_.'referrer`
-		WHERE `id_referrer` = '.(int)$this->context->cookie->tracking_id.' AND `passwd` = \''.pSQL($this->context->cookie->tracking_passwd).'\'');
-
+		WHERE `id_referrer` = '.(int)($this->context->cookie->tracking_id).' AND `passwd` = \''.pSQL($this->context->cookie->tracking_passwd).'\'');
 		return isset($result['id_referrer']) ? $result['id_referrer'] : false;
 	}
-
+		
 	public function displayLogin()
 	{
 		return $this->display(__FILE__, 'login.tpl');
 	}
-
+	
 	public function displayAccount()
 	{
 		if (!isset($this->context->cookie->stats_date_from))
@@ -168,13 +158,13 @@ class TrackingFront extends Module
 		if (!isset($this->context->cookie->stats_date_to))
 			$this->context->cookie->stats_date_to = date('Y-m-t');
 		Referrer::refreshCache(array(array('id_referrer' => (int)$this->context->cookie->tracking_id)));
-
-		$referrer = new Referrer((int)$this->context->cookie->tracking_id);
+		
+		$referrer = new Referrer((int)($this->context->cookie->tracking_id));
 		$this->smarty->assign('referrer', $referrer);
 		$this->smarty->assign('datepickerFrom', $this->context->cookie->stats_date_from);
 		$this->smarty->assign('datepickerTo', $this->context->cookie->stats_date_to);
-
-		$display_tab = array(
+		
+		$displayTab = array(
 			'uniqs' => $this->l('Unique visitors'),
 			'visitors' => $this->l('Visitors'),
 			'visits' => $this->l('Visits'),
@@ -187,43 +177,79 @@ class TrackingFront extends Module
 			'sales' => $this->l('Sales'),
 			'cart' => $this->l('Average cart'),
 			'reg_rate' => $this->l('Registration rate'),
-			'order_rate' => $this->l('Order rate')
-		);
-		$this->smarty->assign('displayTab', $display_tab);
-
+			'order_rate' => $this->l('Order rate'));
+		$this->smarty->assign('displayTab', $displayTab);
+		
 		$products = Product::getSimpleProducts($this->context->language->id);
-		$products_array = array();
+		$productsArray = array();
 		foreach ($products as $product)
-			$products_array[] = $product['id_product'];
+			$productsArray[] = $product['id_product'];
+		
+		$echo = '
+		<script type="text/javascript">
+			$("#datepickerFrom").datepicker({
+				prevText:"",
+				nextText:"",
+				dateFormat:"yy-mm-dd"});
+			$("#datepickerTo").datepicker({
+				prevText:"",
+				nextText:"",
+				dateFormat:"yy-mm-dd"});
+			
+			function updateValues()
+			{
+				$.getJSON("stats.php",{ajaxProductFilter:1,id_referrer:'.$referrer->id.',token:"'.$this->context->cookie->tracking_passwd.'",id_product:0},
+					function(j) {';
+		foreach ($displayTab as $key => $value)
+			$echo .= '$("#'.$key.'").html(j[0].'.$key.');';
+		$echo .= '		}
+				)
+			}		
 
-		$js_files = array();
-
-		$jquery_files = Media::getJqueryPath();
-		if (is_array($jquery_files))
-			$js_files = array_merge($js_files, $jquery_files);
-		else
-			$js_files[] = $jquery_files;
-
-		$jquery_ui_files = Media::getJqueryUIPath('ui.datepicker', 'base', true);
-
-		$js_files = array_merge($js_files, $jquery_ui_files['js']);
-		$css_files = $jquery_ui_files['css'];
-
-		$js_files[] = $this->_path.'js/trackingfront.js';
-
-		$js_tpl_var = array(
-			'product_ids' => implode(', ', $products_array),
-			'referrer_id' => $referrer->id,
-			'token' => $this->context->cookie->tracking_passwd,
-			'display_tab' => implode('", "', array_keys($display_tab))
-		);
-
-		$this->smarty->assign(array(
-			'js' => $js_files,
-			'css' => $css_files,
-			'js_tpl_var' => $js_tpl_var
-		));
-
-		return $this->display(__FILE__, 'views/templates/front/account.tpl');
-	}
+			var productIds = new Array(\''.implode('\',\'', $productsArray).'\');
+			var referrerStatus = new Array();
+			
+			function newProductLine(id_referrer, result, color)
+			{
+				return \'\'+
+				\'<tr id="trprid_\'+id_referrer+\'_\'+result.id_product+\'" style="background-color: rgb(\'+color+\', \'+color+\', \'+color+\');">\'+
+				\'	<td align="center">\'+result.id_product+\'</td>\'+
+				\'	<td>\'+result.product_name+\'</td>\'+
+				\'	<td align="center">\'+result.uniqs+\'</td>\'+
+				\'	<td align="center">\'+result.visits+\'</td>\'+
+				\'	<td align="center">\'+result.pages+\'</td>\'+
+				\'	<td align="center">\'+result.registrations+\'</td>\'+
+				\'	<td align="center">\'+result.orders+\'</td>\'+
+				\'	<td align="right">\'+result.sales+\'</td>\'+
+				\'	<td align="right">\'+result.cart+\'</td>\'+
+				\'	<td align="center">\'+result.reg_rate+\'</td>\'+
+				\'	<td align="center">\'+result.order_rate+\'</td>\'+
+				\'	<td align="center">\'+result.click_fee+\'</td>\'+
+				\'	<td align="center">\'+result.base_fee+\'</td>\'+
+				\'	<td align="center">\'+result.percent_fee+\'</td>\'+
+				\'</tr>\';
+			}
+			
+			function showProductLines()
+			{
+				var irow = 0;
+				for (var i = 0; i < productIds.length; ++i)
+					$.getJSON("stats.php",{ajaxProductFilter:1,token:"'.$this->context->cookie->tracking_passwd.'",id_referrer:'.$referrer->id.',id_product:productIds[i]},
+						function(result) {
+							var newLine = newProductLine('.$referrer->id.', result[0], (irow++%2 ? 204 : 238));
+							$(newLine).hide().insertBefore($(\'#trid_dummy\')).fadeIn();
+						}
+					);
+			}
+		</script>';
+		
+		$echo2 = '
+		<script type="text/javascript">
+			updateValues();
+			//showProductLines();
+		</script>';
+		
+		return $this->display(__FILE__, 'header.tpl').$echo.$this->display(__FILE__, 'account.tpl').$echo2;
+	}	
 }
+

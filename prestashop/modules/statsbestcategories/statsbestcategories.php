@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -29,59 +29,62 @@ if (!defined('_PS_VERSION_'))
 
 class StatsBestCategories extends ModuleGrid
 {
-	private $html;
-	private $query;
-	private $columns;
-	private $default_sort_column;
-	private $default_sort_direction;
-	private $empty_message;
-	private $paging_message;
+	private $_html;
+	private $_query;
+	private $_columns;
+	private $_defaultSortColumn;
+	private $_defaultSortDirection;
+	private $_emptyMessage;
+	private $_pagingMessage;
 
 	public function __construct()
 	{
 		$this->name = 'statsbestcategories';
 		$this->tab = 'analytics_stats';
-		$this->version = '1.3';
+		$this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
-
+		
 		parent::__construct();
+		
+		$this->_defaultSortColumn = 'totalPriceSold';
+		$this->_defaultSortDirection = 'DESC';
+		$this->_emptyMessage = $this->l('Empty recordset returned');
+		$this->_pagingMessage = sprintf($this->l('Displaying %1$s of %2$s'), '{0} - {1}', '{2}');
 
-		$this->default_sort_column = 'totalPriceSold';
-		$this->default_sort_direction = 'DESC';
-		$this->empty_message = $this->l('Empty recordset returned');
-		$this->paging_message = sprintf($this->l('Displaying %1$s of %2$s'), '{0} - {1}', '{2}');
-
-		$this->columns = array(
+		$this->_columns = array(
 			array(
 				'id' => 'name',
 				'header' => $this->l('Name'),
 				'dataIndex' => 'name',
-				'align' => 'left'
+				'align' => 'left',
+				'width' => 140
 			),
 			array(
 				'id' => 'totalQuantitySold',
 				'header' => $this->l('Total Quantity Sold'),
 				'dataIndex' => 'totalQuantitySold',
-				'align' => 'center'
+				'width' => 20,
+				'align' => 'right'
 			),
 			array(
 				'id' => 'totalPriceSold',
 				'header' => $this->l('Total Price'),
 				'dataIndex' => 'totalPriceSold',
+				'width' => 30,
 				'align' => 'right'
 			),
 			array(
 				'id' => 'totalPageViewed',
 				'header' => $this->l('Total Viewed'),
 				'dataIndex' => 'totalPageViewed',
-				'align' => 'center'
+				'width' => 30,
+				'align' => 'right'
 			)
 		);
 
 		$this->displayName = $this->l('Best categories');
-		$this->description = $this->l('Adds a list of the best categories to the Stats dashboard.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+		$this->description = $this->l('A list of the best categories');
 	}
 
 	public function install()
@@ -91,35 +94,30 @@ class StatsBestCategories extends ModuleGrid
 
 	public function hookAdminStatsModules($params)
 	{
-		$engine_params = array(
+		$engineParams = array(
 			'id' => 'id_category',
 			'title' => $this->displayName,
-			'columns' => $this->columns,
-			'defaultSortColumn' => $this->default_sort_column,
-			'defaultSortDirection' => $this->default_sort_direction,
-			'emptyMessage' => $this->empty_message,
-			'pagingMessage' => $this->paging_message
+			'columns' => $this->_columns,
+			'defaultSortColumn' => $this->_defaultSortColumn,
+			'defaultSortDirection' => $this->_defaultSortDirection,
+			'emptyMessage' => $this->_emptyMessage,
+			'pagingMessage' => $this->_pagingMessage
 		);
 
 		if (Tools::getValue('export'))
-			$this->csvExport($engine_params);
+			$this->csvExport($engineParams);
 
-		$this->html = '
-			<div class="panel-heading">
-				<i class="icon-sitemap"></i> '.$this->displayName.'
-			</div>
-			'.$this->engine($engine_params).'
-			<a class="btn btn-default export-csv" href="'.htmlentities($_SERVER['REQUEST_URI']).'&export=1">
-				<i class="icon-cloud-upload"></i> '.$this->l('CSV Export').'
-			</a>';
-
-		return $this->html;
+		$this->_html = '
+		<div class="blocStats"><h2 class="icon-'.$this->name.'"><span></span>'.$this->displayName.'</h2>
+			'.$this->engine($engineParams).'
+			<br /><a class="button export-csv" href="'.htmlentities($_SERVER['REQUEST_URI']).'&export=1"><span>'.$this->l('CSV Export').'</span></a>
+		</div>';
+		return $this->_html;
 	}
 
 	public function getData()
 	{
-		$currency = new Currency(Configuration::get('PS_CURRENCY_DEFAULT'));
-		$date_between = $this->getDate();
+		$dateBetween = $this->getDate();
 		$id_lang = $this->getLang();
 
 		// If a shop is selected, get all children categories for the shop
@@ -135,15 +133,15 @@ class StatsBestCategories extends ModuleGrid
 					)';
 			if ($result = Db::getInstance()->executeS($sql))
 			{
-				$ntree_restriction = array();
+				$ntreeRestriction = array();
 				foreach ($result as $row)
-					$ntree_restriction[] = '(nleft >= '.$row['nleft'].' AND nright <= '.$row['nright'].')';
-
-				if ($ntree_restriction)
+					$ntreeRestriction[] = '(nleft >= '.$row['nleft'].' AND nright <= '.$row['nright'].')';
+				
+				if ($ntreeRestriction)
 				{
 					$sql = 'SELECT id_category
 							FROM '._DB_PREFIX_.'category
-							WHERE '.implode(' OR ', $ntree_restriction);
+							WHERE '.implode(' OR ', $ntreeRestriction);
 					if ($result = Db::getInstance()->executeS($sql))
 					{
 						foreach ($result as $row)
@@ -154,7 +152,7 @@ class StatsBestCategories extends ModuleGrid
 		}
 
 		// Get best categories
-		$this->query = '
+		$this->_query = '
 		SELECT SQL_CALC_FOUND_ROWS ca.`id_category`, CONCAT(parent.name, \' > \', calang.`name`) as name,
 			IFNULL(SUM(t.`totalQuantitySold`), 0) AS totalQuantitySold,
 			ROUND(IFNULL(SUM(t.`totalPriceSold`), 0), 2) AS totalPriceSold,
@@ -167,8 +165,8 @@ class StatsBestCategories extends ModuleGrid
 				LEFT JOIN `'._DB_PREFIX_.'category_product` capr2 ON capr2.`id_product` = pr.`id_product`
 				WHERE capr.`id_category` = capr2.`id_category`
 				AND p.`id_page_type` = 1
-				AND dr.`time_start` BETWEEN '.$date_between.'
-				AND dr.`time_end` BETWEEN '.$date_between.'
+				AND dr.`time_start` BETWEEN '.$dateBetween.'
+				AND dr.`time_end` BETWEEN '.$dateBetween.'
 			) AS totalPageViewed
 		FROM `'._DB_PREFIX_.'category` ca
 		LEFT JOIN `'._DB_PREFIX_.'category_lang` calang ON (ca.`id_category` = calang.`id_category` AND calang.`id_lang` = '.(int)$id_lang.Shop::addSqlRestrictionOnLang('calang').')
@@ -185,29 +183,22 @@ class StatsBestCategories extends ModuleGrid
 				LEFT OUTER JOIN `'._DB_PREFIX_.'order_detail` cp ON pr.`id_product` = cp.`product_id`
 				LEFT JOIN `'._DB_PREFIX_.'orders` o ON o.`id_order` = cp.`id_order`
 				WHERE o.valid = 1
-				AND o.invoice_date BETWEEN '.$date_between.'
+				AND o.invoice_date BETWEEN '.$dateBetween.'
 				GROUP BY pr.`id_product`
 			) t ON t.`id_product` = pr.`id_product`
 		) t	ON t.`id_product` = capr.`id_product`
 		'.(($categories) ? 'WHERE ca.id_category IN ('.implode(', ', $categories).')' : '').'
 		GROUP BY ca.`id_category`
 		HAVING ca.`id_category` != 1';
-
 		if (Validate::IsName($this->_sort))
 		{
-			$this->query .= ' ORDER BY `'.bqSQL($this->_sort).'`';
+			$this->_query .= ' ORDER BY `'.$this->_sort.'`';
 			if (isset($this->_direction) && Validate::isSortDirection($this->_direction))
-				$this->query .= ' '.$this->_direction;
+				$this->_query .= ' '.$this->_direction;
 		}
-
 		if (($this->_start === 0 || Validate::IsUnsignedInt($this->_start)) && Validate::IsUnsignedInt($this->_limit))
-			$this->query .= ' LIMIT '.(int)$this->_start.', '.(int)$this->_limit;
-
-		$values = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($this->query);
-		foreach ($values as &$value)
-			$value['totalPriceSold'] = Tools::displayPrice($value['totalPriceSold'], $currency);
-
-		$this->_values = $values;
+			$this->_query .= ' LIMIT '.$this->_start.', '.($this->_limit);
+		$this->_values = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($this->_query);
 		$this->_totalCount = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('SELECT FOUND_ROWS()');
 	}
 }

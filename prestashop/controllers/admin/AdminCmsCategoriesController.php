@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,31 +33,22 @@ class AdminCmsCategoriesControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
 		$this->is_cms = true;
 		$this->table = 'cms_category';
-		$this->list_id = 'cms_category';
 		$this->className = 'CMSCategory';
 		$this->lang = true;
 		$this->addRowAction('view');
 		$this->addRowAction('edit');
 		$this->addRowAction('delete');
-		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
-		$this->tpl_list_vars['icon'] = 'icon-folder-close';
-		$this->tpl_list_vars['title'] = $this->l('Categories');
+		$this->bulk_actions = array('delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')));
+
 		$this->fields_list = array(
-		'id_cms_category' => array('title' => $this->l('ID'), 'align' => 'center', 'class' => 'fixed-width-xs'),
+		'id_cms_category' => array('title' => $this->l('ID'), 'align' => 'center', 'width' => 30),
 		'name' => array('title' => $this->l('Name'), 'width' => 'auto', 'callback' => 'hideCMSCategoryPosition', 'callback_object' => 'CMSCategory'),
-		'description' => array('title' => $this->l('Description'), 'maxlength' => 90, 'orderby' => false),
-		'position' => array('title' => $this->l('Position'),'filter_key' => 'position', 'align' => 'center', 'class' => 'fixed-width-sm', 'position' => 'position'),
+		'description' => array('title' => $this->l('Description'), 'width' => 500, 'maxlength' => 90, 'orderby' => false),
+		'position' => array('title' => $this->l('Position'), 'width' => 40,'filter_key' => 'position', 'align' => 'center', 'position' => 'position'),
 		'active' => array(
-			'title' => $this->l('Displayed'), 'class' => 'fixed-width-sm', 'active' => 'status',
+			'title' => $this->l('Displayed'), 'width' => 25, 'active' => 'status',
 			'align' => 'center','type' => 'bool', 'orderby' => false
 		));
 
@@ -70,7 +61,7 @@ class AdminCmsCategoriesControllerCore extends AdminController
 		}
 
 		$this->cms_category = AdminCmsContentController::getCurrentCMSCategory();
-		$this->_where = ' AND `id_parent` = '.(int)$this->cms_category->id;
+		$this->_filter = 'AND `id_parent` = '.(int)$this->cms_category->id;
 		$this->_select = 'position ';
 
 		parent::__construct();
@@ -79,9 +70,21 @@ class AdminCmsCategoriesControllerCore extends AdminController
 	public function renderList()
 	{
 		$this->initToolbar();
-		if (isset($this->toolbar_btn['new']))
-        	$this->toolbar_btn['new']['href'] .= '&amp;id_parent='.(int)Tools::getValue('id_cms_category');
+        $this->toolbar_btn['new']['href'] .= '&amp;id_parent='.(int)Tools::getValue('id_cms_category');
 		return parent::renderList();
+	}
+
+	/**
+	 * Modifying initial getList method to display position feature (drag and drop)
+	 */
+	public function getList($id_lang, $order_by = null, $order_way = null, $start = 0, $limit = null, $id_lang_shop = false)
+	{
+		if ($order_by && $this->context->cookie->__get($this->table.'Orderby'))
+			$order_by = $this->context->cookie->__get($this->table.'Orderby');
+		else
+			$order_by = 'position';
+
+		parent::getList($id_lang, $order_by, $order_way, $start, $limit, $id_lang_shop);
 	}
 
 	public function postProcess()
@@ -218,22 +221,24 @@ class AdminCmsCategoriesControllerCore extends AdminController
 		$this->fields_form = array(
 			'legend' => array(
 				'title' => $this->l('CMS Category'),
-				'icon' => 'icon-folder-close'
+				'image' => '../img/admin/tab-categories.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
 					'required' => true,
 					'lang' => true,
-					'hint' => $this->l('Invalid characters:').' &lt;&gt;;=#{}'
+					'class' => 'copy2friendlyUrl',
+					'hint' => $this->l('Invalid characters:').' <>;=#{}'
 				),
 				array(
-					'type' => 'switch',
-					'label' => $this->l('Displayed'),
+					'type' => 'radio',
+					'label' => $this->l('Displayed:'),
 					'name' => 'active',
 					'required' => false,
+					'class' => 't',
 					'is_bool' => true,
 					'values' => array(
 						array(
@@ -251,7 +256,7 @@ class AdminCmsCategoriesControllerCore extends AdminController
 				// custom template
 				array(
 					'type' => 'select_category',
-					'label' => $this->l('Parent CMS Category'),
+					'label' => $this->l('Parent CMS Category:'),
 					'name' => 'id_parent',
 					'options' => array(
 						'html' => $html_categories,
@@ -259,37 +264,37 @@ class AdminCmsCategoriesControllerCore extends AdminController
 				),
 				array(
 					'type' => 'textarea',
-					'label' => $this->l('Description'),
+					'label' => $this->l('Description:'),
 					'name' => 'description',
 					'lang' => true,
 					'rows' => 5,
 					'cols' => 40,
-					'hint' => $this->l('Invalid characters:').' &lt;&gt;;=#{}'
+					'hint' => $this->l('Invalid characters:').' <>;=#{}'
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Meta title'),
+					'label' => $this->l('Meta title:'),
 					'name' => 'meta_title',
 					'lang' => true,
-					'hint' => $this->l('Invalid characters:').' &lt;&gt;;=#{}'
+					'hint' => $this->l('Invalid characters:').' <>;=#{}'
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Meta description'),
+					'label' => $this->l('Meta description:'),
 					'name' => 'meta_description',
 					'lang' => true,
-					'hint' => $this->l('Invalid characters:').' &lt;&gt;;=#{}'
+					'hint' => $this->l('Invalid characters:').' <>;=#{}'
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Meta keywords'),
+					'label' => $this->l('Meta keywords:'),
 					'name' => 'meta_keywords',
 					'lang' => true,
-					'hint' => $this->l('Invalid characters:').' &lt;&gt;;=#{}'
+					'hint' => $this->l('Invalid characters:').' <>;=#{}'
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Friendly URL'),
+					'label' => $this->l('Friendly URL:'),
 					'name' => 'link_rewrite',
 					'required' => true,
 					'lang' => true,
@@ -298,6 +303,7 @@ class AdminCmsCategoriesControllerCore extends AdminController
 			),
 			'submit' => array(
 				'title' => $this->l('Save'),
+				'class' => 'button'
 			)
 		);
 		$this->tpl_form_vars['PS_ALLOW_ACCENTED_CHARS_URL'] = (int)Configuration::get('PS_ALLOW_ACCENTED_CHARS_URL');

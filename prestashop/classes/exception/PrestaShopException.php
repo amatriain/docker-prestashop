@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -51,7 +51,7 @@ class PrestaShopExceptionCore extends Exception
 			</style>';
 			echo '<div id="psException">';
 			echo '<h2>['.get_class($this).']</h2>';
-			echo $this->getExtendedMessage();
+			echo $this->getExentedMessage();
 
 			$this->displayFileDebug($this->getFile(), $this->getLine());
 
@@ -61,19 +61,19 @@ class PrestaShopExceptionCore extends Exception
 			{
 				$relative_file = (isset($trace['file'])) ? ltrim(str_replace(array(_PS_ROOT_DIR_, '\\'), array('', '/'), $trace['file']), '/') : '';
 				$current_line = (isset($trace['line'])) ? $trace['line'] : '';
-				if (defined('_PS_ADMIN_DIR_'))
-					$relative_file = str_replace(basename(_PS_ADMIN_DIR_).DIRECTORY_SEPARATOR, 'admin'.DIRECTORY_SEPARATOR, $relative_file);
+
 				echo '<li>';
 				echo '<b>'.((isset($trace['class'])) ? $trace['class'] : '').((isset($trace['type'])) ? $trace['type'] : '').$trace['function'].'</b>';
-				echo ' - <a style="font-size: 12px; color: #000000; cursor:pointer; color: blue;" onclick="document.getElementById(\'psTrace_'.$id.'\').style.display = (document.getElementById(\'psTrace_'.$id.'\').style.display != \'block\') ? \'block\' : \'none\'; return false">[line '.$current_line.' - '.$relative_file.']</a>';
+				echo ' - <a href="#" style="font-size: 12px; color: #000000" onclick="document.getElementById(\'psTrace_'.$id.'\').style.display = (document.getElementById(\'psTrace_'.$id.'\').style.display != \'block\') ? \'block\' : \'none\'; return false">[line '.$current_line.' - '.$relative_file.']</a>';
 
-				if (isset($trace['args']) && count($trace['args']))
-					echo ' - <a style="font-size: 12px; color: #000000; cursor:pointer; color: blue;" onclick="document.getElementById(\'psArgs_'.$id.'\').style.display = (document.getElementById(\'psArgs_'.$id.'\').style.display != \'block\') ? \'block\' : \'none\'; return false">['.count($trace['args']).' Arguments]</a>';
+				if (count($trace['args']))
+					echo ' - <a href="#" onclick="document.getElementById(\'psArgs_'.$id.'\').style.display = (document.getElementById(\'psArgs_'.$id.'\').style.display != \'block\') ? \'block\' : \'none\'; return false">['.count($trace['args']).' Arguments]</a>';
+				else
+					echo ' - <span style="font-size: 12px;">[0 Argument]</a>';
 
 				if ($relative_file)
 					$this->displayFileDebug($trace['file'], $trace['line'], $id);
-				if (isset($trace['args']) && count($trace['args']))
-					$this->displayArgsDebug($trace['args'], $id);
+				$this->displayArgsDebug($trace['args'], $id);
 				echo '</li>';
 			}
 			echo '</ul>';
@@ -131,8 +131,8 @@ class PrestaShopExceptionCore extends Exception
 		echo '<div class="psArgs" id="psArgs_'.$id.'"><pre>';
 		foreach ($args as $arg => $value)
 		{
-			echo '<b>Argument ['.Tools::safeOutput($arg)."]</b>\n";
-			echo Tools::safeOutput(print_r($value, true));
+			echo '<b>Argument ['.$arg."]</b>\n";
+			print_r($value);
 			echo "\n";
 		}
 		echo '</pre>';
@@ -145,23 +145,14 @@ class PrestaShopExceptionCore extends Exception
 	{
 		$logger = new FileLogger();
 		$logger->setFilename(_PS_ROOT_DIR_.'/log/'.date('Ymd').'_exception.log');
-		$logger->logError($this->getExtendedMessage(false));
-	}
-	
-	/**
-	 * @deprecated 1.5.5
-	 */
-	protected function getExentedMessage($html = true)
-	{
-		Tools::displayAsDeprecated();
-		return $this->getExtendedMessage($html);
+		$logger->logError($this->getExentedMessage(false));
 	}
 	
 	/**
 	 * Return the content of the Exception
 	 * @return string content of the exception
 	 */
-	protected function getExtendedMessage($html = true)
+	protected function getExentedMessage($html = true)
 	{
 		$format = '<p><b>%s</b><br /><i>at line </i><b>%d</b><i> in file </i><b>%s</b></p>';
 		if (!$html)

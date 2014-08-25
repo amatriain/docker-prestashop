@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,7 +33,7 @@ class BlockSearch extends Module
 	{
 		$this->name = 'blocksearch';
 		$this->tab = 'search_filter';
-		$this->version = '1.5.1';
+		$this->version = 1.2;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -41,7 +41,6 @@ class BlockSearch extends Module
 
 		$this->displayName = $this->l('Quick search block');
 		$this->description = $this->l('Adds a quick search field to your website.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
 	}
 
 	public function install()
@@ -54,7 +53,6 @@ class BlockSearch extends Module
 	public function hookdisplayMobileTopSiteMap($params)
 	{
 		$this->smarty->assign(array('hook_mobile' => true, 'instantsearch' => false));
-		$params['hook_mobile'] = true;
 		return $this->hookTop($params);
 	}
 	
@@ -73,11 +71,6 @@ public function hookDisplayMobileHeader($params)
 			$this->context->controller->addJqueryPlugin('autocomplete');
 		$this->context->controller->addCSS(_THEME_CSS_DIR_.'product_list.css');
 		$this->context->controller->addCSS(($this->_path).'blocksearch.css', 'all');
-		if (Configuration::get('PS_SEARCH_AJAX'))
-		{
-			Media::addJsDef(array('search_url' => $this->context->link->getPageLink('search', Tools::usingSecureMode())));
-			$this->context->controller->addJS(($this->_path).'blocksearch.js');
-		}
 	}
 
 	public function hookLeftColumn($params)
@@ -87,40 +80,31 @@ public function hookDisplayMobileHeader($params)
 
 	public function hookRightColumn($params)
 	{
-		if (Tools::getValue('search_query') || !$this->isCached('blocksearch.tpl', $this->getCacheId()))
+		if (!$this->isCached('blocksearch.tpl', $this->getCacheId()))
 		{
 			$this->calculHookCommon($params);
-			$this->smarty->assign(array(
-				'blocksearch_type' => 'block',
-				'search_query' => (string)Tools::getValue('search_query')
-				)
-			);
+			$this->smarty->assign('blocksearch_type', 'block');
 		}
-		Media::addJsDef(array('blocksearch_type' => 'block'));
-		return $this->display(__FILE__, 'blocksearch.tpl', Tools::getValue('search_query') ? null : $this->getCacheId());
+		return $this->display(__FILE__, 'blocksearch.tpl', $this->getCacheId());
 	}
 
 	public function hookTop($params)
 	{
-		$key = $this->getCacheId('blocksearch-top'.((!isset($params['hook_mobile']) || !$params['hook_mobile']) ? '' : '-hook_mobile'));
-		if (Tools::getValue('search_query') || !$this->isCached('blocksearch-top.tpl', $key))
+		if (!$this->isCached('blocksearch-top.tpl', $this->getCacheId('blocksearch-top')))
 		{
 			$this->calculHookCommon($params);
-			$this->smarty->assign(array(
-				'blocksearch_type' => 'top',
-				'search_query' => (string)Tools::getValue('search_query')
-				)
-			);
+			$this->smarty->assign('blocksearch_type', 'top');
 		}
-		Media::addJsDef(array('blocksearch_type' => 'top'));
-		return $this->display(__FILE__, 'blocksearch-top.tpl', Tools::getValue('search_query') ? null : $key);
-	}
-	
-	public function hookDisplayNav($params)
-	{
-		return $this->hookTop($params);
+
+		return $this->display(__FILE__, 'blocksearch-top.tpl', $this->getCacheId('blocksearch-top'));
 	}
 
+	/**
+	 * _hookAll has to be called in each hookXXX methods. This is made to avoid code duplication.
+	 *
+	 * @param mixed $params
+	 * @return void
+	 */
 	private function calculHookCommon($params)
 	{
 		$this->smarty->assign(array(

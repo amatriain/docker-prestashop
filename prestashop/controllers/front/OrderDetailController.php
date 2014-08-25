@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,15 +19,13 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class OrderDetailControllerCore extends FrontController
 {
-	public $php_self = 'order-detail';
-
 	public $auth = true;
 	public $authRedirection = 'history';
 	public $ssl = true;
@@ -75,7 +73,7 @@ class OrderDetailControllerCore extends FrontController
 						$ct->id_contact = 0;
 						$ct->id_customer = (int)$order->id_customer;
 						$ct->id_shop = (int)$this->context->shop->id;
-						if (($id_product = (int)Tools::getValue('id_product')) && $order->orderContainProduct((int)$id_product))
+						if ($id_product = (int)Tools::getValue('id_product') && $order->orderContainProduct((int)$id_product))
 							$ct->id_product = $id_product;
 						$ct->id_order = (int)$order->id;
 						$ct->id_lang = (int)$this->context->language->id;
@@ -116,7 +114,6 @@ class OrderDetailControllerCore extends FrontController
 					if (Tools::getValue('ajax') != 'true')
 						Tools::redirect('index.php?controller=order-detail&id_order='.(int)$idOrder);
 
-					$this->context->smarty->assign('message_confirmation', true);
 				}
 				else
 					$this->errors[] = Tools::displayError('Order not found');
@@ -170,9 +167,9 @@ class OrderDetailControllerCore extends FrontController
 				$this->context->smarty->assign(array(
 					'shop_name' => strval(Configuration::get('PS_SHOP_NAME')),
 					'order' => $order,
-					'return_allowed' => (int)$order->isReturnable(),
+					'return_allowed' => (int)($order->isReturnable()),
 					'currency' => new Currency($order->id_currency),
-					'order_state' => (int)$id_order_state,
+					'order_state' => (int)($id_order_state),
 					'invoiceAllowed' => (int)(Configuration::get('PS_INVOICE')),
 					'invoice' => (OrderState::invoiceAvailable($id_order_state) && count($order->getInvoicesCollection())),
 					'order_history' => $order->getHistory($this->context->language->id, false, true),
@@ -195,9 +192,8 @@ class OrderDetailControllerCore extends FrontController
 					'use_tax' => Configuration::get('PS_TAX'),
 					'group_use_tax' => (Group::getPriceDisplayMethod($customer->id_default_group) == PS_TAX_INC),
 					/* DEPRECATED: customizedDatas @since 1.5 */
-					'customizedDatas' => $customizedDatas,
+					'customizedDatas' => $customizedDatas
 					/* DEPRECATED: customizedDatas @since 1.5 */
-					'reorderingAllowed' => !(int)(Configuration::get('PS_DISALLOW_HISTORY_REORDERING'))
 				));
 
 				if ($carrier->url && $order->shipping_number)
@@ -225,3 +221,4 @@ class OrderDetailControllerCore extends FrontController
 		}
 	}
 }
+

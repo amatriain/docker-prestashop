@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,10 +19,12 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
+
+require_once(_PS_TOOL_DIR_.'tar/Archive_Tar.php');
 
 class LocalizationPackCore
 {
@@ -33,30 +35,16 @@ class LocalizationPackCore
 	protected $iso_currency;
 	protected $_errors = array();
 
-	public function loadLocalisationPack($file, $selection, $install_mode = false, $iso_localization_pack = null)
+	public function loadLocalisationPack($file, $selection, $install_mode = false)
 	{
 		if (!$xml = simplexml_load_string($file))
 			return false;
 		$main_attributes = $xml->attributes();
 		$this->name = (string)$main_attributes['name'];
 		$this->version = (string)$main_attributes['version'];
-		if ($iso_localization_pack)
-		{
-
-			$id_country = Country::getByIso($iso_localization_pack);
-			$country = new Country($id_country);
-			if (!$country->active)
-			{
-				$country->active = 1;
-				if (!$country->update())
-					$this->_errors[] = Tools::displayError('Cannot enable the associated country: ').$country->name;
-			}
-		}
-
-		$res = true;
-
 		if (empty($selection))
 		{
+			$res = true;
 			$res &= $this->_installStates($xml);
 			$res &= $this->_installTaxes($xml);
 			$res &= $this->_installCurrencies($xml, $install_mode);
@@ -64,7 +52,6 @@ class LocalizationPackCore
 			$res &= $this->installConfiguration($xml);
 			$res &= $this->installModules($xml);
 			$res &= $this->_installLanguages($xml, $install_mode);
-			$res &= $this->updateDefaultGroupDisplayMethod($xml);
 
 			if ($res && isset($this->iso_code_lang))
 			{
@@ -76,18 +63,17 @@ class LocalizationPackCore
 
 			if ($install_mode && $res && isset($this->iso_currency))
 			{
-				Cache::clean('Currency::getIdByIsoCode_*');
 				$res &= Configuration::updateValue('PS_CURRENCY_DEFAULT', (int)Currency::getIdByIsoCode($this->iso_currency));
 				Currency::refreshCurrencies();
 			}
 
+			return $res;
 		}
-		else
-			foreach ($selection as $selected)
-				// No need to specify the install_mode because if the selection mode is used, then it's not the install
-				$res &= Validate::isLocalizationPackSelection($selected) ? $this->{'_install'.$selected}($xml) : false;
+		foreach ($selection as $selected)
+			if (!Validate::isLocalizationPackSelection($selected) || !$this->{'_install'.ucfirst($selected)}($xml))
+				return false;
 
-		return $res;
+		return true;
 	}
 
 	protected function _installStates($xml)
@@ -96,15 +82,12 @@ class LocalizationPackCore
 			foreach ($xml->states->state as $data)
 			{
 				$attributes = $data->attributes();
-				$id_country = ($attributes['country']) ? (int)Country::getByIso(strval($attributes['country'])) : false;
-				$id_state = ($id_country) ? State::getIdByIso($attributes['iso_code'], $id_country) : State::getIdByName($attributes['name']);
-
-				if (!$id_state)
+				if (!$id_state = State::getIdByName($attributes['name']))
 				{
 					$state = new State();
 					$state->name = strval($attributes['name']);
 					$state->iso_code = strval($attributes['iso_code']);
-					$state->id_country = $id_country;
+					$state->id_country = Country::getByIso(strval($attributes['country']));
 
 					$id_zone = (int)Zone::getIdByName(strval($attributes['zone']));
 					if (!$id_zone)
@@ -143,9 +126,7 @@ class LocalizationPackCore
 						$this->_errors[] = Tools::displayError('An error occurred while adding the state.');
 						return false;
 					}
-				}
-				else
-				{
+				} else {
 					$state = new State($id_state);
 					if (!Validate::isLoadedObject($state))
 					{
@@ -251,13 +232,15 @@ class LocalizationPackCore
 				}
 			}
 		}
-		return true;
+		return $this->updateDefaultGroupDisplayMethod($xml);
 	}
 
 	protected function _installCurrencies($xml, $install_mode = false)
 	{
 		if (isset($xml->currencies->currency))
 		{
+
+
 			foreach ($xml->currencies->currency as $data)
 			{
 				$attributes = $data->attributes();
@@ -272,7 +255,7 @@ class LocalizationPackCore
 				$currency->conversion_rate = 1; // This value will be updated if the store is online
 				$currency->format = (int)$attributes['format'];
 				$currency->decimals = (int)$attributes['decimals'];
-				$currency->active = true;
+				$currency->active = $install_mode;
 				if (!$currency->validateFields())
 				{
 					$this->_errors[] = Tools::displayError('Invalid currency properties.');
@@ -289,9 +272,10 @@ class LocalizationPackCore
 					PaymentModule::addCurrencyPermissions($currency->id);
 				}
 			}
-            
-			if (($error = Currency::refreshCurrencies()) !== null)
-                $this->_errors[] = $error;
+            if (!$feed = Tools::simplexml_load_file('http://api.prestashop.com/xml/currencies.xml'))
+                $this->_errors[] = Tools::displayError('Cannot parse the currencies XML feed.');
+            else
+			    Currency::refreshCurrencies();
 
 			if (!count($this->_errors) && $install_mode && isset($attributes['iso_code']) && count($xml->currencies->currency) == 1)
 				$this->iso_currency = $attributes['iso_code'];
@@ -310,7 +294,7 @@ class LocalizationPackCore
 				// if we are not in an installation context or if the pack is not available in the local directory
 				if (Language::getIdByIso($attributes['iso_code']) && !$install_mode)
 					continue;
-				$errors = Language::downloadAndInstallLanguagePack($attributes['iso_code'], $attributes['version'], $attributes);
+				$errors = Language::downloadAndInstallLanguagePack($attributes['iso_code'], $attributes['version']);
 				if ($errors !== true && is_array($errors))
 					$this->_errors = array_merge($this->_errors, $errors);
 			}
@@ -398,11 +382,6 @@ class LocalizationPackCore
 
 		return true;
 	}
-	
-	protected function _installGroups($xml)
-	{
-		return $this->updateDefaultGroupDisplayMethod($xml);
-	}
 
 	protected function updateDefaultGroupDisplayMethod($xml)
 	{
@@ -411,8 +390,6 @@ class LocalizationPackCore
 			$attributes = $xml->group_default->attributes();
 			if (isset($attributes['price_display_method']) && in_array((int)$attributes['price_display_method'], array(0, 1)))
 			{
-				Configuration::updateValue('PRICE_DISPLAY_METHOD', (int)$attributes['price_display_method']);
-
 				foreach (array((int)Configuration::get('PS_CUSTOMER_GROUP'), (int)Configuration::get('PS_GUEST_GROUP'), (int)Configuration::get('PS_UNIDENTIFIED_GROUP')) as $id_group)
 				{
 					$group = new Group((int)$id_group);

@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -32,13 +32,13 @@
 {include file="$tpl_dir./order-steps.tpl"}
 
 {if isset($nbProducts) && $nbProducts <= 0}
-	<p class="warning">{l s='Your shopping cart is empty.' mod='cheque'}</p>
+	<p class="warning">{l s='Your shopping cart is empty.'}</p>
 {else}
 
 <h3>{l s='Check payment' mod='cheque'}</h3>
-<form action="{$link->getModuleLink('cheque', 'validation', [], true)|escape:'html'}" method="post">
+<form action="{$link->getModuleLink('cheque', 'validation', [], true)}" method="post">
 	<p>
-		<img src="{$this_path_cheque}cheque.jpg" alt="{l s='Check' mod='cheque'}" width="86" height="49" style="float:left; margin: 0px 10px 5px 0px;" />
+		<img src="{$this_path}cheque.jpg" alt="{l s='Check' mod='cheque'}" width="86" height="49" style="float:left; margin: 0px 10px 5px 0px;" />
 		{l s='You have chosen to pay by check.' mod='cheque'}
 		<br/><br />
 		{l s='Here is a short summary of your order:' mod='cheque'}
@@ -71,9 +71,9 @@
 		<br /><br />
 		<b>{l s='Please confirm your order by clicking \'I confirm my order\'' mod='cheque'}.</b>
 	</p>
-	<p class="cart_navigation" id="cart_navigation">
-		<input type="submit" value="{l s='I confirm my order' mod='cheque'}" class="exclusive_large"/>
-		<a href="{$link->getPageLink('order', true, NULL, "step=3")|escape:'html'}" class="button_large">{l s='Other payment methods' mod='cheque'}</a>
+	<p class="cart_navigation">
+		<input type="submit" name="submit" value="{l s='I confirm my order' mod='cheque'}" class="exclusive_large" />
+		<a href="{$link->getPageLink('order', true, NULL, "step=3")}" class="button_large">{l s='Other payment methods' mod='cheque'}</a>
 	</p>
 </form>
 {/if}

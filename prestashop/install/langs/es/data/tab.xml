@@ -33,7 +33,8 @@
   <tab id="General" name="General"/>
   <tab id="Geolocation" name="Localizaci&#xF3;n"/>
   <tab id="Groups" name="Grupos"/>
-  <tab id="Dashboard" name="Dashboard"/>
+  <tab id="Home" name="Inicio"/>
+  <tab id="Image_Mapping" name="Cartograf&#xED;a de im&#xE1;genes"/>
   <tab id="Images" name="Im&#xE1;genes"/>
   <tab id="Instant_Stock_Status" name="Estado de existencias instantes"/>
   <tab id="Invoices" name="facturas"/>
@@ -63,6 +64,7 @@
   <tab id="Positions" name="Posiciones"/>
   <tab id="Preferences_1" name="Preferencias"/>
   <tab id="Preferences" name="Preferencias"/>
+  <tab id="Price_Ranges" name="Rangos de precio"/>
   <tab id="Price_Rules" name="Precio de las normas"/>
   <tab id="Products_1" name="Productos"/>
   <tab id="Products" name="Productos"/>
@@ -73,8 +75,8 @@
   <tab id="Search" name="Buscar"/>
   <tab id="Search_Engines" name="Buscador"/>
   <tab id="SEO_URLs" name="SEO y URLs"/>
-  <tab id="Shipping" name="Transporte"/>
-  <tab id="Shipping_1" name="Preferencias"/>
+  <tab id="Shipping" name="transporte"/>
+  <tab id="Shipping_1" name="transporte"/>
   <tab id="Shop_URLs" name="URL cortos"/>
   <tab id="Shopping_Carts" name="Cestas"/>
   <tab id="Shops" name="Tiendas"/>
@@ -98,6 +100,6 @@
   <tab id="Translations" name="Traducciones"/>
   <tab id="Warehouses" name="Almacenes"/>
   <tab id="Webservice" name="Servicio Web"/>
+  <tab id="Weight_Ranges" name="Rangos de peso"/>
   <tab id="Zones" name="Zonas"/>
-  <tab id="CarrierWizard" name="Carrier"/>
 </entity_tab>

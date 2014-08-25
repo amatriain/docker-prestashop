@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -81,7 +81,7 @@ class OrderStateCore extends ObjectModel
 			'delivery' =>	array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
 			'hidden' =>		array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
 			'paid' =>		array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
-			'deleted' =>	array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
+			'deleted' =>	array('type' => self::TYPE_BOOL, 'validade' => 'isBool'),
 
 			// Lang fields
 			'name' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 64),
@@ -105,42 +105,34 @@ class OrderStateCore extends ObjectModel
 	
 
 	/**
-	* Get all available order statuses
+	* Get all available order states
 	*
-	* @param integer $id_lang Language id for status name
-	* @return array Order statuses
+	* @param integer $id_lang Language id for state name
+	* @return array Order states
 	*/
 	public static function getOrderStates($id_lang)
 	{
-		$cache_id = 'OrderState::getOrderStates_'.(int)$id_lang;
-		if (!Cache::isStored($cache_id))
-		{
-			$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
-			SELECT *
-			FROM `'._DB_PREFIX_.'order_state` os
-			LEFT JOIN `'._DB_PREFIX_.'order_state_lang` osl ON (os.`id_order_state` = osl.`id_order_state` AND osl.`id_lang` = '.(int)$id_lang.')
-			WHERE deleted = 0
-			ORDER BY `name` ASC');
-			Cache::store($cache_id, $result);
-		}
-		return Cache::retrieve($cache_id);
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+		SELECT *
+		FROM `'._DB_PREFIX_.'order_state` os
+		LEFT JOIN `'._DB_PREFIX_.'order_state_lang` osl ON (os.`id_order_state` = osl.`id_order_state` AND osl.`id_lang` = '.(int)$id_lang.')
+		WHERE deleted = 0
+		ORDER BY `name` ASC');
 	}
 
 	/**
-	* Check if we can make a invoice when order is in this state
+	* Check if we can make a facture when order is in this state
 	*
 	* @param integer $id_order_state State ID
 	* @return boolean availability
 	*/
 	public static function invoiceAvailable($id_order_state)
 	{
-		$result = false;
-		if (Configuration::get('PS_INVOICE'))
-			$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('
-			SELECT `invoice`
-			FROM `'._DB_PREFIX_.'order_state`
-			WHERE `id_order_state` = '.(int)$id_order_state);
-		return (bool)$result;
+		$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
+		SELECT `invoice` AS ok
+		FROM `'._DB_PREFIX_.'order_state`
+		WHERE `id_order_state` = '.(int)$id_order_state);
+		return $result['ok'];
 	}
 
 	public function isRemovable()

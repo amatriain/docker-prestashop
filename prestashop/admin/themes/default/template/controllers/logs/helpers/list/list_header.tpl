@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -27,18 +27,15 @@
 
 {block name="override_header"}
 
-	<div class="panel">
-		<h3>
-			<i class="icon-warning-sign"></i>
-			{l s='Severity levels'}
-		</h3>
+	<fieldset>
+		<legend>{l s='Severity levels'}</legend>
 		<p>{l s='Meaning of severity levels:'}</p>
-		<ol>
-			<li><span class="badge badge-success">{l s='Informative only'}</span></li>
-			<li><span class="badge badge-warning">{l s='Warning'}</span></li>
-			<li><span class="badge badge-danger">{l s='Error'}</span></li>
-			<li><span class="badge badge-critical">{l s='Major issue (crash)!'}</span></li>
+		<ol style="margin-left: 30px; list-style-type: decimal;">
+			<li style="color: green;">{l s='Informative only'}</li>
+			<li style="color: orange;">{l s='Warning'}</li>
+			<li style="color: orange;">{l s='Error'}</li>
+			<li style="color: red;">{l s='Major issue (crash)!'}</li>
 		</ol>
-	</div>
+	</fieldset><br />
 
 {/block}

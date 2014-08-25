@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -93,7 +93,7 @@ class SupplyOrderStateCore extends ObjectModel
 	);
 
 	/**
-	 * Gets the list of supply order statuses
+	 * Gets the list of supply order states
 	 *
 	 * @param int $id_state_referrer Optional, used to know what state is available after this one
 	 * @param int $id_lang Optional Id Language
@@ -126,7 +126,7 @@ class SupplyOrderStateCore extends ObjectModel
 				$is_pending_receipt = $state->pending_receipt;
 			}
 
-			$query->where('s.id_supply_order_state <> '.(int)$id_state_referrer);
+			$query->where('s.id_supply_order_state <> '.$id_state_referrer);
 
 			//check first if the order is editable
 			if ($is_editable)
@@ -143,7 +143,7 @@ class SupplyOrderStateCore extends ObjectModel
 	}
 
 	/**
-	 * Gets the list of supply order statuses
+	 * Gets the list of supply order states
 	 *
 	 * @param array $ids Optional Do not include these ids in the result
 	 * @param int $id_lang Optional

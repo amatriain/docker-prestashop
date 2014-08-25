@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,7 +28,6 @@ class AdminDeliverySlipControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'delivery';
 
 		$this->context = Context::getContext();
@@ -38,18 +37,20 @@ class AdminDeliverySlipControllerCore extends AdminController
 				'title' =>	$this->l('Delivery slip options'),
 				'fields' =>	array(
 					'PS_DELIVERY_PREFIX' => array(
-						'title' => $this->l('Delivery prefix'),
-						'desc' => $this->l('Prefix used for delivery slips.'),
+						'title' => $this->l('Delivery prefix:'),
+						'desc' => $this->l('Prefix used for delivery slips'),
+						'size' => 6,
 						'type' => 'textLang'
 					),
 					'PS_DELIVERY_NUMBER' => array(
-						'title' => $this->l('Delivery number'),
+						'title' => $this->l('Delivery number:'),
 						'desc' => $this->l('The next delivery slip will begin with this number and then increase with each additional slip.'),
+						'size' => 6,
 						'cast' => 'intval',
 						'type' => 'text'
 					)
 				),
-				'submit' => array('title' => $this->l('Save'))
+				'submit' => array()
 			)
 		);
 
@@ -61,29 +62,31 @@ class AdminDeliverySlipControllerCore extends AdminController
 		$this->fields_form = array(
 			'legend' => array(
 				'title' => $this->l('Print PDF delivery slips'),
-				'icon' => 'icon-print'
+				'image' => '../img/admin/AdminPdf.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'date',
-					'label' => $this->l('From'),
+					'label' => $this->l('From:'),
 					'name' => 'date_from',
+					'size' => 20,
 					'maxlength' => 10,
 					'required' => true,
-					'hint' => $this->l('Format: 2011-12-31 (inclusive).')
+					'desc' => $this->l('Format: 2011-12-31 (inclusive)')
 				),
 				array(
 					'type' => 'date',
-					'label' => $this->l('To'),
+					'label' => $this->l('To:'),
 					'name' => 'date_to',
+					'size' => 20,
 					'maxlength' => 10,
 					'required' => true,
-					'hint' => $this->l('Format: 2012-12-31 (inclusive).')
+					'desc' => $this->l('Format: 2012-12-31 (inclusive)')
 				)
 			),
 			'submit' => array(
 				'title' => $this->l('Generate PDF file'),
-				'icon' => 'process-icon-download-alt'	
+				'class' => 'button'
 			)
 		);
 
@@ -117,17 +120,13 @@ class AdminDeliverySlipControllerCore extends AdminController
 
 	public function initContent()
 	{
-		$this->initTabModuleList();
-		$this->initPageHeaderToolbar();
+		$this->content .= $this->renderForm().'<br />';
 		$this->show_toolbar = false;
-		$this->content .= $this->renderForm();		
 		$this->content .= $this->renderOptions();
+
 		$this->context->smarty->assign(array(
 			'content' => $this->content,
 			'url_post' => self::$currentIndex.'&token='.$this->token,
-			'show_page_header_toolbar' => $this->show_page_header_toolbar,
-			'page_header_toolbar_title' => $this->page_header_toolbar_title,
-			'page_header_toolbar_btn' => $this->page_header_toolbar_btn
 		));
 	}
 }

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -82,7 +82,8 @@ class GuestTrackingControllerCore extends FrontController
 				$this->errors[] = Tools::displayError('There is no account associated with this email address.');
 			else if (Customer::customerExists($email, false, true))
 			{
-				$this->errors[] = Tools::displayError('This page is for guest accounts only. Since your guest account has already been transformed into a customer account, you can no longer view your order here. Please log in to your customer account to view this order');
+				$this->errors[] = Tools::displayError('Your guest account has already been transformed into a customer account.').' '.
+					Tools::displayError('Please login to your customer account to view this order. This section is reserved for guest accounts.');
 				$this->context->smarty->assign('show_login_link', true);
 			}
 			else if (!count($order_collection))

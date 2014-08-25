@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -51,9 +51,9 @@ function smartyTranslate($params, &$smarty)
 		$key = 'override_'.$key;
 
 	if ($params['mod'])
-		return Translate::smartyPostProcessTranslation(Translate::getModuleTranslation($params['mod'], $params['s'], $basename, $params['sprintf'], $params['js']), $params);
+		return Translate::getModuleTranslation($params['mod'], $params['s'], $basename, $params['sprintf'], $params['js']);
 	else if ($params['pdf'])
-		return Translate::smartyPostProcessTranslation(Translate::getPdfTranslation($params['s']), $params);
+		return Translate::getPdfTranslation($params['s']);
 
 	if ($_LANG != null && isset($_LANG[$key]))
 		$msg = $_LANG[$key];
@@ -62,13 +62,12 @@ function smartyTranslate($params, &$smarty)
 	else
 		$msg = $params['s'];
 
-	if ($msg != $params['s'] && !$params['js'])
-		$msg = stripslashes($msg);
-	elseif ($params['js'])
-		$msg = addslashes($msg);
+	if ($msg != $params['s'])
+		$msg = $params['js'] ? addslashes($msg) : stripslashes($msg);
 
 	if ($params['sprintf'] !== null)
 		$msg = Translate::checkAndReplaceArgs($msg, $params['sprintf']);
 
-	return Translate::smartyPostProcessTranslation($params['js'] ? $msg : Tools::safeOutput($msg), $params);
+	return $params['js'] ? $msg : Tools::safeOutput($msg);
 }
+

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -37,8 +37,6 @@ class SpecificPriceRuleCore extends ObjectModel
 	public	$reduction_type;
 	public	$from;
 	public	$to;
-
-	protected static $rules_application_enable = true;
 
 	/**
 	 * @see ObjectModel::$definition
@@ -91,16 +89,6 @@ class SpecificPriceRuleCore extends ObjectModel
 				Db::getInstance()->delete('specific_price_rule_condition', 'id_specific_price_rule_condition_group='.(int)$row['id_specific_price_rule_condition_group']);
 			}
 	}
-	
-	public static function disableAnyApplication()
-	{
-		SpecificPriceRule::$rules_application_enable = false;
-	}
-
-	public static function enableAnyApplication()
-	{
-		SpecificPriceRule::$rules_application_enable = true;
-	}
 
 	public function addConditions($conditions)
 	{
@@ -128,9 +116,6 @@ class SpecificPriceRuleCore extends ObjectModel
 
 	public function apply($products = false)
 	{
-		if (!SpecificPriceRule::$rules_application_enable)
-			return;
-
 		$this->resetApplication($products);
 		$products = $this->getAffectedProducts($products);
 		foreach ($products as $product)
@@ -145,15 +130,9 @@ class SpecificPriceRuleCore extends ObjectModel
 		return Db::getInstance()->execute('DELETE FROM '._DB_PREFIX_.'specific_price WHERE id_specific_price_rule='.(int)$this->id.$where);
 	}
 
-	/**
-	 * @param array $products
-	 */
 	public static function applyAllRules($products = false)
 	{
-		if (!SpecificPriceRule::$rules_application_enable)
-			return;
-
-		$rules = new PrestaShopCollection('SpecificPriceRule');
+		$rules = new Collection('SpecificPriceRule');
 		foreach ($rules as $rule)
 			$rule->apply($products);
 	}
@@ -204,7 +183,7 @@ class SpecificPriceRuleCore extends ObjectModel
 
 		if ($conditions_group)
 		{
-			$where .= ' AND ((';
+			$where .= ' AND (';
 			foreach ($conditions_group as $id_condition_group => $condition_group)
 			{
 				$fields = array(
@@ -256,7 +235,7 @@ class SpecificPriceRuleCore extends ObjectModel
 				
 				$where = rtrim($where, ' AND ').') OR (';
 			}
-			$where = rtrim($where, 'OR (').')';
+			$where = rtrim($where, 'OR (');
 		}
 		if ($products && count($products))
 			$where .= ' AND p.id_product IN ('.implode(', ', array_map('intval', $products)).')';
@@ -288,7 +267,7 @@ class SpecificPriceRuleCore extends ObjectModel
 	public static function applyRuleToProduct($id_rule, $id_product, $id_product_attribute = null)
 	{
 		$rule = new SpecificPriceRule((int)$id_rule);
-		if (!Validate::isLoadedObject($rule) || !$id_product)
+		if (!Validate::isLoadedObject($rule))
 			return false;
 
 		$specific_price = new SpecificPrice();

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,11 +30,6 @@ class AdminCarriersControllerCore extends AdminController
 
 	public function __construct()
 	{
-
-		if ($id_carrier = Tools::getValue('id_carrier') && !Tools::isSubmit('deletecarrier') && !Tools::isSubmit('statuscarrier') && !Tools::isSubmit('isFreecarrier') && !Tools::isSubmit('onboarding_carrier'))
-			Tools::redirectAdmin(Context::getContext()->link->getAdminLink('AdminCarrierWizard').'&id_carrier='.(int)$id_carrier);
-
-		$this->bootstrap = true;
 		$this->table = 'carrier';
 		$this->className = 'Carrier';
 		$this->lang = false;
@@ -48,12 +43,10 @@ class AdminCarriersControllerCore extends AdminController
 		$this->context = Context::getContext();
 
 		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
+			'delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Are you sure that you want to delete the selected items?')),
+			'enableSelection' => array('text' => $this->l('Enable selection')),
+			'disableSelection' => array('text' => $this->l('Disable selection'))
+			);
 
 		$this->fieldImageSettings = array(
 			'name' => 'logo',
@@ -64,21 +57,23 @@ class AdminCarriersControllerCore extends AdminController
 			'id_carrier' => array(
 				'title' => $this->l('ID'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 25
 			),
 			'name' => array(
-				'title' => $this->l('Name')
+				'title' => $this->l('Name'),
+				'width' => 'auto'
 			),
 			'image' => array(
 				'title' => $this->l('Logo'),
 				'align' => 'center',
 				'image' => 's',
-				'class' => 'fixed-width-xs',
 				'orderby' => false,
-				'search' => false
+				'search' => false,
+				'width' => 120
 			),
 			'delay' => array(
 				'title' => $this->l('Delay'),
+				'width' => 300,
 				'orderby' => false
 			),
 			'active' => array(
@@ -86,66 +81,114 @@ class AdminCarriersControllerCore extends AdminController
 				'align' => 'center',
 				'active' => 'status',
 				'type' => 'bool',
-				'class' => 'fixed-width-sm',
 				'orderby' => false,
+				'width' => 25
 			),
 			'is_free' => array(
 				'title' => $this->l('Free Shipping'),
 				'align' => 'center',
-				'active' => 'isFree',
+				'icon' => array(
+					0 => 'disabled.gif',
+					1 => 'enabled.gif',
+					'default' => 'disabled.gif'
+				),
 				'type' => 'bool',
-				'class' => 'fixed-width-sm',
 				'orderby' => false,
+				'width' => 150
 			),
 			'position' => array(
 				'title' => $this->l('Position'),
+				'width' => 40,
 				'filter_key' => 'a!position',
 				'align' => 'center',
-				'class' => 'fixed-width-sm',
 				'position' => 'position'
 			)
 		);
+
+		$carrier_default_sort = array(
+			array('value' => Carrier::SORT_BY_PRICE, 'name' => $this->l('Price')),
+			array('value' => Carrier::SORT_BY_POSITION, 'name' => $this->l('Position'))
+		);
+
+		$carrier_default_order = array(
+			array('value' => Carrier::SORT_BY_ASC, 'name' => $this->l('Ascending')),
+			array('value' => Carrier::SORT_BY_DESC, 'name' => $this->l('Descending'))
+		);
+
+		$this->fields_options = array(
+			'general' => array(
+				'title' => $this->l('Carrier options'),
+				'fields' => array(
+					'PS_CARRIER_DEFAULT' => array(
+						'title' => $this->l('Default carrier:'),
+						'desc' => $this->l('Your shop\'s default carrier'),
+						'cast' => 'intval',
+						'type' => 'select',
+						'identifier' => 'id_carrier',
+						'list' => array_merge(
+							array(
+								-1 => array('id_carrier' => -1, 'name' => $this->l('Best price')),
+								-2 => array('id_carrier' => -2, 'name' => $this->l('Best grade'))
+							),
+							Carrier::getCarriers((int)Configuration::get('PS_LANG_DEFAULT'), true, false, false, null, Carrier::ALL_CARRIERS))
+					),
+					'PS_CARRIER_DEFAULT_SORT' => array(
+						'title' => $this->l('Sort by:'),
+						'desc' => $this->l('This will only be visible in the Front Office'),
+						'cast' => 'intval',
+						'type' => 'select',
+						'identifier' => 'value',
+						'list' => $carrier_default_sort
+					),
+					'PS_CARRIER_DEFAULT_ORDER' => array(
+						'title' => $this->l('Order by:'),
+						'desc' => $this->l('This will only be visible in the Front Office'),
+						'cast' => 'intval',
+						'type' => 'select',
+						'identifier' => 'value',
+						'list' => $carrier_default_order
+					),
+				),
+				'submit' => array()
+			)
+		);
+
 		parent::__construct();
-		
-		if (Tools::isSubmit('onboarding_carrier'))
-			$this->display = 'view';
 	}
 
-	public function initToolbar()
-	{
-		parent::initToolbar();
-		
-		if (isset($this->toolbar_btn['new']) && $this->display != 'view')
-			$this->toolbar_btn['new']['href'] = $this->context->link->getAdminLink('AdminCarriers').'&onboarding_carrier';
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		$this->page_header_toolbar_title = $this->l('Carriers');
-		if ($this->display != 'view')
-			$this->page_header_toolbar_btn['new_carrier'] = array(
-				'href' => $this->context->link->getAdminLink('AdminCarriers').'&onboarding_carrier',
-				'desc' => $this->l('Add new carrier', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-
-		parent::initPageHeaderToolbar();
-	}
-	
-	public function renderView()
-	{
-		$this->initTabModuleList();
-		$this->filterTabModuleList();
-		$this->context->smarty->assign('panel_title', $this->l('Use one of our recommended carrier modules'));
-		$this->tpl_view_vars = array('modules_list' => $this->renderModulesList());
-		unset($this->page_header_toolbar_btn['modules-list']);
-		return parent::renderView();
-	}
-	
 	public function renderList()
 	{
+		$this->displayInformation(
+			'&nbsp;<b>'.$this->l('How do I create a new carrier?').'</b>
+			<br />
+			<ul>
+			<li>'.$this->l('Click "Add New."').'<br /></li>
+				<li>'.$this->l('Fill in the fields and click "Save."').'</li>
+				<li>'.
+					$this->l('You need to set a price range -- or weight range -- for which the new carrier will be available.').' '.
+					$this->l('Under the "Shipping" menu, click either "Price ranges" or "Weight ranges.".').'
+				</li>
+				<li>'.$this->l('Click "Add New."').'</li>
+				<li>'.
+					$this->l('Select the name of the carrier before defining the price or weight range.').' '.
+					$this->l('For example, the carrier can be made available for a weight range between 0 and 5lbs. Another carrier can have a range between 5 and 10lbs.').'
+				</li>
+				<li>'.$this->l('When you\'re done, click "Save."').'</li>
+				<li>'.$this->l('Click on the "Shipping" menu.').'</li>
+				<li>'.
+					$this->l('You need to set the fees that will be applied for this carrier.').' '.
+					$this->l('At the bottom on the page -- in the "Fees" section -- select the name of the carrier.').'
+				</li>
+				<li>'.$this->l('For each zone, enter a price and then click "Save."').'</li>
+				<li>'.$this->l('You\'re all set! The new carrier will now be displayed to customers.').'</li>
+			</ul>'
+		);
 		$this->_select = 'b.*';
-		$this->_join = 'LEFT JOIN `'._DB_PREFIX_.'carrier_lang` b ON a.id_carrier = b.id_carrier'.Shop::addSqlRestrictionOnLang('b').' AND b.id_lang = '.$this->context->language->id.' LEFT JOIN `'._DB_PREFIX_.'carrier_tax_rules_group_shop` ctrgs ON (a.`id_carrier` = ctrgs.`id_carrier` AND ctrgs.id_shop='.(int)$this->context->shop->id.')';
+		$this->_join = 'LEFT JOIN `'._DB_PREFIX_.'carrier_lang` b ON a.id_carrier = b.id_carrier'.Shop::addSqlRestrictionOnLang('b').'
+							LEFT JOIN `'._DB_PREFIX_.'carrier_tax_rules_group_shop` ctrgs ON (a.`id_carrier` = ctrgs.`id_carrier`
+								AND ctrgs.id_shop='.(int)$this->context->shop->id.')';
+		$this->_where = 'AND b.id_lang = '.$this->context->language->id;
+
 		return parent::renderList();
 	}
 
@@ -153,70 +196,74 @@ class AdminCarriersControllerCore extends AdminController
 	{
 		$this->fields_form = array(
 			'legend' => array(
-				'title' => $this->l('Carriers'),
-				'icon' => 'icon-truck'
+				'title' => $this->l('Carriers:'),
+				'image' => '../img/admin/delivery.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Company'),
+					'label' => $this->l('Company:'),
 					'name' => 'name',
+					'size' => 25,
 					'required' => true,
-					'hint' => array(
-						sprintf($this->l('Allowed characters: letters, spaces and %s'), '().-'),
+					'hint' => sprintf($this->l('Allowed characters: letters, spaces and %s'), '().-'),
+					'desc' => array(
 						$this->l('Carrier name displayed during checkout'),
 						$this->l('For in-store pickup, enter 0 to replace the carrier name with your shop name.')
 					)
 				),
 				array(
 					'type' => 'file',
-					'label' => $this->l('Logo'),
+					'label' => $this->l('Logo:'),
 					'name' => 'logo',
-					'hint' => $this->l('Upload a logo from your computer.').' (.gif, .jpg, .jpeg '.$this->l('or').' .png)'
+					'desc' => $this->l('Upload a logo from your computer.').' (.gif, .jpg, .jpeg '.$this->l('or').' .png)'
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Transit time'),
+					'label' => $this->l('Transit time:'),
 					'name' => 'delay',
 					'lang' => true,
 					'required' => true,
+					'size' => 41,
 					'maxlength' => 128,
-					'hint' => $this->l('Estimated delivery time will be displayed during checkout.')
+					'desc' => $this->l('Estimated delivery time will be displayed during checkout.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Speed grade'),
+					'label' => $this->l('Speed Grade:'),
 					'name' => 'grade',
 					'required' => false,
-					'hint' => $this->l('Enter "0" for a longest shipping delay, or "9" for the shortest shipping delay.')
+					'size' => 1,
+					'desc' => $this->l('Enter "0" for a longest shipping delay, or "9" for the shortest shipping delay.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('URL'),
+					'label' => $this->l('URL:'),
 					'name' => 'url',
-					'hint' => $this->l('Delivery tracking URL: Type \'@\' where the tracking number should appear. It will then be automatically replaced by the tracking number.')
+					'size' => 40,
+					'desc' => $this->l('Delivery tracking URL: Type \'@\' where the tracking number should appear. It will then be automatically replaced by the tracking number.')
 				),
 				array(
 					'type' => 'checkbox',
-					'label' => $this->l('Zone'),
+					'label' => $this->l('Zone:'),
 					'name' => 'zone',
 					'values' => array(
 						'query' => Zone::getZones(false),
 						'id' => 'id_zone',
 						'name' => 'name'
 					),
-					'hint' => $this->l('The zones in which this carrier will be used.')
+					'desc' => $this->l('The zones in which this carrier will be used')
 				),
 				array(
 					'type' => 'group',
-					'label' => $this->l('Group access'),
+					'label' => $this->l('Group access:'),
 					'name' => 'groupBox',
 					'values' => Group::getGroups(Context::getContext()->language->id),
-					'hint' => $this->l('Mark the groups that are allowed access to this carrier.')
+					'desc' => $this->l('Mark the groups that are allowed access to this carrier.')
 				),
 				array(
-					'type' => 'switch',
-					'label' => $this->l('Status'),
+					'type' => 'radio',
+					'label' => $this->l('Status:'),
 					'name' => 'active',
 					'required' => false,
 					'class' => 't',
@@ -233,11 +280,11 @@ class AdminCarriersControllerCore extends AdminController
 							'label' => $this->l('Disabled')
 						)
 					),
-					'hint' => $this->l('Enable the carrier in the Front Office.')
+					'desc' => $this->l('Enable the carrier in the Front Office')
 				),
 				array(
-					'type' => 'switch',
-					'label' => $this->l('Apply shipping cost'),
+					'type' => 'radio',
+					'label' => $this->l('Apply shipping cost:'),
 					'name' => 'is_free',
 					'required' => false,
 					'class' => 't',
@@ -253,11 +300,11 @@ class AdminCarriersControllerCore extends AdminController
 							'label' => '<img src="../img/admin/disabled.gif" alt="'.$this->l('No').'" title="'.$this->l('No').'" />'
 						)
 					),
-					'hint' => $this->l('Apply both regular shipping cost and product-specific shipping costs.')
+					'desc' => $this->l('Apply both regular shipping cost and product-specific shipping costs.')
 				),
 				array(
 					'type' => 'select',
-					'label' => $this->l('Tax'),
+					'label' => $this->l('Tax:'),
 					'name' => 'id_tax_rules_group',
 					'options' => array(
 						'query' => TaxRulesGroup::getTaxRulesGroups(true),
@@ -270,8 +317,8 @@ class AdminCarriersControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'switch',
-					'label' => $this->l('Shipping and handling'),
+					'type' => 'radio',
+					'label' => $this->l('Shipping and handling:'),
 					'name' => 'shipping_handling',
 					'required' => false,
 					'class' => 't',
@@ -288,11 +335,11 @@ class AdminCarriersControllerCore extends AdminController
 							'label' => $this->l('Disabled')
 						)
 					),
-					'hint' => $this->l('Include the shipping and handling costs in the carrier price.')
+					'desc' => $this->l('Include the shipping and handling costs in the carrier price.')
 				),
 				array(
 					'type' => 'radio',
-					'label' => $this->l('Billing'),
+					'label' => $this->l('Billing:'),
 					'name' => 'shipping_method',
 					'required' => false,
 					'class' => 't',
@@ -317,7 +364,7 @@ class AdminCarriersControllerCore extends AdminController
 				),
 				array(
 					'type' => 'select',
-					'label' => $this->l('Out-of-range behavior'),
+					'label' => $this->l('Out-of-range behavior:'),
 					'name' => 'range_behavior',
 					'options' => array(
 						'query' => array(
@@ -333,35 +380,39 @@ class AdminCarriersControllerCore extends AdminController
 						'id' => 'id',
 						'name' => 'name'
 					),
-					'hint' => $this->l('Out-of-range behavior occurs when none is defined (e.g. when a customer\'s cart weight is greater than the highest range limit).')
+					'desc' => $this->l('Out-of-range behavior occurs when none is defined (e.g. when a customer\'s cart weight is greater than the highest range limit)')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Maximum package height'),
+					'label' => $this->l('Maximium package height:'),
 					'name' => 'max_height',
 					'required' => false,
-					'hint' => $this->l('Maximum height managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
+					'size' => 10,
+					'desc' => $this->l('Maximum height managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Maximum package width'),
+					'label' => $this->l('Maximium package width:'),
 					'name' => 'max_width',
 					'required' => false,
-					'hint' => $this->l('Maximum width managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
+					'size' => 10,
+					'desc' => $this->l('Maximum width managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Maximum package depth'),
+					'label' => $this->l('Maximium package depth:'),
 					'name' => 'max_depth',
 					'required' => false,
-					'hint' => $this->l('Maximum depth managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
+					'size' => 10,
+					'desc' => $this->l('Maximum depth managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Maximum package weight'),
+					'label' => $this->l('Maximium package weight:'),
 					'name' => 'max_weight',
 					'required' => false,
-					'hint' => $this->l('Maximum weight managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
+					'size' => 10,
+					'desc' => $this->l('Maximum weight managed by this carrier. Set the value to "0," or leave this field blank to ignore.')
 				),
 				array(
 					'type' => 'hidden',
@@ -386,13 +437,14 @@ class AdminCarriersControllerCore extends AdminController
 		{
 			$this->fields_form['input'][] = array(
 				'type' => 'shop',
-				'label' => $this->l('Shop association'),
+				'label' => $this->l('Shop association:'),
 				'name' => 'checkBoxShopAsso',
 			);
 		}
 
 		$this->fields_form['submit'] = array(
-			'title' => $this->l('Save'),
+			'title' => $this->l('Save   '),
+			'class' => 'button'
 		);
 
 		if (!($obj = $this->loadObject(true)))
@@ -404,9 +456,6 @@ class AdminCarriersControllerCore extends AdminController
 
 	public function postProcess()
 	{
-		if (Tools::getValue('action') == 'GetModuleQuickView' && Tools::getValue('ajax') == '1')
-			$this->ajaxProcessGetModuleQuickView();
-		
 		if (Tools::getValue('submitAdd'.$this->table))
 		{
 			/* Checking fields validity */
@@ -490,33 +539,25 @@ class AdminCarriersControllerCore extends AdminController
 			}
 			parent::postProcess();
 		}
-		/*
-else if ((isset($_GET['status'.$this->table]) || isset($_GET['status'])) && Tools::getValue($this->identifier))
+		else if ((isset($_GET['status'.$this->table]) || isset($_GET['status'])) && Tools::getValue($this->identifier))
 		{
 			if ($this->tabAccess['edit'] === '1')
 			{
 				if (Tools::getValue('id_carrier') == Configuration::get('PS_CARRIER_DEFAULT'))
-					$this->errors[] = Tools::displayError('You cannot disable the default carrier, however you can change your default carrier. ');
+					$this->errors[] = Tools::displayError('You cannot disable the default carrier, however you can change your defeault carrier. ');
 				else
 					parent::postProcess();
 			}
 			else
 				$this->errors[] = Tools::displayError('You do not have permission to edit this.');
 		}
-*/
-		else if (isset($_GET['isFree'.$this->table]))
-		{
-			$this->processIsFree();
-		}
 		else
 		{
-		/*
-	if ((Tools::isSubmit('submitDel'.$this->table) && in_array(Configuration::get('PS_CARRIER_DEFAULT'), Tools::getValue('carrierBox')))
+			if ((Tools::isSubmit('submitDel'.$this->table) && in_array(Configuration::get('PS_CARRIER_DEFAULT'), Tools::getValue('carrierBox')))
 				|| (isset($_GET['delete'.$this->table]) && Tools::getValue('id_carrier') == Configuration::get('PS_CARRIER_DEFAULT')))
 					$this->errors[] = $this->l('Please set another carrier as default before deleting this one.');
 			else
 			{
-*/
 				// if deletion : removes the carrier from the warehouse/carrier association
 				if (Tools::isSubmit('delete'.$this->table))
 				{
@@ -538,19 +579,8 @@ else if ((isset($_GET['status'.$this->table]) || isset($_GET['status'])) && Tool
 				}
 				parent::postProcess();
 				Carrier::cleanPositions();
-			//}
+			}
 		}
-	}
-
-	public function processIsFree()
-	{
-		$carrier = new Carrier($this->id_object);
-		if (!Validate::isLoadedObject($carrier))
-			$this->errors[] = Tools::displayError('An error occurred while updating carrier information.');
-		$carrier->is_free = $carrier->is_free ? 0 : 1;
-		if (!$carrier->update())
-			$this->errors[] = Tools::displayError('An error occurred while updating carrier information.');
-		Tools::redirectAdmin(self::$currentIndex.'&token='.$this->token);
 	}
 
 	/**
@@ -666,69 +696,6 @@ else if ((isset($_GET['status'.$this->table]) || isset($_GET['status'])) && Tool
 		}
 	}
 
-	public function displayEditLink($token = null, $id, $name = null)
-	{
-		if ($this->tabAccess['edit'] == 1)
-		{
-			$tpl = $this->createTemplate('helpers/list/list_action_edit.tpl');
-			if (!array_key_exists('Edit', self::$cache_lang))
-				self::$cache_lang['Edit'] = $this->l('Edit', 'Helper');
-
-			$tpl->assign(array(
-				'href' => $this->context->link->getAdminLink('AdminCarrierWizard').'&id_carrier='.(int)$id,
-				'action' => self::$cache_lang['Edit'],
-				'id' => $id
-			));
-
-			return $tpl->fetch();
-		}
-		else
-			return;
-	}
-	
-	public function displayDeleteLink($token = null, $id, $name = null)
-	{
-		if ($this->tabAccess['delete'] == 1)
-		{
-			$tpl = $this->createTemplate('helpers/list/list_action_delete.tpl');
-
-			if (!array_key_exists('Delete', self::$cache_lang))
-				self::$cache_lang['Delete'] = $this->l('Delete', 'Helper');
-
-			if (!array_key_exists('DeleteItem', self::$cache_lang))
-				self::$cache_lang['DeleteItem'] = $this->l('Delete selected item?', 'Helper');
-
-			if (!array_key_exists('Name', self::$cache_lang))
-				self::$cache_lang['Name'] = $this->l('Name:', 'Helper');
-
-			if (!is_null($name))
-				$name = '\n\n'.self::$cache_lang['Name'].' '.$name;
-
-			$data = array(
-				$this->identifier => $id,
-				'href' => $this->context->link->getAdminLink('AdminCarriers').'&id_carrier='.(int)$id.'&deletecarrier=1',
-				'action' => self::$cache_lang['Delete'],
-			);
-
-			if ($this->specificConfirmDelete !== false)
-				$data['confirm'] = !is_null($this->specificConfirmDelete) ? '\r'.$this->specificConfirmDelete : addcslashes(Tools::htmlentitiesDecodeUTF8(self::$cache_lang['DeleteItem'].$name), '\'');
-
-			$tpl->assign(array_merge($this->tpl_delete_link_vars, $data));
-
-			return $tpl->fetch();
-		}
-		else
-			return;
-	}
-	
-	protected function initTabModuleList()
-	{
-		if (Tools::isSubmit('onboarding_carrier'))
-		{
-			parent::initTabModuleList();
-			$this->filter_modules_list = $this->tab_modules_list['default_list'] = $this->tab_modules_list['slider_list'];
-		}
-	}
 }
 
 

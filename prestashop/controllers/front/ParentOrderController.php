@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -56,9 +56,11 @@ class ParentOrderControllerCore extends FrontController
 		header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 
 		$this->nbProducts = $this->context->cart->nbProducts();
+
+		global $isVirtualCart;
 		
-		if (!$this->context->customer->isLogged(true) && $this->useMobileTheme() && Tools::getValue('step'))
-			Tools::redirect($this->context->link->getPageLink('authentication', true, (int)$this->context->language->id));
+		if (!$this->context->customer->isLogged(true) && $this->context->getMobileDevice() && Tools::getValue('step'))
+			Tools::redirect($this->context->link->getPageLink('authentication', true, (int)$this->context->language->id, $params));
 		
 		// Redirect to the good order process
 		if (Configuration::get('PS_ORDER_PROCESS_TYPE') == 0 && Dispatcher::getInstance()->getController() != 'order')
@@ -66,7 +68,7 @@ class ParentOrderControllerCore extends FrontController
 			
 		if (Configuration::get('PS_ORDER_PROCESS_TYPE') == 1 && Dispatcher::getInstance()->getController() != 'orderopc')
 		{
-			if (Tools::getIsset('step') && Tools::getValue('step') == 3)
+			if (isset($_GET['step']) && $_GET['step'] == 3)
 				Tools::redirect('index.php?controller=order-opc&isPaymentStep=true');
 			Tools::redirect('index.php?controller=order-opc');
 		}
@@ -111,9 +113,7 @@ class ParentOrderControllerCore extends FrontController
 							else
 							{
 								$this->context->cart->addCartRule($cartRule->id);
-								if (Configuration::get('PS_ORDER_PROCESS_TYPE') == 1)
-									Tools::redirect('index.php?controller=order-opc&addingCartRule=1');
-								Tools::redirect('index.php?controller=order&addingCartRule=1');
+								Tools::redirect('index.php?controller=order-opc');
 							}
 						}
 						else
@@ -142,20 +142,19 @@ class ParentOrderControllerCore extends FrontController
 	{
 		parent::setMedia();
 
-		if (!$this->useMobileTheme())
+		if ($this->context->getMobileDevice() === false)
 			// Adding CSS style sheet
 			$this->addCSS(_THEME_CSS_DIR_.'addresses.css');
 
 		// Adding JS files
-		$this->addJS(_THEME_JS_DIR_.'tools.js');  // retro compat themes 1.5
+		$this->addJS(_THEME_JS_DIR_.'tools.js');
 		if ((Configuration::get('PS_ORDER_PROCESS_TYPE') == 0 && Tools::getValue('step') == 1) || Configuration::get('PS_ORDER_PROCESS_TYPE') == 1)
 			$this->addJS(_THEME_JS_DIR_.'order-address.js');
 		$this->addJqueryPlugin('fancybox');
-		
-		if (in_array((int)Tools::getValue('step'), array(0, 2)) || Configuration::get('PS_ORDER_PROCESS_TYPE'))
+		if ((int)(Configuration::get('PS_BLOCK_CART_AJAX')) || Configuration::get('PS_ORDER_PROCESS_TYPE') == 1)
 		{
-			$this->addJqueryPlugin('typewatch');
 			$this->addJS(_THEME_JS_DIR_.'cart-summary.js');
+			$this->addJqueryPlugin('typewatch');
 		}
 	}
 
@@ -213,10 +212,10 @@ class ParentOrderControllerCore extends FrontController
 		$this->context->cart->gift = (int)(Tools::getValue('gift'));
 		if ((int)(Tools::getValue('gift')))
 		{
-			if (!Validate::isMessage(Tools::getValue('gift_message')))
+			if (!Validate::isMessage($_POST['gift_message']))
 				$this->errors[] = Tools::displayError('Invalid gift message.');
 			else
-				$this->context->cart->gift_message = strip_tags(Tools::getValue('gift_message'));
+				$this->context->cart->gift_message = strip_tags($_POST['gift_message']);
 		}
 
 		if (isset($this->context->customer->id) && $this->context->customer->id)
@@ -373,7 +372,6 @@ class ParentOrderControllerCore extends FrontController
 			'currencyFormat' => $this->context->currency->format,
 			'currencyBlank' => $this->context->currency->blank,
 			'show_option_allow_separate_package' => $show_option_allow_separate_package,
-			'smallSize' => Image::getSize(ImageType::getFormatedName('small')),
 				
 		));
 
@@ -401,12 +399,10 @@ class ParentOrderControllerCore extends FrontController
 
 			// Getting a list of formated address fields with associated values
 			$formatedAddressFieldsValuesList = array();
-
-			foreach ($customerAddresses as $i => $address)
+			foreach ($customerAddresses as $address)
 			{
-				if (!Address::isCountryActiveById((int)($address['id_address'])))
-					unset($customerAddresses[$i]);										
 				$tmpAddress = new Address($address['id_address']);
+
 				$formatedAddressFieldsValuesList[$address['id_address']]['ordered_fields'] = AddressFormat::getOrderedAddressFields($address['id_country']);
 				$formatedAddressFieldsValuesList[$address['id_address']]['formated_fields_values'] = AddressFormat::getFormattedAddressFieldsValues(
 					$tmpAddress,
@@ -414,52 +410,30 @@ class ParentOrderControllerCore extends FrontController
 
 				unset($tmpAddress);
 			}
-
-			if (key($customerAddresses) != 0)
-				$customerAddresses = array_values($customerAddresses);
-
-			if (!count($customerAddresses) && !Tools::isSubmit('ajax'))
-			{
-				$bad_delivery = false;
-				if (($bad_delivery = (bool)!Address::isCountryActiveById((int)$this->context->cart->id_address_delivery)) || !Address::isCountryActiveById((int)$this->context->cart->id_address_invoice))
-				{
-					$back_url = $this->context->link->getPageLink('order', true, (int)$this->context->language->id, array('step' => Tools::getValue('step'), 'multi-shipping' => (int)Tools::getValue('multi-shipping')));
-					$params = array('multi-shipping' => (int)Tools::getValue('multi-shipping'), 'id_address' => ($bad_delivery ? (int)$this->context->cart->id_address_delivery : (int)$this->context->cart->id_address_invoice), 'back' => $back_url);
-					Tools::redirect($this->context->link->getPageLink('address', true, (int)$this->context->language->id, $params));
-				}
-			}
 			$this->context->smarty->assign(array(
 				'addresses' => $customerAddresses,
-				'formatedAddressFieldsValuesList' => $formatedAddressFieldsValuesList)
-			);
+				'formatedAddressFieldsValuesList' => $formatedAddressFieldsValuesList));
 
 			/* Setting default addresses for cart */
-			if (count($customerAddresses))
+			if ((!isset($this->context->cart->id_address_delivery) || empty($this->context->cart->id_address_delivery)) && count($customerAddresses))
 			{
-				if ((!isset($this->context->cart->id_address_delivery) || empty($this->context->cart->id_address_delivery)) || !Address::isCountryActiveById((int)$this->context->cart->id_address_delivery))
-				{
-					$this->context->cart->id_address_delivery = (int)($customerAddresses[0]['id_address']);
-					$update = 1;
-				}
-				if ((!isset($this->context->cart->id_address_invoice) || empty($this->context->cart->id_address_invoice)) || !Address::isCountryActiveById((int)$this->context->cart->id_address_invoice))
-				{
-					$this->context->cart->id_address_invoice = (int)($customerAddresses[0]['id_address']);
-					$update = 1;
-				}
-
-				/* Update cart addresses only if needed */
-				if (isset($update) && $update)
-				{
-					$this->context->cart->update();
-					if (!$this->context->cart->isMultiAddressDelivery())
-						$this->context->cart->setNoMultishipping();
-					// Address has changed, so we check if the cart rules still apply
-					CartRule::autoRemoveFromCart($this->context);
-					CartRule::autoAddToCart($this->context);
-				}
+				$this->context->cart->id_address_delivery = (int)($customerAddresses[0]['id_address']);
+				$update = 1;
 			}
-
-
+			if ((!isset($this->context->cart->id_address_invoice) || empty($this->context->cart->id_address_invoice)) && count($customerAddresses))
+			{
+				$this->context->cart->id_address_invoice = (int)($customerAddresses[0]['id_address']);
+				$update = 1;
+			}
+			/* Update cart addresses only if needed */
+			if (isset($update) && $update)
+			{
+				$this->context->cart->update();
+				
+				// Address has changed, so we check if the cart rules still apply
+				CartRule::autoRemoveFromCart($this->context);
+				CartRule::autoAddToCart($this->context);
+			}
 
 			/* If delivery address is valid in cart, assign it to Smarty */
 			if (isset($this->context->cart->id_address_delivery))
@@ -485,10 +459,9 @@ class ParentOrderControllerCore extends FrontController
 	{	
 		$address = new Address($this->context->cart->id_address_delivery);
 		$id_zone = Address::getZoneById($address->id);
-		$carriers = $this->context->cart->simulateCarriersOutput(null, true);
-		$checked = $this->context->cart->simulateCarrierSelectedOutput(false);
+		$carriers = $this->context->cart->simulateCarriersOutput();
+		$checked = $this->context->cart->simulateCarrierSelectedOutput();
 		$delivery_option_list = $this->context->cart->getDeliveryOptionList();
-		$delivery_option = $this->context->cart->getDeliveryOption(null, false);
 		$this->setDefaultCarrierSelection($delivery_option_list);
 
 		$this->context->smarty->assign(array(		
@@ -496,7 +469,7 @@ class ParentOrderControllerCore extends FrontController
 			'delivery_option_list' => $delivery_option_list,
 			'carriers' => $carriers,
 			'checked' => $checked,
-			'delivery_option' => $delivery_option
+			'delivery_option' => $this->context->cart->getDeliveryOption(null, false)
 		));
 
 		$vars = array(
@@ -504,7 +477,7 @@ class ParentOrderControllerCore extends FrontController
 				'carriers' => $carriers,
 				'checked' => $checked,
 				'delivery_option_list' => $delivery_option_list,
-				'delivery_option' => $delivery_option
+				'delivery_option' => $this->context->cart->getDeliveryOption(null, false)
 			))
 		);
 		
@@ -521,7 +494,7 @@ class ParentOrderControllerCore extends FrontController
 
 		// TOS
 		$cms = new CMS(Configuration::get('PS_CONDITIONS_CMS_ID'), $this->context->language->id);
-		$this->link_conditions = $this->context->link->getCMSLink($cms, $cms->link_rewrite, (bool)Configuration::get('PS_SSL_ENABLED'));
+		$this->link_conditions = $this->context->link->getCMSLink($cms, $cms->link_rewrite, false);
 		if (!strpos($this->link_conditions, '?'))
 			$this->link_conditions .= '?content_only=1';
 		else

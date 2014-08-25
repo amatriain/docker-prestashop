@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -98,7 +98,7 @@ class CustomerCore extends ObjectModel
 	/** @var integer Password */
 	public $passwd;
 
-	/** @var string Datetime Password */
+	/** @var datetime Password */
 	public $last_passwd_gen;
 
 	/** @var boolean Status */
@@ -147,7 +147,7 @@ class CustomerCore extends ObjectModel
 			'passwd' => array('setter' => 'setWsPasswd'),
 		),
 		'associations' => array(
-			'groups' => array('resource' => 'groups'),
+			'groups' => array('resource' => 'group'),
 		)
 	);
 
@@ -329,7 +329,7 @@ class CustomerCore extends ObjectModel
 			return false;
 		$this->id = $result['id_customer'];
 		foreach ($result as $key => $value)
-			if (array_key_exists($key, $this))
+			if (key_exists($key, $this))
 				$this->{$key} = $value;
 
 		return $this;
@@ -362,18 +362,15 @@ class CustomerCore extends ObjectModel
 	{
 		if (!Validate::isUnsignedId($id_customer))
 			return true;
-		$cache_id = 'Customer::isBanned_'.(int)$id_customer;
-		if (!Cache::isStored($cache_id))
-		{
-			$result = (bool)!Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
-			SELECT `id_customer`
-			FROM `'._DB_PREFIX_.'customer`
-			WHERE `id_customer` = \''.(int)$id_customer.'\'
-			AND active = 1
-			AND `deleted` = 0');
-			Cache::store($cache_id, $result);
-		}
-		return Cache::retrieve($cache_id);
+		$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
+		SELECT `id_customer`
+		FROM `'._DB_PREFIX_.'customer`
+		WHERE `id_customer` = \''.(int)$id_customer.'\'
+		AND active = 1
+		AND `deleted` = 0');
+		if (isset($result['id_customer']))
+			return false;
+		return true;
 	}
 
 	/**
@@ -416,7 +413,7 @@ class CustomerCore extends ObjectModel
 	public static function customerHasAddress($id_customer, $id_address)
 	{
 		$key = (int)$id_customer.'-'.(int)$id_address;
-		if (!array_key_exists($key, self::$_customerHasAddress))
+		if (!array_key_exists($id_address, self::$_customerHasAddress))
 		{
 			self::$_customerHasAddress[$key] = (bool)Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('
 			SELECT `id_address`
@@ -442,22 +439,15 @@ class CustomerCore extends ObjectModel
 	 */
 	public function getAddresses($id_lang)
 	{
-		$share_order = (bool)Context::getContext()->shop->getGroup()->share_order;
-		$cache_id = 'Customer::getAddresses'.(int)$this->id.'-'.(int)$id_lang.'-'.$share_order;
-		if (!Cache::isStored($cache_id))
-		{ 
-			$sql = 'SELECT DISTINCT a.*, cl.`name` AS country, s.name AS state, s.iso_code AS state_iso
-					FROM `'._DB_PREFIX_.'address` a
-					LEFT JOIN `'._DB_PREFIX_.'country` c ON (a.`id_country` = c.`id_country`)
-					LEFT JOIN `'._DB_PREFIX_.'country_lang` cl ON (c.`id_country` = cl.`id_country`)
-					LEFT JOIN `'._DB_PREFIX_.'state` s ON (s.`id_state` = a.`id_state`)
-					'.($share_order ? '' : Shop::addSqlAssociation('country', 'c')).' 
-					WHERE `id_lang` = '.(int)$id_lang.' AND `id_customer` = '.(int)$this->id.' AND a.`deleted` = 0';
+		$sql = 'SELECT DISTINCT a.*, cl.`name` AS country, s.name AS state, s.iso_code AS state_iso
+				FROM `'._DB_PREFIX_.'address` a
+				LEFT JOIN `'._DB_PREFIX_.'country` c ON (a.`id_country` = c.`id_country`)
+				LEFT JOIN `'._DB_PREFIX_.'country_lang` cl ON (c.`id_country` = cl.`id_country`)
+				LEFT JOIN `'._DB_PREFIX_.'state` s ON (s.`id_state` = a.`id_state`)
+				'.(Context::getContext()->shop->getGroup()->share_order ? '' : Shop::addSqlAssociation('country', 'c')).' 
+				WHERE `id_lang` = '.(int)$id_lang.' AND `id_customer` = '.(int)$this->id.' AND a.`deleted` = 0';
 
-			$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
-			Cache::store($cache_id, $result);
-		}
-		return Cache::retrieve($cache_id);
+		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
 	}
 
 	/**
@@ -486,17 +476,12 @@ class CustomerCore extends ObjectModel
 	{
 		if (!Validate::isUnsignedId($id_customer) || !Validate::isMd5($passwd))
 			die (Tools::displayError());
-		$cache_id = 'Customer::checkPassword'.(int)$id_customer.'-'.$passwd;
-		if (!Cache::isStored($cache_id))
-		{
-			$sql = 'SELECT `id_customer`
-					FROM `'._DB_PREFIX_.'customer`
-					WHERE `id_customer` = '.$id_customer.'
+
+		$sql = 'SELECT `id_customer`
+				FROM `'._DB_PREFIX_.'customer`
+				WHERE `id_customer` = '.$id_customer.'
 					AND `passwd` = \''.$passwd.'\'';
-			$result = (bool)Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue($sql);
-			Cache::store($cache_id, $result);
-		}
-		return Cache::retrieve($cache_id);
+		return (bool)Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue($sql);
 	}
 
 	/**
@@ -589,16 +574,12 @@ class CustomerCore extends ObjectModel
 
 	public static function customerIdExistsStatic($id_customer)
 	{
-		$cache_id = 'Customer::customerIdExistsStatic'.(int)$id_customer;
-		if (!Cache::isStored($cache_id))
-		{
-			$result = (int)Db::getInstance()->getValue('
-			SELECT `id_customer`
-			FROM '._DB_PREFIX_.'customer c
-			WHERE c.`id_customer` = '.(int)$id_customer);
-			Cache::store($cache_id, $result);
-		}
-		return Cache::retrieve($cache_id);
+		$row = Db::getInstance()->getRow('
+		SELECT `id_customer`
+		FROM '._DB_PREFIX_.'customer c
+		WHERE c.`id_customer` = '.(int)$id_customer);
+
+		return isset($row['id_customer']);
 	}
 
 	/**
@@ -608,11 +589,9 @@ class CustomerCore extends ObjectModel
 	 */
 	public function updateGroup($list)
 	{
+		$this->cleanGroups();
 		if ($list && !empty($list))
-		{
-			$this->cleanGroups();
 			$this->addGroups($list);
-		}
 		else
 			$this->addGroups(array($this->id_default_group));
 	}
@@ -627,7 +606,7 @@ class CustomerCore extends ObjectModel
 		foreach ($groups as $group)
 		{
 			$row = array('id_customer' => (int)$this->id, 'id_group' => (int)$group);
-			Db::getInstance()->insert('customer_group', $row, false, true, Db::INSERT_IGNORE);
+			Db::getInstance()->insert('customer_group', $row);
 		}
 	}
 
@@ -747,7 +726,7 @@ class CustomerCore extends ObjectModel
 			Mail::Send(
 				(int)$id_lang,
 				'guest_to_customer',
-				Mail::l('Your guest account has been transformed into a customer account', (int)$id_lang),
+				Mail::l('Your guest account has been transformed to customer account', (int)$id_lang),
 				$vars,
 				$this->email,
 				$this->firstname.' '.$this->lastname,

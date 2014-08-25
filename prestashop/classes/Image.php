@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -39,9 +39,6 @@ class ImageCore extends ObjectModel
 
 	/** @var boolean Image is cover */
 	public $cover;
-
-	/** @var string Legend */
-	public $legend;
 
 	/** @var string image extension */
 	public $image_format = 'jpg';
@@ -69,7 +66,6 @@ class ImageCore extends ObjectModel
 			'id_product' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true),
 			'position' => 	array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'),
 			'cover' => 		array('type' => self::TYPE_BOOL, 'validate' => 'isBool', 'shop' => true),
-			'legend' => 	array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 128),
 		),
 	);
 
@@ -124,22 +120,16 @@ class ImageCore extends ObjectModel
 	 *
 	 * @param integer $id_lang Language ID
 	 * @param integer $id_product Product ID
-	 * @param integer $id_product_attribute Product Attribute ID
 	 * @return array Images
 	 */
-	public static function getImages($id_lang, $id_product, $id_product_attribute = NULL)
+	public static function getImages($id_lang, $id_product)
 	{
-		$attribute_filter = ($id_product_attribute ? ' AND ai.`id_product_attribute` = '.(int)$id_product_attribute : '');
-		$sql = 'SELECT *
-			FROM `'._DB_PREFIX_.'image` i
-			LEFT JOIN `'._DB_PREFIX_.'image_lang` il ON (i.`id_image` = il.`id_image`)';
-
-		if ($id_product_attribute)
-			$sql .= ' LEFT JOIN `'._DB_PREFIX_.'product_attribute_image` ai ON (i.`id_image` = ai.`id_image`)';
-
-		$sql .= ' WHERE i.`id_product` = '.(int)$id_product.' AND il.`id_lang` = '.(int)$id_lang . $attribute_filter.'
-			ORDER BY i.`position` ASC';
-		return Db::getInstance()->executeS($sql);
+		return Db::getInstance()->executeS('
+		SELECT *
+		FROM `'._DB_PREFIX_.'image` i
+		LEFT JOIN `'._DB_PREFIX_.'image_lang` il ON (i.`id_image` = il.`id_image`)
+		WHERE i.`id_product` = '.(int)$id_product.' AND il.`id_lang` = '.(int)$id_lang.'
+		ORDER BY i.`position` ASC');
 	}
 
 	/**
@@ -654,7 +644,7 @@ class ImageCore extends ObjectModel
 	 */
 	public static function testFileSystem()
 	{
-		$safe_mode = Tools::getSafeModeStatus();
+		$safe_mode = ini_get('safe_mode');
 		if ($safe_mode)
 			return false;
 		$folder1 = _PS_PROD_IMG_DIR_.'testfilesystem/';

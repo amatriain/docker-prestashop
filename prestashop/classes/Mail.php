@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -50,11 +50,9 @@ class MailCore
 	 * @param bool $modeSMTP
 	 * @param string $template_path
 	 * @param bool $die
-         * @param string $bcc Bcc recipient
 	 */
 	public static function Send($id_lang, $template, $subject, $template_vars, $to,
-		$to_name = null, $from = null, $from_name = null, $file_attachment = null, $mode_smtp = null,
-		$template_path = _PS_MAIL_DIR_, $die = false, $id_shop = null, $bcc = null)
+		$to_name = null, $from = null, $from_name = null, $file_attachment = null, $mode_smtp = null, $template_path = _PS_MAIL_DIR_, $die = false, $id_shop = null)
 	{
 		$configuration = Configuration::getMultiple(array(
 			'PS_SHOP_EMAIL',
@@ -65,6 +63,7 @@ class MailCore
 			'PS_SHOP_NAME',
 			'PS_MAIL_SMTP_ENCRYPTION',
 			'PS_MAIL_SMTP_PORT',
+			'PS_MAIL_METHOD',
 			'PS_MAIL_TYPE'
 		), null, null, $id_shop);
 		
@@ -128,46 +127,37 @@ class MailCore
 		}
 
 		/* Construct multiple recipients list if needed */
-		$to_list = new Swift_RecipientList();
 		if (is_array($to) && isset($to))
 		{
+			$to_list = new Swift_RecipientList();
 			foreach ($to as $key => $addr)
 			{
+				$to_name = null;
 				$addr = trim($addr);
 				if (!Validate::isEmail($addr))
 				{
 					Tools::dieOrLog(Tools::displayError('Error: invalid e-mail address'), $die);
 					return false;
 				}
-
 				if (is_array($to_name))
 				{
 					if ($to_name && is_array($to_name) && Validate::isGenericName($to_name[$key]))
 						$to_name = $to_name[$key];
 				}
-
-				if ($to_name == null || $to_name == $addr)
-					$to_name = '';
-				else
-					$to_name = self::mimeEncode($to_name);
-
-				$to_list->addTo($addr, $to_name);
+				if ($to_name == null)
+					$to_name = $addr;
+				/* Encode accentuated chars */
+				$to_list->addTo($addr, '=?UTF-8?B?'.base64_encode($to_name).'?=');
 			}
 			$to_plugin = $to[0];
+			$to = $to_list;
 		} else {
 			/* Simple recipient, one address */
 			$to_plugin = $to;
-			if ($to_name == null || $to_name == $to)
-				$to_name = '';
-			else
-				$to_name = self::mimeEncode($to_name);
-
-			$to_list->addTo($to, $to_name);
+			if ($to_name == null)
+				$to_name = $to;
+			$to = new Swift_Address($to, '=?UTF-8?B?'.base64_encode($to_name).'?=');
 		}
-		if(isset($bcc)) {
-			$to_list->addBcc($bcc);
-		}
-		$to = $to_list;
 		try {
 			/* Connect with the appropriate configuration */
 			if ($configuration['PS_MAIL_METHOD'] == 2)
@@ -235,26 +225,16 @@ class MailCore
 					include_once($template_path.$iso.'/lang.php');
 			else if ($module_name && file_exists($theme_path.'mails/'.$iso.'/lang.php'))
 				include_once($theme_path.'mails/'.$iso.'/lang.php');
-			else if (file_exists(_PS_MAIL_DIR_.$iso.'/lang.php'))
-				include_once(_PS_MAIL_DIR_.$iso.'/lang.php');
 			else
-			{
-				Tools::dieOrLog(Tools::displayError('Error - The language file is missing for:').' '.$iso, $die);
-				return false;
-			}
+				include_once(_PS_MAIL_DIR_.$iso.'/lang.php');
 
 			/* Create mail and attach differents parts */
 			$message = new Swift_Message('['.Configuration::get('PS_SHOP_NAME', null, null, $id_shop).'] '.$subject);
-
-			$message->setCharset('utf-8');
 
 			/* Set Message-ID - getmypid() is blocked on some hosting */
 			$message->setId(Mail::generateId());
 
 			$message->headers->setEncoding('Q');
-
-			$template_vars = array_map(array('Tools', 'htmlentitiesDecodeUTF8'), $template_vars);
-			$template_vars = array_map(array('Tools', 'stripslashes'), $template_vars);
 
 			if (Configuration::get('PS_LOGO_MAIL') !== false && file_exists(_PS_IMG_DIR_.Configuration::get('PS_LOGO_MAIL', null, null, $id_shop)))
 				$logo = _PS_IMG_DIR_.Configuration::get('PS_LOGO_MAIL', null, null, $id_shop);
@@ -265,19 +245,16 @@ class MailCore
 				else
 					$template_vars['{shop_logo}'] = '';
 			}
-			ShopUrl::cacheMainDomainForShop((int)$id_shop);
+
 			/* don't attach the logo as */
 			if (isset($logo))
 				$template_vars['{shop_logo}'] = $message->attach(new Swift_Message_EmbeddedFile(new Swift_File($logo), null, ImageManager::getMimeTypeByExtension($logo)));
 
-			if ((Context::getContext()->link instanceof Link) === false)
-				Context::getContext()->link = new Link();
-
 			$template_vars['{shop_name}'] = Tools::safeOutput(Configuration::get('PS_SHOP_NAME', null, null, $id_shop));
-			$template_vars['{shop_url}'] = Context::getContext()->link->getPageLink('index', true, Context::getContext()->language->id, null, false, $id_shop);
-			$template_vars['{my_account_url}'] = Context::getContext()->link->getPageLink('my-account', true, Context::getContext()->language->id, null, false, $id_shop);
-			$template_vars['{guest_tracking_url}'] = Context::getContext()->link->getPageLink('guest-tracking', true, Context::getContext()->language->id, null, false, $id_shop);
-			$template_vars['{history_url}'] = Context::getContext()->link->getPageLink('history', true, Context::getContext()->language->id, null, false, $id_shop);
+			$template_vars['{shop_url}'] = Context::getContext()->link->getPageLink('index', true, Context::getContext()->language->id);
+			$template_vars['{my_account_url}'] = Context::getContext()->link->getPageLink('my-account', true, Context::getContext()->language->id);
+			$template_vars['{guest_tracking_url}'] = Context::getContext()->link->getPageLink('guest-tracking', true, Context::getContext()->language->id);
+			$template_vars['{history_url}'] = Context::getContext()->link->getPageLink('history', true, Context::getContext()->language->id);
 			$template_vars['{color}'] = Tools::safeOutput(Configuration::get('PS_MAIL_COLOR', null, null, $id_shop));
 			$swift->attachPlugin(new Swift_Plugin_Decorator(array($to_plugin => $template_vars)), 'decorator');
 			if ($configuration['PS_MAIL_TYPE'] == Mail::TYPE_BOTH || $configuration['PS_MAIL_TYPE'] == Mail::TYPE_TEXT)
@@ -297,9 +274,6 @@ class MailCore
 			/* Send mail */
 			$send = $swift->send($message, $to, new Swift_Address($from, $from_name));
 			$swift->disconnect();
-
-			ShopUrl::resetMainDomainCache();			
-
 			return $send;
 		}
 		catch (Swift_Exception $e) {
@@ -393,68 +367,4 @@ class MailCore
 		return vsprintf("<%s.%d.%s@%s>", $midparams);
 	}
 	
-	public static function isMultibyte($data)
-	{
-		$length = strlen($data);
-
-		for ($i = 0; $i < $length; $i++)
-		{
-			$result = ord(($data[$i]));
-
-			if ($result > 128)
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	public static function mimeEncode($string, $charset = 'UTF-8', $newline = "\r\n")
-	{
-		if (!self::isMultibyte($string) && strlen($string) < 75)
-		{
-			return $string;
-		}
-
-		$charset = strtoupper($charset);
-		$start   = '=?' . $charset . '?B?';
-		$end     = '?=';
-		$sep     = $end . $newline . ' ' . $start;
-		$length  = 75 - strlen($start) - strlen($end);
-		$length  = $length - ($length % 4);
-
-		if ($charset === 'UTF-8')
-		{
-			$parts = array();
-			$maxchars = floor(($length * 3) / 4);
-			$stringLength = strlen($string);
-
-			while ($stringLength > $maxchars)
-			{
-				$i = (int)$maxchars;
-				$result = ord($string[$i]);
-
-				while ($result >= 128 && $result <= 191)
-				{
-					$i--;
-					$result = ord($string[$i]);
-				}
-
-				$parts[] = base64_encode(substr($string, 0, $i));
-				$string = substr($string, $i);
-				$stringLength = strlen($string);
-			}
-
-			$parts[] = base64_encode($string);
-			$string = implode($sep, $parts);
-		}
-		else
-		{
-			$string = chunk_split(base64_encode($string), $length, $sep);
-			$string = preg_replace('/' . preg_quote($sep) . '$/', '', $string);
-		}
-
-		return $start . $string . $end;
-	}
 }

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -117,38 +117,25 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 		if ($this->output != '')
 			return $this->objOutput->getObjectRender()->overrideContent($this->output);
 		// display image content if needed
-		elseif ($this->imgToDisplay)
+		else if ($this->imgToDisplay)
 		{
-			if (empty($this->imgExtension))
-			{
+			if(empty($this->imgExtension)){
 				$imginfo = getimagesize($this->imgToDisplay);
-				$this->imgExtension = image_type_to_extension($imginfo[2], false);
+				$this->imgExtension = image_type_to_extension($imginfo[2],false);
 			}
 
 			$imageResource = false;
 			$types = array(
-				'jpg' => array(
-					'function' => 'imagecreatefromjpeg', 
-					'Content-Type' => 'image/jpeg'
-				),
-				'jpeg' => array(
-					'function' => 'imagecreatefromjpeg', 
-					'Content-Type' => 'image/jpeg'
-				),
-				'png' => array('function' => 
-					'imagecreatefrompng', 
-					'Content-Type' => 'image/png'
-				),
-				'gif' => array(
-					'function' => 'imagecreatefromgif', 
-					'Content-Type' => 'image/gif'
-				)
+				'jpg' => array('function' => 'imagecreatefromjpeg', 'Content-Type' => 'image/jpeg'),
+				'jpeg' => array('function' => 'imagecreatefromjpeg', 'Content-Type' => 'image/jpeg'),
+				'png' => array('function' => 'imagecreatefrompng', 'Content-Type' => 'image/png'),
+				'gif' => array('function' => 'imagecreatefromgif', 'Content-Type' => 'image/gif')
 			);
 
 			if (array_key_exists($this->imgExtension, $types))
 				$imageResource = @$types[$this->imgExtension]['function']($this->imgToDisplay);
 
-			if (!$imageResource)
+			if(!$imageResource)
 				throw new WebserviceException(sprintf('Unable to load the image "%s"', str_replace(_PS_ROOT_DIR_, '[SHOP_ROOT_DIR]', $this->imgToDisplay)), array(47, 500));
 			else
 			{
@@ -417,8 +404,7 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 				{
 					if ($this->wsObject->urlSegment[2] == 'header')
 					{
-						$logo_name = Configuration::get('PS_LOGO') ? Configuration::get('PS_LOGO') : 'logo.jpg';
-						list($width, $height, $type, $attr) = getimagesize(_PS_IMG_DIR_.$logo_name);
+						list($width, $height, $type, $attr) = getimagesize(_PS_IMG_DIR_.'logo.jpg');
 						Configuration::updateValue('SHOP_LOGO_WIDTH', (int)round($width));
 						Configuration::updateValue('SHOP_LOGO_HEIGHT', (int)round($height));
 					}
@@ -706,15 +692,15 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 				break;
 			// Delete the image
 			case 'DELETE':
-				// Delete products image in DB
-				if ($this->imageType == 'products')
+				if ($filename_exists)
 				{
+					// Delete products image in DB
+					if ($this->imageType == 'products')
+					{
 						$image = new Image((int)$this->wsObject->urlSegment[3]);
 						return $image->delete();
-				}
-				elseif ($filename_exists)
-				{
-					if (in_array($this->imageType, array('categories', 'manufacturers', 'suppliers', 'stores')))
+					}
+					elseif (in_array($this->imageType, array('categories', 'manufacturers', 'suppliers', 'stores')))
 					{
 						$object = new $this->wsObject->resourceList[$this->imageType]['class']((int)$this->wsObject->urlSegment[2]);
 						return $object->deleteImage(true);
@@ -795,7 +781,6 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 	 */
 	protected function writeImageOnDisk($basePath, $newPath, $destWidth = null, $destHeight = null, $imageTypes = null, $parentPath = null)
 	{
-		
 		list($sourceWidth, $sourceHeight, $type, $attr) = getimagesize($basePath);
 		if (!$sourceWidth)
 			throw new WebserviceException('Image width was null', array(68, 400));
@@ -860,13 +845,11 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 				$imaged = imagegif($destImage, $newPath);
 				break;
 			case 'png':
-				$quality = (Configuration::get('PS_PNG_QUALITY') === false ? 7 : Configuration::get('PS_PNG_QUALITY'));
-				$imaged = imagepng($destImage, $newPath, (int)$quality);
+				$imaged = imagepng($destImage, $newPath, 7);
 				break;
 			case 'jpeg':
 			default:
-				$quality = (Configuration::get('PS_JPEG_QUALITY') === false ? 90 : Configuration::get('PS_JPEG_QUALITY'));
-				$imaged = imagejpeg($destImage, $newPath, (int)$quality);
+				$imaged = imagejpeg($destImage, $newPath, 90);
 				break;
 		}
 		imagedestroy($destImage);
@@ -884,7 +867,7 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 				{
 					if ($this->imageType == 'products')
 					{
-						$declination_path = $parentPath.chunk_split($this->wsObject->urlSegment[3], 1, '/').$this->wsObject->urlSegment[3].'-'.$imageType['name'].'.jpg';
+						$declination_path = $parentPath.$this->wsObject->urlSegment[2].'-'.$this->productImageDeclinationId.'-'.$imageType['name'].'.jpg';
 					}
 					else
 						$declination_path = $parentPath.$this->wsObject->urlSegment[2].'-'.$imageType['name'].'.jpg';
@@ -893,8 +876,6 @@ class WebserviceSpecificManagementImagesCore implements WebserviceSpecificManage
 					throw new WebserviceException(sprintf('Unable to save the declination "%s" of this image.', $imageType['name']), array(71, 500));
 			}
 		}
-
-		Hook::exec('actionWatermark', array('id_image' => $this->wsObject->urlSegment[3], 'id_product' => $this->wsObject->urlSegment[2]));
 		return $newPath;
 	}
 

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -76,10 +76,10 @@ class FileUploaderCore
 		$pathinfo = pathinfo($this->file->getName());
 		$these = implode(', ', $this->allowedExtensions);
 		if (!isset($pathinfo['extension']))
-			return array('error' => sprintf(Tools::displayError('File has an invalid extension, it should be one of these: %s.'), $these));
+			return array('error' => Tools::displayError('File has an invalid extension, it should be one of').$these.'.');
 		$ext = $pathinfo['extension'];
 		if ($this->allowedExtensions && !in_array(strtolower($ext), $this->allowedExtensions))
-			return array('error' => sprintf(Tools::displayError('File has an invalid extension, it should be one of these: %s.'), $these));
+			return array('error' => Tools::displayError('File has an invalid extension, it should be one of').$these.'.');
 
 		return $this->file->save();
 
@@ -102,13 +102,6 @@ class QqUploadedFileForm
 			$image = new Image();
 			$image->id_product = (int)$product->id;
 			$image->position = Image::getHighestPosition($product->id) + 1;
-			$legends = Tools::getValue('legend');
-			if (is_array($legends))
-				foreach ($legends as $key => $legend)
-					if (Validate::isGenericName($legend))
-						$image->legend[(int)$key] = $legend;
-					else
-						return array('error' => sprintf(Tools::displayError('Error on image caption: "%1s" is not a valid caption.'), Tools::safeOutput($legend)));
 			if (!Image::getCover($image->id_product))
 				$image->cover = 1;
 			else
@@ -143,7 +136,7 @@ class QqUploadedFileForm
 
 		if (!$image->update())
 			return array('error' => Tools::displayError('Error while updating status'));
-		$img = array('id_image' => $image->id, 'position' => $image->position, 'cover' => $image->cover, 'name' => $this->getName(), 'legend' => $image->legend);
+		$img = array('id_image' => $image->id, 'position' => $image->position, 'cover' => $image->cover, 'name' => $this->getName());
 		return array('success' => $img);
 	}
 
@@ -191,13 +184,6 @@ class QqUploadedFileXhr
 			$image = new Image();
 			$image->id_product = (int)($product->id);
 			$image->position = Image::getHighestPosition($product->id) + 1;
-			$legends = Tools::getValue('legend');
-			if (is_array($legends))
-				foreach ($legends as $key => $legend)
-					if (Validate::isGenericName($legend))
-						$image->legend[(int)$key] = $legend;
-					else
-						return array('error' => sprintf(Tools::displayError('Error on image caption: "%1s" is not a valid caption.'), Tools::safeOutput($legend)));
 			if (!Image::getCover($image->id_product))
 				$image->cover = 1;
 			else
@@ -237,7 +223,7 @@ class QqUploadedFileXhr
 
 		if (!$image->update())
 			return array('error' => Tools::displayError('Error while updating status'));
-		$img = array('id_image' => $image->id, 'position' => $image->position, 'cover' => $image->cover, 'name' => $this->getName(), 'legend' => $image->legend);
+		$img = array('id_image' => $image->id, 'position' => $image->position, 'cover' => $image->cover, 'name' => $this->getName());
 		return array('success' => $img);
 	}
 
@@ -248,13 +234,9 @@ class QqUploadedFileXhr
 
 	public function getSize()
 	{
-		if (isset($_SERVER['CONTENT_LENGTH']) || isset($_SERVER['HTTP_CONTENT_LENGTH']))
-		{
-			if (isset($_SERVER['HTTP_CONTENT_LENGTH']))
-				return (int)$_SERVER['HTTP_CONTENT_LENGTH'];
-			else
-				return (int)$_SERVER['CONTENT_LENGTH'];
-		}
-		return false;
+		if (isset($_SERVER['CONTENT_LENGTH']))
+			return (int)$_SERVER['CONTENT_LENGTH'];
+		else
+			throw new Exception('Getting content length is not supported.');
 	}
 }

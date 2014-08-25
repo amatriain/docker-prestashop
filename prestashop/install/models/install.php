@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -97,15 +97,8 @@ class InstallModelInstall extends InstallAbstractModel
 		}
 
 		$settings_content = "<?php\n";
-
 		foreach ($settings_constants as $constant => $value)
-		{
-			if ($constant == '_PS_VERSION_')
-				$settings_content .= 'if (!defined(\''.$constant.'\'))'."\n\t";
-
 			$settings_content .= "define('$constant', '".str_replace('\'', '\\\'', $value)."');\n";
-		}
-
 		if (!file_put_contents(_PS_ROOT_DIR_.'/'.self::SETTINGS_FILE, $settings_content))
 		{
 			$this->setError($this->language->l('Cannot write settings file'));
@@ -194,8 +187,6 @@ class InstallModelInstall extends InstallAbstractModel
 		$flip_languages = array_flip($languages);
 		$id_lang =  (!empty($flip_languages[$this->language->getLanguageIso()])) ? $flip_languages[$this->language->getLanguageIso()] : 1;
 		Configuration::updateGlobalValue('PS_LANG_DEFAULT', $id_lang);
-		Configuration::updateGlobalValue('PS_VERSION_DB', _PS_INSTALL_VERSION_);
-		Configuration::updateGlobalValue('PS_INSTALL_VERSION', _PS_INSTALL_VERSION_);
 		return true;
 	}
 
@@ -316,10 +307,12 @@ class InstallModelInstall extends InstallAbstractModel
 			if (!$xml = @simplexml_load_file(_PS_INSTALL_LANGS_PATH_.$iso.'/language.xml'))
 				throw new PrestashopInstallerException($this->language->l('File "language.xml" not valid for language iso "%s"', $iso));
 			
-			$params_lang = array('name' => (string)$xml->name, 'iso_code' => substr((string)$xml->language_code, 0, 2));
+			$params_lang = array('name' => (string)$xml->name, 'iso_code' => (string)$xml->language_code);
 
-			if (!InstallSession::getInstance()->safe_mode || !Language::downloadAndInstallLanguagePack($iso, _PS_INSTALL_VERSION_, $params_lang))
+			if (InstallSession::getInstance()->safe_mode)
 				Language::checkAndAddLanguage($iso, false, true, $params_lang);
+			else
+				Language::downloadAndInstallLanguagePack($iso, _PS_INSTALL_VERSION_, $params_lang);
 
 			if (!$id_lang = Language::getIdByIso($iso))
 				throw new PrestashopInstallerException($this->language->l('Cannot install language "%s"', ($xml->name) ? $xml->name : $iso));
@@ -342,7 +335,7 @@ class InstallModelInstall extends InstallAbstractModel
 
 		$list = array(
 			'products' =>		_PS_PROD_IMG_DIR_,
-			'categories' =>		_PS_CAT_IMG_DIR_,
+			'categories',		_PS_CAT_IMG_DIR_,
 			'manufacturers' =>	_PS_MANU_IMG_DIR_,
 			'suppliers' =>		_PS_SUPP_IMG_DIR_,
 			'scenes' =>			_PS_SCENE_IMG_DIR_,
@@ -374,21 +367,23 @@ class InstallModelInstall extends InstallAbstractModel
 	 */
 	public function configureShop(array $data = array())
 	{
+		// Clear smarty cache
+		$this->clearSmartyCache();
+		
 		//clear image cache in tmp folder
-		if (file_exists(_PS_TMP_IMG_DIR_))
-			foreach (scandir(_PS_TMP_IMG_DIR_) as $file)
-				if ($file[0] != '.' && $file != 'index.php')
-					Tools::deleteFile(_PS_TMP_IMG_DIR_.$file);
-
+		Tools::deleteDirectory(_PS_TMP_IMG_DIR_, false);
+		
 		$default_data = array(
-			'shop_name' => 'My Shop',
-			'shop_activity' => '',
-			'shop_country' => 'us',
-			'shop_timezone' => 'US/Eastern',
-			'use_smtp' => false,
-			'smtp_encryption' => 'off',
-			'smtp_port' => 25,
-			'rewrite_engine' => false,
+			'shop_name' =>		'My Shop',
+			'shop_activity' =>	'',
+			'shop_country' =>	'us',
+			'shop_timezone' =>	'US/Eastern',
+			'use_smtp' =>		false,
+			'smtp_server' =>	'',
+			'smtp_login' =>		'',
+			'smtp_password' =>	'',
+			'smtp_encryption' =>'off',
+			'smtp_port' =>		25,
 		);
 
 		foreach ($default_data as $k => $v)
@@ -400,7 +395,7 @@ class InstallModelInstall extends InstallAbstractModel
 
 		// use the old image system if the safe_mod is enabled otherwise the installer will fail with the fixtures installation
 		if (InstallSession::getInstance()->safe_mode)
-			Configuration::updateGlobalValue('PS_LEGACY_IMAGES', 1);
+			Configuration::updateGlobalValue('PS_LEGACY_IMAGES', 				1);
 	
 		$id_country = Country::getByIso($data['shop_country']);
 
@@ -418,11 +413,11 @@ class InstallModelInstall extends InstallAbstractModel
 
 		// Set mails configuration
 		Configuration::updateGlobalValue('PS_MAIL_METHOD', 			($data['use_smtp']) ? 2 : 1);
+		Configuration::updateGlobalValue('PS_MAIL_SERVER', 			$data['smtp_server']);
+		Configuration::updateGlobalValue('PS_MAIL_USER', 			$data['smtp_login']);
+		Configuration::updateGlobalValue('PS_MAIL_PASSWD', 			$data['smtp_password']);
 		Configuration::updateGlobalValue('PS_MAIL_SMTP_ENCRYPTION', $data['smtp_encryption']);
 		Configuration::updateGlobalValue('PS_MAIL_SMTP_PORT', 		$data['smtp_port']);
-		
-		// Set default rewriting settings
-		Configuration::updateGlobalValue('PS_REWRITING_SETTINGS', $data['rewrite_engine']);
 
 		// Activate rijndael 128 encrypt algorihtm if mcrypt is activated
 		Configuration::updateGlobalValue('PS_CIPHER_ALGORITHM', function_exists('mcrypt_encrypt') ? 1 : 0);
@@ -434,10 +429,6 @@ class InstallModelInstall extends InstallAbstractModel
 			Configuration::updateGlobalValue('SHOP_LOGO_WIDTH', round($width));
 			Configuration::updateGlobalValue('SHOP_LOGO_HEIGHT', round($height));
 		}
-		
-		// Disable cache for debug mode
-		if (_PS_MODE_DEV_)
-			Configuration::updateGlobalValue('PS_SMARTY_CACHE', 1);
 
 		// Active only the country selected by the merchant
 		Db::getInstance()->execute('UPDATE '._DB_PREFIX_.'country SET active = 0 WHERE id_country != '.(int)$id_country);
@@ -471,12 +462,10 @@ class InstallModelInstall extends InstallAbstractModel
 			$employee->passwd = md5(_COOKIE_KEY_.$data['admin_password']);
 			$employee->last_passwd_gen = date('Y-m-d h:i:s', strtotime('-360 minutes'));
 			$employee->bo_theme = 'default';
-			$employee->default_tab = 1;
 			$employee->active = true;
-			$employee->optin = (bool)$data['send_informations'];
 			$employee->id_profile = 1;
 			$employee->id_lang = Configuration::get('PS_LANG_DEFAULT');
-			$employee->bo_menu = 1;
+			$employee->bo_show_screencast = 1;
 			if (!$employee->add())
 			{
 				$this->setError($this->language->l('Cannot create admin account'));
@@ -494,7 +483,7 @@ class InstallModelInstall extends InstallAbstractModel
 		{
 			Configuration::updateGlobalValue('PS_SHOP_EMAIL', $data['admin_email']);
 
-			$contacts = new PrestaShopCollection('Contact');
+			$contacts = new Collection('Contact');
 			foreach ($contacts as $contact)
 			{
 				$contact->email = $data['admin_email'];
@@ -502,14 +491,24 @@ class InstallModelInstall extends InstallAbstractModel
 			}
 		}
 
-		if (!@Tools::generateHtaccess(null, $data['rewrite_engine']))
-			Configuration::updateGlobalValue('PS_REWRITING_SETTINGS', 0);
-
 		return true;
+	}
+
+	/**
+	 * Clear smarty cache folders
+	 */
+	public function clearSmartyCache()
+	{
+		foreach (array(_PS_CACHE_DIR_.'smarty/cache', _PS_CACHE_DIR_.'smarty/compile') as $dir)
+			if (file_exists($dir))
+				foreach (scandir($dir) as $file)
+					if ($file[0] != '.' && $file != 'index.php')
+						@unlink($dir.$file);
 	}
 
 	public function getModulesList()
 	{
+		// @todo REMOVE DEV MODE
 		$modules = array();
 		if (false)
 		{
@@ -519,29 +518,30 @@ class InstallModelInstall extends InstallAbstractModel
 		}
 		else
 		{
+			// @todo THIS CODE NEED TO BE REMOVED WHEN MODULES API IS COMMITED
 			$modules = array(
-				'socialsharing',
-				'blockbanner',
 				'bankwire',
+				'blockadvertising',
 				'blockbestsellers',
 				'blockcart',
-				'blocksocial',
 				'blockcategories',
-				'blockcurrencies',
-				'blockfacebook',
-				'blocklanguages',
-				'blocklayered',
 				'blockcms',
-				'blockcmsinfo',
 				'blockcontact',
 				'blockcontactinfos',
+				'blockcurrencies',
+				'blockcustomerprivacy',
+				'blocklanguages',
 				'blockmanufacturer',
 				'blockmyaccount',
 				'blockmyaccountfooter',
 				'blocknewproducts',
 				'blocknewsletter',
 				'blockpaymentlogo',
+				'blockpermanentlinks',
+				'blockreinsurance',
 				'blocksearch',
+				'blocksharefb',
+				'blocksocial',
 				'blockspecials',
 				'blockstore',
 				'blocksupplier',
@@ -550,15 +550,15 @@ class InstallModelInstall extends InstallAbstractModel
 				'blockuserinfo',
 				'blockviewed',
 				'cheque',
-				'dashactivity',
-				'dashtrends',
-				'dashgoals',
-				'dashproducts',
-				'graphnvd3',
+				'favoriteproducts',
+				'feeder',
+				'graphartichow',
+				'graphgooglechart',
+				'graphvisifire',
+				'graphxmlswfcharts',
 				'gridhtml',
-				'homeslider',
 				'homefeatured',
-				'productpaymentlogos',
+				'homeslider',
 				'pagesnotfound',
 				'sekeywords',
 				'statsbestcategories',
@@ -582,7 +582,6 @@ class InstallModelInstall extends InstallAbstractModel
 				'statssearch',
 				'statsstock',
 				'statsvisits',
-				'themeconfigurator',
 			);
 		}
 		return $modules;
@@ -619,8 +618,16 @@ class InstallModelInstall extends InstallAbstractModel
 						unlink(_PS_MODULE_DIR_.$addons_module['name'].'.zip');
 					}
 		}		
+		$errors = array();
+		foreach ($modules as $module_name)
+			$this->installModules($module_name);
 
-		return count($modules) ? $this->installModules($modules) : true;
+		if ($errors)
+		{
+			$this->setError($errors);
+			return false;
+		}
+		return true;
 	}
 	
 	/**
@@ -629,13 +636,8 @@ class InstallModelInstall extends InstallAbstractModel
 	 */
 	public function installModules($module = null)
 	{
-		if ($module && !is_array($module))
-			$module = array($module);
-
-		$modules = $module ? $module : $this->getModulesList();
-
-		Module::updateTranslationsAfterInstall(false);
-
+		$modules = $module ? array($module) : $this->getModulesList();
+	
 		$errors = array();
 		foreach ($modules as $module_name)
 		{
@@ -652,10 +654,6 @@ class InstallModelInstall extends InstallAbstractModel
 			$this->setError($errors);
 			return false;
 		}
-
-		Module::updateTranslationsAfterInstall(true);
-		Language::updateModulesTranslations($modules);
-
 		return true;
 	}
 
@@ -663,40 +661,13 @@ class InstallModelInstall extends InstallAbstractModel
 	 * PROCESS : installFixtures
 	 * Install fixtures (E.g. demo products)
 	 */
-	public function installFixtures($entity = null, array $data = array())
+	public function installFixtures($entity = null)
 	{
-		$fixtures_path = _PS_INSTALL_FIXTURES_PATH_.'fashion/';
-		$fixtures_name = 'fashion';
-		$zip_file = _PS_ROOT_DIR_.'/download/fixtures.zip';
-		$temp_dir = _PS_ROOT_DIR_.'/download/fixtures/';
-
-		// try to download fixtures if no low memory mode
-		if ($entity === null)
-		{
-			if (Tools::copy('http://api.prestashop.com/fixtures/'.$data['shop_country'].'/'.$data['shop_activity'].'/fixtures.zip', $zip_file))
-			{
-				Tools::deleteDirectory($temp_dir, true);
-				if (Tools::ZipTest($zip_file))
-					if (Tools::ZipExtract($zip_file, $temp_dir))
-					{
-						$files = scandir($temp_dir);
-						if (count($files))
-							foreach ($files as $file)
-								if (!preg_match('/^\./', $file) && is_dir($temp_dir.$file.'/'))
-								{
-									$fixtures_path = $temp_dir.$file.'/';
-									$fixtures_name = $file;
-									break;
-								}
-					}
-			}
-		}
-
 		// Load class (use fixture class if one exists, or use InstallXmlLoader)
-		if (file_exists($fixtures_path.'/install.php'))
+		if (file_exists(_PS_INSTALL_FIXTURES_PATH_.'apple/install.php'))
 		{
-			require_once $fixtures_path.'/install.php';
-			$class = 'InstallFixtures'.Tools::toCamelCase($fixtures_name);
+			require_once _PS_INSTALL_FIXTURES_PATH_.'apple/install.php';
+			$class = 'InstallFixtures'.Tools::toCamelCase('apple');
 			if (!class_exists($class, false))
 			{
 				$this->setError($this->language->l('Fixtures class "%s" not found', $class));
@@ -706,7 +677,7 @@ class InstallModelInstall extends InstallAbstractModel
 			$xml_loader = new $class();
 			if (!$xml_loader instanceof InstallXmlLoader)
 			{
-				$this->setError($this->language->l('"%s" must be an instance of "InstallXmlLoader"', $class));
+				$this->setError($this->language->l('"%s" must be an instane of "InstallXmlLoader"', $class));
 				return false;
 			}
 		}
@@ -714,7 +685,7 @@ class InstallModelInstall extends InstallAbstractModel
 			$xml_loader = new InstallXmlLoader();
 
 		// Install XML data (data/xml/ folder)
-		$xml_loader->setFixturesPath($fixtures_path);
+		$xml_loader->setFixturesPath();
 		if (isset($this->xml_loader_ids) && $this->xml_loader_ids)
 			$xml_loader->setIds($this->xml_loader_ids);
 
@@ -726,11 +697,7 @@ class InstallModelInstall extends InstallAbstractModel
 		if ($entity)
 			$xml_loader->populateEntity($entity);
 		else
-		{
 			$xml_loader->populateFromXmlFiles();
-			Tools::deleteDirectory($temp_dir, true);
-			@unlink($zip_file);
-		}
 
 		if ($errors = $xml_loader->getErrors())
 		{

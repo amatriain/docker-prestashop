@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -163,7 +163,7 @@ class SupplyOrderCore extends ObjectModel
  		),
  		'associations' => array(
 			'supply_order_details' => array(
-				'resource' => 'supply_order_details',
+				'resource' => 'supply_order_detail',
 				'fields' => array(
 					'id' => array(),
  					'id_product' => array(),
@@ -279,11 +279,11 @@ class SupplyOrderCore extends ObjectModel
 	/**
 	 * Retrieves the details entries (i.e. products) collection for the current order
 	 *
-	 * @return PrestaShopCollection Collection of SupplyOrderDetail
+	 * @return Collection of SupplyOrderDetail
 	 */
 	public function getEntriesCollection()
 	{
-		$details = new PrestaShopCollection('SupplyOrderDetail');
+		$details = new Collection('SupplyOrderDetail');
 		$details->where('id_supply_order', '=', $this->id);
 		return $details;
 	}
@@ -455,13 +455,12 @@ class SupplyOrderCore extends ObjectModel
 		$query->select('id_supply_order');
 		$query->from('supply_order', 'so');
 		$query->where('so.reference = "'.pSQL($reference).'"');
-		$id_supply_order = (int)Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue($query);
+		$id = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue($query);
 
-		if (!$id_supply_order)
+		if ($id == false)
 			return false;
 
-		$supply_order = new SupplyOrder($id_supply_order);
-		return $supply_order;
+		return (new SupplyOrder((int)$id));
 	}
 
 	/**
@@ -504,33 +503,6 @@ class SupplyOrderCore extends ObjectModel
 		$ref = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue($query);
 
 		return (pSQL($ref));
-	}
-
-	public function getAllExpectedQuantity()
-	{
-		return Db::getInstance()->getValue('
-			SELECT SUM(`quantity_expected`)
-			FROM `'._DB_PREFIX_.'supply_order_detail`
-			WHERE `id_supply_order` = '.(int)$this->id
-		);
-	}
-
-	public function getAllReceivedQuantity()
-	{
-		return Db::getInstance()->getValue('
-			SELECT SUM(`quantity_received`)
-			FROM `'._DB_PREFIX_.'supply_order_detail`
-			WHERE `id_supply_order` = '.(int)$this->id
-		);
-	}
-
-	public function getAllPendingQuantity()
-	{
-		return Db::getInstance()->getValue('
-			SELECT (SUM(`quantity_expected`) - SUM(`quantity_received`))
-			FROM `'._DB_PREFIX_.'supply_order_detail`
-			WHERE `id_supply_order` = '.(int)$this->id
-		);
 	}
 
 	/*********************************\

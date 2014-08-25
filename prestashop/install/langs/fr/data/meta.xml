@@ -3,61 +3,61 @@
   <meta id="404" id_shop="1">
     <title>Erreur 404</title>
     <description>Cette page est introuvable</description>
-    <keywords/>
+    <keywords>erreur, 404, introuvable</keywords>
     <url_rewrite>page-non-trouvee</url_rewrite>
   </meta>
   <meta id="best-sales" id_shop="1">
     <title>Meilleures ventes</title>
     <description>Liste de nos produits les mieux vendus</description>
-    <keywords/>
+    <keywords>meilleures ventes</keywords>
     <url_rewrite>meilleures-ventes</url_rewrite>
   </meta>
   <meta id="contact" id_shop="1">
     <title>Contactez-nous</title>
     <description>Utilisez notre formulaire pour nous contacter</description>
-    <keywords/>
+    <keywords>contact, formulaire, e-mail</keywords>
     <url_rewrite>contactez-nous</url_rewrite>
   </meta>
   <meta id="index" id_shop="1">
     <title/>
     <description>Boutique propuls&#xE9;e par PrestaShop</description>
-    <keywords/>
+    <keywords>boutique, prestashop</keywords>
     <url_rewrite/>
   </meta>
   <meta id="manufacturer" id_shop="1">
     <title>Fabricants</title>
     <description>Liste de nos fabricants</description>
-    <keywords/>
+    <keywords>fabricants</keywords>
     <url_rewrite>fabricants</url_rewrite>
   </meta>
   <meta id="new-products" id_shop="1">
     <title>Nouveaux produits</title>
     <description>Liste de nos nouveaux produits</description>
-    <keywords/>
+    <keywords>nouveau, produit</keywords>
     <url_rewrite>nouveaux-produits</url_rewrite>
   </meta>
   <meta id="password" id_shop="1">
     <title>Mot de passe oubli&#xE9;</title>
     <description>Renseignez votre adresse e-mail afin de recevoir votre nouveau mot de passe.</description>
-    <keywords/>
+    <keywords>mot de passe, oubli&#xE9;, e-mail, nouveau, reg&#xE9;n&#xE9;ration</keywords>
     <url_rewrite>mot-de-passe-oublie</url_rewrite>
   </meta>
   <meta id="prices-drop" id_shop="1">
     <title>Promotions</title>
     <description>Nos produits en promotion</description>
-    <keywords/>
+    <keywords>promotion, r&#xE9;duction</keywords>
     <url_rewrite>promotions</url_rewrite>
   </meta>
   <meta id="sitemap" id_shop="1">
     <title>Plan du site</title>
     <description>Perdu ? Trouvez ce que vous cherchez</description>
-    <keywords/>
+    <keywords>plan, site</keywords>
     <url_rewrite>plan-du-site</url_rewrite>
   </meta>
   <meta id="supplier" id_shop="1">
     <title>Fournisseurs</title>
     <description>Liste de nos fournisseurs</description>
-    <keywords/>
+    <keywords>fournisseurs</keywords>
     <url_rewrite>fournisseurs</url_rewrite>
   </meta>
   <meta id="address" id_shop="1">
@@ -155,11 +155,5 @@
     <description/>
     <keywords/>
     <url_rewrite>confirmation-commande</url_rewrite>
-  </meta>
-    <meta id="products-comparison" id_shop="1">
-    <title>Comparaison de produits</title>
-    <description/>
-    <keywords/>
-    <url_rewrite>comparaison-de-produits</url_rewrite>
   </meta>
 </entity_meta>

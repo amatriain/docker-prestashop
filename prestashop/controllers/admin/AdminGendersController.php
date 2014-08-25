@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,7 +28,6 @@ class AdminGendersControllerCore extends AdminController
 {
 	public function __construct()
 	{
-		$this->bootstrap = true;
 	 	$this->table = 'gender';
 		$this->className = 'Gender';
 		$this->lang = true;
@@ -40,13 +39,7 @@ class AdminGendersControllerCore extends AdminController
 		if (!Tools::getValue('realedit'))
 			$this->deleted = false;
 
-		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
+	 	$this->bulk_actions = array('delete' => array('text' => $this->l('Delete selected'), 'confirm' => $this->l('Delete selected items?')));
 
 		$this->default_image_height = 16;
 		$this->default_image_width = 16;
@@ -60,14 +53,16 @@ class AdminGendersControllerCore extends AdminController
 			'id_gender' => array(
 				'title' => $this->l('ID'),
 				'align' => 'center',
-				'class' => 'fixed-width-xs'
+				'width' => 25
 			),
 			'name' => array(
-				'title' => $this->l('Social title'),
+				'title' => $this->l('Name'),
+				'width' => 'auto',
 				'filter_key' => 'b!name'
 			),
 			'type' => array(
-				'title' => $this->l('Gender'),
+				'title' => $this->l('Type'),
+				'width' => 100,
 				'orderby' => false,
 				'type' => 'select',
 				'list' => array(
@@ -77,52 +72,41 @@ class AdminGendersControllerCore extends AdminController
 				),
 				'filter_key' => 'a!type',
 				'callback' => 'displayGenderType',
-				'callback_object' => $this
+				'callback_object' => $this,
 			),
 			'image' => array(
 				'title' => $this->l('Image'),
 				'align' => 'center',
 				'image' => 'genders',
 				'orderby' => false,
-				'search' => false
+				'search' => false,
+				'width' => 40
 			)
 		);
 
 		parent::__construct();
 	}
 
-	public function initPageHeaderToolbar()
-	{
-		if(empty($this->display))
-			$this->page_header_toolbar_btn['new_gender'] = array(
-				'href' => self::$currentIndex.'&addgender&token='.$this->token,
-				'desc' => $this->l('Add new title', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-
-		parent::initPageHeaderToolbar();
-	}
-
 	public function renderForm()
 	{
 		$this->fields_form = array(
 			'legend' => array(
-				'title' => $this->l('Social titles'),
-				'icon' => 'icon-male'
+				'title' => $this->l('Titles'),
+				'image' => '../img/admin/tab-genders.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Social title'),
+					'label' => $this->l('Name:'),
 					'name' => 'name',
 					'lang' => true,
-					'col' => 4,
-					'hint' => $this->l('Invalid characters:').' 0-9!&lt;&gt;,;?=+()@#"�{}_$%:',
+					'size' => 33,
+					'hint' => $this->l('Invalid characters:').' 0-9!<>,;?=+()@#"�{}_$%:',
 					'required' => true
 				),
 				array(
 					'type' => 'radio',
-					'label' => $this->l('Gender'),
+					'label' => $this->l('Type:'),
 					'name' => 'type',
 					'required' => false,
 					'class' => 't',
@@ -146,28 +130,28 @@ class AdminGendersControllerCore extends AdminController
 				),
 				array(
 					'type' => 'file',
-					'label' => $this->l('Image'),
+					'label' => $this->l('Image:'),
 					'name' => 'image',
-					'col' => 6,
 					'value' => true
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Image width'),
+					'label' => $this->l('Image Width:'),
 					'name' => 'img_width',
-					'col' => 2,
-					'hint' => $this->l('Image width in pixels. Enter "0" to use the original size.')
+					'size' => 4,
+					'desc' => $this->l('Image width in pixels. Enter "0" to use the original size.')
 				),
 				array(
 					'type' => 'text',
-					'label' => $this->l('Image height'),
+					'label' => $this->l('Image Height:'),
 					'name' => 'img_height',
-					'col' => 2,
-					'hint' => $this->l('Image height in pixels. Enter "0" to use the original size.')
+					'size' => 4,
+					'desc' => $this->l('Image height in pixels. Enter "0" to use the original size.')
 				)
 			),
 			'submit' => array(
 				'title' => $this->l('Save'),
+				'class' => 'button'
 			)
 		);
 
@@ -210,22 +194,6 @@ class AdminGendersControllerCore extends AdminController
 			}
 		}
 		return !count($this->errors) ? true : false;
-	}
-
-	protected function afterImageUpload()
-	{
-		parent::afterImageUpload();
-
-		if (($id_gender = (int)Tools::getValue('id_gender')) &&
-			 isset($_FILES) && count($_FILES) && file_exists(_PS_GENDERS_DIR_.$id_gender.'.jpg'))
-		{
-			$current_file = _PS_TMP_IMG_DIR_.'gender_mini_'.$id_gender.'_'.$this->context->shop->id.'.jpg';
-
-			if (file_exists($current_file))
-				unlink($current_file);
-		}
-
-		return true;
 	}
 }
 

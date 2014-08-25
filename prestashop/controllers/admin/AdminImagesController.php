@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -32,7 +32,6 @@ class AdminImagesControllerCore extends AdminController
 
 	public function __construct()
 	{
-		$this->bootstrap = true;
 		$this->table = 'image_type';
 		$this->className = 'ImageType';
 		$this->lang = false;
@@ -40,73 +39,62 @@ class AdminImagesControllerCore extends AdminController
 	 	$this->addRowAction('edit');
 		$this->addRowAction('delete');
 
-		$this->bulk_actions = array(
-			'delete' => array(
-				'text' => $this->l('Delete selected'),
-				'confirm' => $this->l('Delete selected items?'),
-				'icon' => 'icon-trash'
-			)
-		);
-
 		$this->fields_list = array(
-			'id_image_type' => array('title' => $this->l('ID'), 'align' => 'center', 'class' => 'fixed-width-xs'),
-			'name' => array('title' => $this->l('Name')),
-			'width' => array('title' => $this->l('Width'),  'suffix' => ' px'),
-			'height' => array('title' => $this->l('Height'),  'suffix' => ' px'),
-			'products' => array('title' => $this->l('Products'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
-			'categories' => array('title' => $this->l('Categories'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
-			'manufacturers' => array('title' => $this->l('Manufacturers'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
-			'suppliers' => array('title' => $this->l('Suppliers'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
-			'scenes' => array('title' => $this->l('Scenes'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
-			'stores' => array('title' => $this->l('Stores'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false)
+			'id_image_type' => array('title' => $this->l('ID'), 'align' => 'center', 'width' => 25),
+			'name' => array('title' => $this->l('Name'), 'width' => 'auto'),
+			'width' => array('title' => $this->l('Width'), 'align' => 'right', 'suffix' => ' px', 'width' => 50, 'size' => 5),
+			'height' => array('title' => $this->l('Height'), 'align' => 'right', 'suffix' => ' px', 'width' => 50, 'size' => 5),
+			'products' => array('title' => $this->l('Products'), 'width' => 50, 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
+			'categories' => array('title' => $this->l('Categories'), 'width' => 50, 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
+			'manufacturers' => array('title' => $this->l('Manufacturers'), 'width' => 50, 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
+			'suppliers' => array('title' => $this->l('Suppliers'), 'width' => 50, 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
+			'scenes' => array('title' => $this->l('Scenes'), 'width' => 50, 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false),
+			'stores' => array('title' => $this->l('Stores'), 'width' => 50, 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false)
 		);
 		
-		// No need to display the old image system migration tool except if product images are in _PS_PROD_IMG_DIR_
-		$this->display_move = false;
-		$dir = _PS_PROD_IMG_DIR_;
-		if (is_dir($dir))
-			if ($dh = opendir($dir))
-			{
-				while (($file = readdir($dh)) !== false && $this->display_move == false)
-						if (!is_dir($dir.DIRECTORY_SEPARATOR.$file) && $file[0] != '.' && is_numeric($file[0]))
-							$this->display_move = true;
-				closedir($dh);
-			}
+		// No need to display the old image system if the install has been made later than 2013-03-26
+		$this->display_move = (defined('_PS_CREATION_DATE_') && strtotime(_PS_CREATION_DATE_) > strtotime('2013-03-26')) ? false : true;
 
 		$this->fields_options = array(
 			'images' => array(
-				'title' =>	$this->l('Images generation options'),
-				'icon' =>	'icon-picture',
+				'title' =>	$this->l('images'),
+				'icon' =>	'tab-orders',
 				'top' => '',
 				'bottom' => '',
 				'description' => $this->l('JPEG images have a small file size and standard quality. PNG images have a larger file size, a higher quality and support transparency. Note that in all cases the image files will have the .jpg extension.').'
-					<br /><br />'.$this->l('WARNING: This feature may not be compatible with your theme, or with some of your modules. In particular, PNG mode is not compatible with the Watermark module. If you encounter any issues, turn it off by selecting "Use JPEG".'),
+								  <br /><br />'.$this->l('WARNING: This feature may not be compatible with your theme, or with some of your modules. In particular, PNG mode is not compatible with the Watermark module. If you encounter any issues, turn it off by selecting "Use JPEG".'),
 				'fields' =>	array(
 					'PS_IMAGE_QUALITY' => array(
-						'title' => $this->l('Image format'),
+						'title' => $this->l('Image quality'),
 						'show' => true,
 						'required' => true,
 						'type' => 'radio',
-						'choices' => array('jpg' => $this->l('Use JPEG.'), 'png' => $this->l('Use PNG only if the base image is in PNG format.'), 'png_all' => $this->l('Use PNG for all images.'))
+						'choices' => array('jpg' => $this->l('Use JPEG'), 'png' => $this->l('Use PNG only if the base image is in PNG format.'), 'png_all' => $this->l('Use PNG for all images'))
 					),
 					'PS_JPEG_QUALITY' => array(
-						'title' => $this->l('JPEG compression'),
-						'hint' => $this->l('Ranges from 0 (worst quality, smallest file) to 100 (best quality, biggest file).').' '.$this->l('Recommended: 90.'),
+						'title' => $this->l('JPEG quality'),
+						'desc' => $this->l('Ranges from 0 (worst quality, smallest file) to 100 (best quality, biggest file).'),
 						'validation' => 'isUnsignedId',
 						'required' => true,
 						'cast' => 'intval',
 						'type' => 'text'
 					),
 		 			'PS_PNG_QUALITY' => array(
-						 'title' => $this->l('PNG compression'),
-						 'hint' => $this->l('PNG compression is lossless: unlike JPG, you do not lose image quality with a high compression ratio. However, photographs will compress very badly.').' '.$this->l('Ranges from 0 (biggest file) to 9 (smallest file, slowest decompression).').' '.$this->l('Recommended: 7.'),
+						 'title' => $this->l('PNG quality'),
+						 'desc' => $this->l('Ranges from 9 (worst quality, smallest file) to 0 (best quality, biggest file).'),
 						 'validation' => 'isUnsignedId',
 						 'required' => true,
 						 'cast' => 'intval',
 						 'type' => 'text'
 					 ),
+				),
+				'submit' => array('name' => 'submitImagePreferences'),
+			),
+			'product_images' => array(
+				'title' =>	$this->l('Product images'),
+				'fields' =>	array(
 					'PS_IMAGE_GENERATION_METHOD' => array(
-						'title' => $this->l('Generate images based on one side of the source image'),
+						'title' => $this->l('Image generated by'),
 						'validation' => 'isUnsignedId',
 						'required' => false,
 						'cast' => 'intval',
@@ -114,7 +102,7 @@ class AdminImagesControllerCore extends AdminController
 						'list' => array(
 							array(
 								'id' => '0',
-								'name' => $this->l('Automatic (longest side)')
+								'name' => $this->l('Auto')
 							),
 							array(
 								'id' => '1',
@@ -129,46 +117,44 @@ class AdminImagesControllerCore extends AdminController
 						'visibility' => Shop::CONTEXT_ALL
 					),
 					'PS_PRODUCT_PICTURE_MAX_SIZE' => array(
-						'title' => $this->l('Maximum file size of customer\'s pictures'),
-						'hint' => $this->l('The maximum file size of product customization pictures that customers can upload (in bytes).'),
+						'title' => $this->l('Maximum size of product pictures'),
+						'desc' => $this->l('The maximum size of pictures uploadable by customers (in Bytes).'),
 						'validation' => 'isUnsignedInt',
 						'required' => true,
 						'cast' => 'intval',
 						'type' => 'text',
-						'suffix' => $this->l('bytes'),
+						'suffix' => $this->l('Bytes'),
 						'visibility' => Shop::CONTEXT_ALL
 					),
 					'PS_PRODUCT_PICTURE_WIDTH' => array(
 						'title' => $this->l('Product picture width'),
-						'hint' => $this->l('Width of product customization pictures that customers can upload (in pixels).'),
+						'desc' => $this->l('The maximum width of pictures uploadable by customers.'),
 						'validation' => 'isUnsignedInt',
 						'required' => true,
 						'cast' => 'intval',
 						'type' => 'text',
 						'width' => 'px',
-						'suffix' => $this->l('pixels'),
 						'visibility' => Shop::CONTEXT_ALL
 					),
 					'PS_PRODUCT_PICTURE_HEIGHT' => array(
 						'title' => $this->l('Product picture height'),
-						'hint' => $this->l('Height of product customization pictures that customers can upload (in pixels).'),
+						'desc' => $this->l('The maximum height of pictures uploadable by customers.'),
 						'validation' => 'isUnsignedInt',
 						'required' => true,
 						'cast' => 'intval',
 						'type' => 'text',
 						'height' => 'px',
-						'suffix' => $this->l('pixels'),
 						'visibility' => Shop::CONTEXT_ALL
 					)
 				),
-				'submit' => array('title' => $this->l('Save')),
+				'submit' => array('title' => $this->l('Save   '), 'class' => 'button'),
 			),
 		);
 		
 		if ($this->display_move)
 			$this->fields_options['product_images']['fields']['PS_LEGACY_IMAGES'] = array(
 				'title' => $this->l('Use the legacy image filesystem'),
-				'hint' => $this->l('This should be set to yes unless you successfully moved images in "Images" page under the "Preferences" menu.'),
+				'desc' => $this->l('This should be set to yes unless you successfully moved images in "Images" page under the "Preferences" menu.'),
 				'validation' => 'isBool',
 				'cast' => 'intval',
 				'required' => false,
@@ -178,42 +164,43 @@ class AdminImagesControllerCore extends AdminController
 
 		$this->fields_form = array(
 			'legend' => array(
-				'title' => $this->l('Image type'),
-				'icon' => 'icon-picture'
+				'title' => $this->l('images'),
+				'image' => '../img/admin/picture.gif'
 			),
 			'input' => array(
 				array(
 					'type' => 'text',
-					'label' => $this->l('Name for the image type'),
+					'label' => $this->l('Type name'),
 					'name' => 'name',
 					'required' => true,
-					'hint' => $this->l('Letters, underscores and hyphens only (e.g. "small_custom", "cart_medium", "large", "thickbox_extra-large").')
+					'desc' => $this->l('Letters and hyphens only (e.g. small, medium, large, extra-large)')
 				),
 				array(
 					'type' => 'text',
 					'label' => $this->l('Width'),
 					'name' => 'width',
 					'required' => true,
+					'size' => 4,
 					'maxlength' => 5,
-					'suffix' => $this->l('pixels'),
-					'hint' => $this->l('Maximum image width in pixels.')
+					'desc' => $this->l('Maximum image width in pixels')
 				),
 				array(
 					'type' => 'text',
 					'label' => $this->l('Height'),
 					'name' => 'height',
 					'required' => true,
+					'size' => 4,
 					'maxlength' => 5,
-					'suffix' => $this->l('pixels'),
-					'hint' => $this->l('Maximum image height in pixels.')
+					'desc' => $this->l('Maximum image height in pixels')
 				),
 				array(
-					'type' => 'switch',
+					'type' => 'radio',
 					'label' => $this->l('Products'),
 					'name' => 'products',
 					'required' => false,
+					'class' => 't',
 					'is_bool' => true,
-					'hint' => $this->l('This type will be used for Product images.'),
+					'desc' => $this->l('This type will be used for Product images'),
 					'values' => array(
 						array(
 							'id' => 'products_on',
@@ -228,13 +215,13 @@ class AdminImagesControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'switch',
+					'type' => 'radio',
 					'label' => $this->l('Categories'),
 					'name' => 'categories',
 					'required' => false,
 					'class' => 't',
 					'is_bool' => true,
-					'hint' => $this->l('This type will be used for Category images.'),
+					'desc' => $this->l('This type will be applied to Category images.'),
 					'values' => array(
 						array(
 							'id' => 'categories_on',
@@ -249,12 +236,13 @@ class AdminImagesControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'switch',
+					'type' => 'radio',
 					'label' => $this->l('Manufacturers'),
 					'name' => 'manufacturers',
 					'required' => false,
+					'class' => 't',
 					'is_bool' => true,
-					'hint' => $this->l('This type will be used for Manufacturer images.'),
+					'desc' => $this->l('This type will be applied to Manufacturer images.'),
 					'values' => array(
 						array(
 							'id' => 'manufacturers_on',
@@ -269,12 +257,13 @@ class AdminImagesControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'switch',
+					'type' => 'radio',
 					'label' => $this->l('Suppliers'),
 					'name' => 'suppliers',
 					'required' => false,
+					'class' => 't',
 					'is_bool' => true,
-					'hint' => $this->l('This type will be used for Supplier images.'),
+					'desc' => $this->l('This type will be used for Supplier images.'),
 					'values' => array(
 						array(
 							'id' => 'suppliers_on',
@@ -289,13 +278,13 @@ class AdminImagesControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'switch',
+					'type' => 'radio',
 					'label' => $this->l('Scenes'),
 					'name' => 'scenes',
 					'required' => false,
 					'class' => 't',
 					'is_bool' => true,
-					'hint' => $this->l('This type will be used for Scene images.'),
+					'desc' => $this->l('This type will be used for Scene images.'),
 					'values' => array(
 						array(
 							'id' => 'scenes_on',
@@ -310,12 +299,13 @@ class AdminImagesControllerCore extends AdminController
 					)
 				),
 				array(
-					'type' => 'switch',
+					'type' => 'radio',
 					'label' => $this->l('Stores'),
 					'name' => 'stores',
 					'required' => false,
+					'class' => 't',
 					'is_bool' => true,
-					'hint' => $this->l('This type will be used for Store images.'),
+					'desc' => $this->l('This type will be used for Store images.'),
 					'values' => array(
 						array(
 							'id' => 'stores_on',
@@ -331,7 +321,8 @@ class AdminImagesControllerCore extends AdminController
 				),
 			),
 			'submit' => array(
-				'title' => $this->l('Save')
+				'title' => $this->l('Save   '),
+				'class' => 'button'
 			)
 		);
 
@@ -344,10 +335,12 @@ class AdminImagesControllerCore extends AdminController
 		// When moving images, if duplicate images were found they are moved to a folder named duplicates/
 		if (file_exists(_PS_PROD_IMG_DIR_.'duplicates/'))
 		{
-			$this->warnings[] = sprintf($this->l('Duplicate images were found when moving the product images. This is likely caused by unused demonstration images. Please make sure that the folder %s only contains demonstration images, and then delete it.'), _PS_PROD_IMG_DIR_.'duplicates/');
+			$this->warnings[] = $this->l('Duplicate images were found when moving the product images. This is likely caused by unused demonstration images. Please make sure that the folder').
+				_PS_PROD_IMG_DIR_.'duplicates/'.
+				$this->l('only contains demonstration images, and then delete it.');
 		}
 
-		if (Tools::isSubmit('submitRegenerate'.$this->table))
+		if (Tools::getValue('submitRegenerate'.$this->table))
 		{
 		 	if ($this->tabAccess['edit'] === '1')
 		 	{
@@ -357,7 +350,7 @@ class AdminImagesControllerCore extends AdminController
 			else
 				$this->errors[] = Tools::displayError('You do not have permission to edit this.');
 		}
-		elseif (Tools::isSubmit('submitMoveImages'.$this->table))
+		elseif (Tools::getValue('submitMoveImages'.$this->table))
 		{
 			if ($this->tabAccess['edit'] === '1')
 		 	{
@@ -367,34 +360,34 @@ class AdminImagesControllerCore extends AdminController
 			else
 				$this->errors[] = Tools::displayError('You do not have permission to edit this.');
 		}
-		elseif (Tools::isSubmit('submitOptions'.$this->table))
+		elseif (Tools::getValue('submitImagePreferences'))
 		{
 			if ($this->tabAccess['edit'] === '1')
 			{
 				if ((int)Tools::getValue('PS_JPEG_QUALITY') < 0
 					|| (int)Tools::getValue('PS_JPEG_QUALITY') > 100)
-					$this->errors[] = Tools::displayError('Incorrect value for the selected JPEG image compression.');
+					$this->errors[] = Tools::displayError('Incorrect value for the selected JPEG image quality.');
 				elseif ((int)Tools::getValue('PS_PNG_QUALITY') < 0
 					|| (int)Tools::getValue('PS_PNG_QUALITY') > 9)
-					$this->errors[] = Tools::displayError('Incorrect value for the selected PNG image compression.');
+					$this->errors[] = Tools::displayError('Incorrect value for the selected PNG image quality.');
 				elseif (!Configuration::updateValue('PS_IMAGE_QUALITY', Tools::getValue('PS_IMAGE_QUALITY'))
 					|| !Configuration::updateValue('PS_JPEG_QUALITY', Tools::getValue('PS_JPEG_QUALITY'))
 					|| !Configuration::updateValue('PS_PNG_QUALITY', Tools::getValue('PS_PNG_QUALITY')))
 					$this->errors[] = Tools::displayError('Unknown error.');
 				else
-					$this->confirmations[] = $this->_conf[6];
 					return parent::postProcess();
 			}
 			else
 				$this->errors[] = Tools::displayError('You do not have permission to edit this.');
 		}
+
 		else
 			return parent::postProcess();
 	}
 
 	public static function printEntityActiveIcon($value, $object)
 	{
-		return ($value ? '<span class="list-action-enable action-enabled"><i class="icon-check"></i></span>' : '<span class="list-action-enable action-disabled"><i class="icon-remove"></i></span>');
+		return ($value ? '<img src="../img/admin/enabled.gif" />' : '<img src="../img/admin/disabled.gif" />');
 	}
 
 	protected function _childValidation()
@@ -435,13 +428,10 @@ class AdminImagesControllerCore extends AdminController
 		if (!is_dir($dir))
 			return false;
 		$toDel = scandir($dir);
-
 		foreach ($toDel as $d)
 			foreach ($type as $imageType)
-				if (preg_match('/^[0-9]+\-'.($product ? '[0-9]+\-' : '').$imageType['name'].'\.jpg$/', $d) 
-					|| (count($type) > 1 && preg_match('/^[0-9]+\-[_a-zA-Z0-9-]*\.jpg$/', $d))					
-					|| preg_match('/^([[:lower:]]{2})\-default\-'.$imageType['name'].'\.jpg$/', $d))
-					if (file_exists($dir.$d))		
+				if (preg_match('/^[0-9]+\-'.($product ? '[0-9]+\-' : '').$imageType['name'].'\.jpg$/', $d) || preg_match('/^([[:lower:]]{2})\-default\-(.*)\.jpg$/', $d))
+					if (file_exists($dir.$d))
 						unlink($dir.$d);
 
 		// delete product images using new filesystem.
@@ -457,10 +447,10 @@ class AdminImagesControllerCore extends AdminController
 					$toDel = scandir($dir.$imageObj->getImgFolder());
 					foreach ($toDel as $d)
 						foreach ($type as $imageType)
-							if (preg_match('/^[0-9]+\-'.$imageType['name'].'\.jpg$/', $d) || (count($type) > 1 && preg_match('/^[0-9]+\-[_a-zA-Z0-9-]*\.jpg$/', $d)))
+							if (preg_match('/^[0-9]+\-'.$imageType['name'].'\.jpg$/', $d))
 								if (file_exists($dir.$imageObj->getImgFolder().$d))
 									unlink($dir.$imageObj->getImgFolder().$d);
-				}
+	}
 			}
 		}
 	}
@@ -496,15 +486,12 @@ class AdminImagesControllerCore extends AdminController
 							if (!file_exists($dir.$image) || !filesize($dir.$image))
 							{
 								$errors = true;
-								$this->errors[] = sprintf(Tools::displayError('Source file does not exist or is empty (%s)'), $dir.$image);
+								$this->errors[] = sprintf(Tools::displayError('Source file does not exist or is empty (%s)', $dir.$image));
 							}
 							elseif (!ImageManager::resize($dir.$image, $newDir.substr($image, 0, -4).'-'.stripslashes($imageType['name']).'.jpg', (int)$imageType['width'], (int)$imageType['height']))
-							{
 								$errors = true;
-								$this->errors[] = sprintf(Tools::displayError('Failed to resize image file (%s)'), $dir.$image);
-							}
 						}
-						if (time() - $this->start_time > $this->max_execution_time - 4) // stop 4 seconds before the timeout, just enough time to process the end of the page on a slow server
+						if (time() - $this->start_time > $this->max_execution_time - 4) // stop 4 seconds before the tiemout, just enough time to process the end of the page on a slow server
 							return 'timeout';
 					}
 		}
@@ -521,16 +508,14 @@ class AdminImagesControllerCore extends AdminController
 							if (!ImageManager::resize($existing_img, $dir.$imageObj->getExistingImgPath().'-'.stripslashes($imageType['name']).'.jpg', (int)($imageType['width']), (int)($imageType['height'])))
 							{
 								$errors = true;
-								$this->errors[] = Tools::displayError(sprintf('Original image is corrupt (%s) for product ID %2$d or bad permission on folder', $existing_img, (int)$imageObj->id_product));
+								$this->errors[] = Tools::displayError(sprintf('Original image is corrupt (%s) or bad permission on folder', $existing_img));
 							}
 				}
 				else
 				{
 					$errors = true;
-					$this->errors[] = Tools::displayError(sprintf('Original image is missing or empty (%1$s) for product ID %2$d', $existing_img, (int)$imageObj->id_product));
+					$this->errors[] = Tools::displayError(sprintf('Original image is missing or empty (%s)', $existing_img));
 				}
-				if (time() - $this->start_time > $this->max_execution_time - 4) // stop 4 seconds before the tiemout, just enough time to process the end of the page on a slow server
-					return 'timeout';
 			}
 		}
 
@@ -548,16 +533,18 @@ class AdminImagesControllerCore extends AdminController
 	protected function _regenerateNoPictureImages($dir, $type, $languages)
 	{
 		$errors = false;
-		foreach ($type as $image_type)
+		foreach ($type as $imageType)
+		{
 			foreach ($languages as $language)
 			{
 				$file = $dir.$language['iso_code'].'.jpg';
 				if (!file_exists($file))
-					$file = _PS_PROD_IMG_DIR_.Language::getIsoById((int)Configuration::get('PS_LANG_DEFAULT')).'.jpg';
-				if (!file_exists($dir.$language['iso_code'].'-default-'.stripslashes($image_type['name']).'.jpg'))
-					if (!ImageManager::resize($file, $dir.$language['iso_code'].'-default-'.stripslashes($image_type['name']).'.jpg', (int)$image_type['width'], (int)$image_type['height']))
+					$file = _PS_PROD_IMG_DIR_.Language::getIsoById((int)(Configuration::get('PS_LANG_DEFAULT'))).'.jpg';
+				if (!file_exists($dir.$language['iso_code'].'-default-'.stripslashes($imageType['name']).'.jpg'))
+					if (!ImageManager::resize($file, $dir.$language['iso_code'].'-default-'.stripslashes($imageType['name']).'.jpg', (int)$imageType['width'], (int)$imageType['height']))
 						$errors = true;
 			}
+		}
 		return $errors;
 	}
 
@@ -629,7 +616,7 @@ class AdminImagesControllerCore extends AdminController
 			if (($return = $this->_regenerateNewImages($proc['dir'], $formats, ($proc['type'] == 'products' ? true : false))) === true)
 			{
 				if (!count($this->errors))
-					$this->errors[] = sprintf(Tools::displayError('Cannot write images for this type: %s. Please check the %s folder\'s writing permissions.'), $proc['type'], $proc['dir']);
+					$this->errors[] = sprintf(Tools::displayError('Cannot write %s images. Please check the folder\'s writing permissions %s.'), $proc['type'], $proc['dir']);
 			}
 			elseif ($return == 'timeout')
 				$this->errors[] = Tools::displayError('Only part of the images have been regenerated. The server timed out before finishing.');
@@ -655,22 +642,10 @@ class AdminImagesControllerCore extends AdminController
 	public function initMoveImages()
 	{
 		$this->context->smarty->assign(array(
-			'safe_mode' => Tools::getSafeModeStatus(),
+			'safe_mode' => ini_get('safe_mode'),
 			'link_ppreferences' => 'index.php?tab=AdminPPreferences&token='.Tools::getAdminTokenLite('AdminPPreferences').'#PS_LEGACY_IMAGES_on',
 		));
-	}
-
-	public function initPageHeaderToolbar()
-	{
-		if (empty($this->display))
-			$this->page_header_toolbar_btn['new_image_type'] = array(
-				'href' => self::$currentIndex.'&addimage_type&token='.$this->token,
-				'desc' => $this->l('Add new image type', null, null, false),
-				'icon' => 'process-icon-new'
-			);
-		
-		parent::initPageHeaderToolbar();
-	}
+}
 
 	/**
 	 * Move product images to the new filesystem
@@ -687,7 +662,7 @@ class AdminImagesControllerCore extends AdminController
 			if ($result === 'timeout')
 				$this->errors[] = Tools::displayError('Not all images have been moved. The server timed out before finishing. Click on "Move images" again to resume the moving process.');
 			else if ($result === false)
-				$this->errors[] = Tools::displayError('Error: Some -- or all -- images cannot be moved.');
+				$this->errors[] = Tools::displayError('Error: Some -- or all -- images can not be moved.');
 		}
 		return (count($this->errors) > 0 ? false : true);
 	}

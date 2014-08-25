@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,16 +19,13 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class ValidateCore
 {
-	const ADMIN_PASSWORD_LENGTH = 8;
-	const PASSWORD_LENGTH = 5;
-
 	public static function isIp2Long($ip)
 	{
 		return preg_match('#^-?[0-9]+$#', (string)$ip);
@@ -47,7 +44,7 @@ class ValidateCore
 	 */
 	public static function isEmail($email)
 	{
-		return !empty($email) && preg_match(Tools::cleanNonUnicodeSupport('/^[a-z\p{L}0-9!#$%&\'*+\/=?^`{}|~_-]+[.a-z\p{L}0-9!#$%&\'*+\/=?^`{}|~_-]*@[a-z\p{L}0-9]+(?:[.]?[_a-z\p{L}0-9-])*\.[a-z\p{L}0-9]+$/ui'), $email);
+		return !empty($email) && preg_match(Tools::cleanNonUnicodeSupport('/^[a-z\p{L}0-9!#$%&\'*+\/=?^`{}|~_-]+[.a-z\p{L}0-9!#$%&\'*+\/=?^`{}|~_-]*@[a-z\p{L}0-9]+[._a-z\p{L}0-9-]*\.[a-z0-9]+$/ui'), $email);
 	}
 
 	/**
@@ -177,7 +174,7 @@ class ValidateCore
 	 */
 	public static function isMailName($mail_name)
 	{
-		return (is_string($mail_name) && preg_match(Tools::cleanNonUnicodeSupport('/^[^<>;=#{}]*$/u'), $mail_name));
+		return preg_match(Tools::cleanNonUnicodeSupport('/^[^<>;=#{}]*$/u'), $mail_name);
 	}
 
 	/**
@@ -383,7 +380,7 @@ class ValidateCore
 	 */
 	public static function isGenericName($name)
 	{
-		return empty($name) || preg_match('/^[^<>={}]*$/u', $name);
+		return empty($name) || preg_match('/^[^<>=#{}]*$/u', $name);
 	}
 
 	/**
@@ -392,7 +389,7 @@ class ValidateCore
 	 * @param string $html HTML field to validate
 	 * @return boolean Validity is ok or not
 	 */
-	public static function isCleanHtml($html, $allow_iframe = false)
+	public static function isCleanHtml($html)
 	{
 		$events = 'onmousedown|onmousemove|onmmouseup|onmouseover|onmouseout|onload|onunload|onfocus|onblur|onchange';
 		$events .= '|onsubmit|ondblclick|onclick|onkeydown|onkeyup|onkeypress|onmouseenter|onmouseleave|onerror|onselect|onreset|onabort|ondragdrop|onresize|onactivate|onafterprint|onmoveend';
@@ -401,14 +398,7 @@ class ValidateCore
 		$events .= '|ondragleave|ondragover|ondragstart|ondrop|onerrorupdate|onfilterchange|onfinish|onfocusin|onfocusout|onhashchange|onhelp|oninput|onlosecapture|onmessage|onmouseup|onmovestart';
 		$events .= '|onoffline|ononline|onpaste|onpropertychange|onreadystatechange|onresizeend|onresizestart|onrowenter|onrowexit|onrowsdelete|onrowsinserted|onscroll|onsearch|onselectionchange';
 		$events .= '|onselectstart|onstart|onstop';
-
-		if (preg_match('/<[\s]*script/ims', $html) || preg_match('/('.$events.')[\s]*=/ims', $html) || preg_match('/.*script\:/ims', $html))
-			return false;
-
-		if (!$allow_iframe && preg_match('/<[\s]*(i?frame|form|input|embed|object)/ims', $html))
-			return false;
-
-		return true;
+		return (!preg_match('/<[ \t\n]*script/ims', $html) && !preg_match('/('.$events.')[ \t\n]*=/ims', $html) && !preg_match('/.*script\:/ims', $html) && !preg_match('/<[ \t\n]*i?frame/ims', $html));
 	}
 
 	/**
@@ -429,14 +419,14 @@ class ValidateCore
 	 * @param int $size
 	 * @return boolean Validity is ok or not
 	 */
-	public static function isPasswd($passwd, $size = Validate::PASSWORD_LENGTH)
+	public static function isPasswd($passwd, $size = 5)
 	{
 		return (Tools::strlen($passwd) >= $size && Tools::strlen($passwd) < 255);
 	}
 
 	public static function isPasswdAdmin($passwd)
 	{
-		return Validate::isPasswd($passwd, Validate::ADMIN_PASSWORD_LENGTH);
+		return Validate::isPasswd($passwd, 8);
 	}
 
 	/**
@@ -499,9 +489,7 @@ class ValidateCore
 			return true;
 		if (preg_match('/^([0-9]{4})-((?:0?[1-9])|(?:1[0-2]))-((?:0?[1-9])|(?:[1-2][0-9])|(?:3[01]))([0-9]{2}:[0-9]{2}:[0-9]{2})?$/', $date, $birth_date))
 		{
-			if ($birth_date[1] > date('Y') && $birth_date[2] > date('m') && $birth_date[3] > date('d')
-				|| $birth_date[1] == date('Y') && $birth_date[2] == date('m') && $birth_date[3] > date('d')
-				|| $birth_date[1] == date('Y') && $birth_date[2] > date('m'))
+			if ($birth_date[1] > date('Y') && $birth_date[2] > date('m') && $birth_date[3] > date('d'))
 				return false;
 			return true;
 		}
@@ -597,7 +585,7 @@ class ValidateCore
 	 */
 	public static function isOrderBy($order)
 	{
-		return preg_match('/^[a-zA-Z0-9.!_-]+$/', $order);
+		return preg_match('/^[a-zA-Z0-9._-]+$/', $order);
 	}
 
 	/**
@@ -725,7 +713,7 @@ class ValidateCore
 	 */
 	public static function isUrl($url)
 	{
-		return preg_match('/^[~:#,$%&_=\(\)\.\? \+\-@\/a-zA-Z0-9]+$/', $url);
+		return preg_match('/^[~:#,%&_=\(\)\.\? \+\-@\/a-zA-Z0-9]+$/', $url);
 	}
 
 	/**
@@ -736,7 +724,7 @@ class ValidateCore
 	 */
 	public static function isTrackingNumber($tracking_number)
 	{
-		return preg_match('/^[~:#,%&_=\(\)\[\]\.\? \+\-@\/a-zA-Z0-9]+$/', $tracking_number);
+		return preg_match('/^[~:#,%&_=\(\)\.\? \+\-@\/a-zA-Z0-9]+$/', $tracking_number);
 	}
 
 	/**
@@ -759,7 +747,7 @@ class ValidateCore
 	public static function isAbsoluteUrl($url)
 	{
 		if (!empty($url))
-			return preg_match('/^https?:\/\/[$~:;#,%&_=\(\)\[\]\.\? \+\-@\/a-zA-Z0-9]+$/', $url);
+			return preg_match('/^https?:\/\/[,:#%&_=\(\)\.\? \+\-@\/a-zA-Z0-9]+$/', $url);
 		return true;
 	}
 
@@ -809,7 +797,7 @@ class ValidateCore
 	 */
 	public static function isTabName($name)
 	{
-		return preg_match('/^[^<>]+$/u', $name);
+		return preg_match('/^[a-zA-Z0-9_-]*$/', $name);
 	}
 
 	public static function isWeightUnit($unit)
@@ -835,7 +823,7 @@ class ValidateCore
 	/**
 	 * Check if the value is a sort direction value (DESC/ASC)
 	 *
-	 * @param string $value
+	 * @param char $value
 	 * @return boolean Validity is ok or not
 	 */
 	public static function isSortDirection($value)
@@ -935,7 +923,7 @@ class ValidateCore
 	 */
 	public static function isLocalizationPackSelection($data)
 	{
-		return in_array((string)$data, array('states', 'taxes', 'currencies', 'languages', 'units', 'groups'));
+		return ($data === 'states' || $data === 'taxes' || $data === 'currencies' || $data === 'languages' || $data === 'units');
 	}
 
 	/**
@@ -979,7 +967,7 @@ class ValidateCore
 	 */
 	public static function isLanguageFileName($file_name)
 	{
-		return (bool)preg_match('/^[a-zA-Z]{2,3}\.(?:gzip|tar\.gz)$/s', $file_name);
+		return (bool)preg_match('/^[a-zA-Z]{2,3}\.gzip$/s', $file_name);
 	}
 
 	/**
@@ -1067,14 +1055,6 @@ class ValidateCore
 	{
 		return (bool)(is_string($name) && preg_match('/^[0-9a-zA-Z-_]*$/u', $name));
 	}
-	
-	public static function isPrestaShopVersion($version)
-	{
-		return (preg_match('/^[0-1]\.[0-9]{1,2}(\.[0-9]{1,2}){0,2}$/', $version) && ip2long($version));
-	}
 
-	public static function isOrderInvoiceNumber($id)
-	{
-		return (preg_match('/^(?:'.Configuration::get('PS_INVOICE_PREFIX', Context::getContext()->language->id).')\s*([0-9]+)$/i', $id));
-	}
 }
+

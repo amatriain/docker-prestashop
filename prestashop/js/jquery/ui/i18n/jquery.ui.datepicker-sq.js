@@ -3,8 +3,8 @@
 jQuery(function($){
 	$.datepicker.regional['sq'] = {
 		closeText: 'mbylle',
-		prevText: '&#x3C;mbrapa',
-		nextText: 'Përpara&#x3E;',
+		prevText: '&#x3c;mbrapa',
+		nextText: 'Përpara&#x3e;',
 		currentText: 'sot',
 		monthNames: ['Janar','Shkurt','Mars','Prill','Maj','Qershor',
 		'Korrik','Gusht','Shtator','Tetor','Nëntor','Dhjetor'],

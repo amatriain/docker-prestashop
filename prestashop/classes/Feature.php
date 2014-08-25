@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -81,7 +81,7 @@ class FeatureCore extends ObjectModel
 	public static function getFeatures($id_lang, $with_shop = true)
 	{
 		return Db::getInstance()->executeS('
-		SELECT DISTINCT f.id_feature, f.*, fl.*
+		SELECT *
 		FROM `'._DB_PREFIX_.'feature` f
 		'.($with_shop ? Shop::addSqlAssociation('feature', 'f') : '').'
 		LEFT JOIN `'._DB_PREFIX_.'feature_lang` fl ON (f.`id_feature` = fl.`id_feature` AND fl.`id_lang` = '.(int)$id_lang.')
@@ -216,13 +216,12 @@ class FeatureCore extends ObjectModel
 			$feature->add();
 			return $feature->id;
 		}
-		elseif(isset($rq['id_feature']) && $rq['id_feature'])
+		else
 		{
-			if (is_numeric($position) && $feature = new Feature((int)$rq['id_feature']))
+			if ($position && $feature = new Feature((int)$rq['id_feature']))
 			{
 				$feature->position = (int)$position;
-				if (Validate::isLoadedObject($feature))
-					$feature->update();
+				$feature->update();
 			}
 
 			return (int)$rq['id_feature'];
@@ -313,40 +312,16 @@ class FeatureCore extends ObjectModel
 	 */
 	public static function cleanPositions()
 	{
-		//Reordering positions to remove "holes" in them (after delete for instance)
-		$sql = "SELECT id_feature, position FROM "._DB_PREFIX_."feature ORDER BY position";
-		$db = Db::getInstance();
-		$r = $db->executeS($sql, false);
-		$shiftTable = array(); //List of update queries (one query is necessary for each "hole" in the table)
-		$currentDelta = 0;
-		$minId = 0;
-		$maxId = 0;
-		$futurePosition = 0;
-		while ($line = $db->nextRow($r))
-		{
-			$delta = $futurePosition - $line['position']; //Difference between current position and future position
-			if ($delta != $currentDelta)
-			{
-				$shiftTable[] = array('minId' => $minId, 'maxId' => $maxId, 'delta' => $currentDelta);
-				$currentDelta = $delta;
-				$minId = $line['id_feature'];
-			}
-			$futurePosition++;
-		}
-
-		$shiftTable[] = array('minId' => $minId, 'delta' => $currentDelta);
-		
-		//Executing generated queries
-		foreach ($shiftTable as $line)
-		{
-			$delta = $line['delta'];
-			if ($delta == 0)
-				continue;
-			$delta = $delta > 0 ? '+'.(int)$delta : (int)$delta;
-			$minId = $line['minId'];
-			$sql = 'UPDATE '._DB_PREFIX_.'feature SET position = '.(int)$delta.' WHERE id_feature = '.(int)$minId;
-			Db::getInstance()->execute($sql);
-		}
+		return Db::getInstance()->execute('
+		UPDATE `'._DB_PREFIX_.'feature` f
+		LEFT JOIN (
+			SELECT @i := @i +1 AS rank, id_feature, position 
+			FROM `'._DB_PREFIX_.'feature`
+			JOIN (SELECT @i :=1) dummy
+			ORDER by position
+		) AS f2
+		USING (id_feature)
+		SET f.position = f2.rank - 1');
 	}
 
 	/**

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -29,7 +29,7 @@ if (!defined('_PS_VERSION_'))
 
 class StatsForecast extends Module
 {
-	private $html = '';
+	private $_html = '';
 	private $t1 = 0;
 	private $t2 = 0;
 	private $t3 = 0;
@@ -43,15 +43,14 @@ class StatsForecast extends Module
 	{
 		$this->name = 'statsforecast';
 		$this->tab = 'analytics_stats';
-		$this->version = '1.3.2';
+		$this->version = 1.0;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		parent::__construct();
 
 		$this->displayName = $this->l('Stats Dashboard');
-		$this->description = $this->l('This is the main module for the Stats dashboard. It displays a summary of all your current statistics.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+		$this->description = '';
 	}
 
 	public function install()
@@ -88,35 +87,30 @@ class StatsForecast extends Module
 		$prop30 = $interval / $interval2;
 
 		if ($this->context->cookie->stats_granularity == 7)
-			$interval_avg = $interval2 / 30;
+			$intervalAvg = $interval2 / 30;
 		if ($this->context->cookie->stats_granularity == 4)
-			$interval_avg = $interval2 / 365;
+			$intervalAvg = $interval2 / 365;
 		if ($this->context->cookie->stats_granularity == 10)
-			$interval_avg = $interval2;
+			$intervalAvg = $interval2;
 		if ($this->context->cookie->stats_granularity == 42)
-			$interval_avg = $interval2 / 7;
+			$intervalAvg = $interval2 / 7;
 
-		$data_table = array();
+		$dataTable = array();
 		if ($this->context->cookie->stats_granularity == 10)
 			for ($i = $from; $i <= $to2; $i = strtotime('+1 day', $i))
-				$data_table[date('Y-m-d', $i)] = array(
-					'fix_date' => date('Y-m-d', $i),
-					'countOrders' => 0,
-					'countProducts' => 0,
-					'totalSales' => 0
-				);
+				$dataTable[date('Y-m-d', $i)] = array('fix_date' => date('Y-m-d', $i), 'countOrders' => 0, 'countProducts' => 0, 'totalSales' => 0);
 
-		$date_from_gadd = ($this->context->cookie->stats_granularity != 42
+		$dateFromGAdd = ($this->context->cookie->stats_granularity != 42
 			? 'LEFT(date_add, '.(int)$this->context->cookie->stats_granularity.')'
 			: 'IFNULL(MAKEDATE(YEAR(date_add),DAYOFYEAR(date_add)-WEEKDAY(date_add)), CONCAT(YEAR(date_add),"-01-01*"))');
 
-		$date_from_ginvoice = ($this->context->cookie->stats_granularity != 42
+		$dateFromGInvoice = ($this->context->cookie->stats_granularity != 42
 			? 'LEFT(invoice_date, '.(int)$this->context->cookie->stats_granularity.')'
 			: 'IFNULL(MAKEDATE(YEAR(invoice_date),DAYOFYEAR(invoice_date)-WEEKDAY(invoice_date)), CONCAT(YEAR(invoice_date),"-01-01*"))');
 
 		$result = $db->query('
 		SELECT
-			'.$date_from_ginvoice.' as fix_date,
+			'.$dateFromGInvoice.' as fix_date,
 			COUNT(*) as countOrders,
 			SUM((SELECT SUM(od.product_quantity) FROM '._DB_PREFIX_.'order_detail od WHERE o.id_order = od.id_order)) as countProducts,
 			SUM(o.total_paid_tax_excl / o.conversion_rate) as totalSales
@@ -124,470 +118,344 @@ class StatsForecast extends Module
 		WHERE o.valid = 1
 		AND o.invoice_date BETWEEN '.ModuleGraph::getDateBetween().'
 		'.Shop::addSqlRestriction(Shop::SHARE_ORDER, 'o').'
-		GROUP BY '.$date_from_ginvoice);
+		GROUP BY '.$dateFromGInvoice);
 		while ($row = $db->nextRow($result))
-			$data_table[$row['fix_date']] = $row;
+			$dataTable[$row['fix_date']] = $row;
 
-		$this->html .= '<div>
-			<div class="panel-heading"><i class="icon-dashboard"></i> '.$this->displayName.'</div>
-			<div class="alert alert-info">'.$this->l('The listed amounts do not include tax.').'</div>
-			<form id="granularity" action="'.Tools::safeOutput($ru).'#granularity" method="post" class="form-horizontal">
-				<div class="row row-margin-bottom">
-					<label class="control-label col-lg-3">
-						'.$this->l('Time frame').'
-					</label>
-					<div class="col-lg-2">
-						<input type="hidden" name="submitGranularity" value="1" />
-						<select name="stats_granularity" onchange="this.form.submit();">
-							<option value="10">'.$this->l('Daily').'</option>
-							<option value="42" '.($this->context->cookie->stats_granularity == '42' ? 'selected="selected"' : '').'>'.$this->l('Weekly').'</option>
-							<option value="7" '.($this->context->cookie->stats_granularity == '7' ? 'selected="selected"' : '').'>'.$this->l('Monthly').'</option>
-							<option value="4" '.($this->context->cookie->stats_granularity == '4' ? 'selected="selected"' : '').'>'.$this->l('Yearly').'</option>
-						</select>
-					</div>
-				</div>
+		$this->_html .= '<div>
+			<div class="blocStats">
+			<h2 class="icon-'.$this->name.'"><span></span>'.$this->displayName.'</h2>
+			<p>'.$this->l('All amounts listed do not include tax.').'</p>
+			<form id="granularity" action="'.Tools::safeOutput($ru).'#granularity" method="post">
+				<input type="hidden" name="submitGranularity" value="1" />
+				'.$this->l('Mode:').' <select name="stats_granularity" onchange="this.form.submit();" style="width:100px">
+					<option value="10">'.$this->l('Day').'</option>
+					<option value="42" '.($this->context->cookie->stats_granularity == '42' ? 'selected="selected"' : '').'>'.$this->l('Week').'</option>
+					<option value="7" '.($this->context->cookie->stats_granularity == '7' ? 'selected="selected"' : '').'>'.$this->l('Month').'</option>
+					<option value="4" '.($this->context->cookie->stats_granularity == '4' ? 'selected="selected"' : '').'>'.$this->l('Year').'</option>
+				</select>
 			</form>
+			
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr>
+					<th style="width:70px;text-align:center"></th>
+					<th style="text-align:center">'.$this->l('Visits').'</th>
+					<th style="text-align:center">'.$this->l('Reg.').'</th>
+					<th style="text-align:center">'.$this->l('orders').'</th>
+					<th style="text-align:center">'.$this->l('Items').'</th>
+					<th style="text-align:center">'.$this->l('% Reg.').'</th>
+					<th style="text-align:center">'.$this->l('% Orders').'</th>
+					<th style="width:100px;text-align:center">'.$this->l('Sales').'</th>
+				</tr>';
 
-			<table class="table">
-				<thead>
-					<tr>
-						<th></th>
-						<th class="center"><span class="title_box active">'.$this->l('Visits').'</span></th>
-						<th class="center"><span class="title_box active">'.$this->l('Registrations').'</span></th>
-						<th class="center"><span class="title_box active">'.$this->l('Placed orders').'</span></th>
-						<th class="center"><span class="title_box active">'.$this->l('Bought items').'</span></th>
-						<th class="center"><span class="title_box active">'.$this->l('Percentage of registrations').'</span></th>
-						<th class="center"><span class="title_box active">'.$this->l('Percentage of orders').'</span></th>
-						<th class="center"><span class="title_box active">'.$this->l('Revenue').'</span></th>
-					</tr>
-				</thead>';
-
-		$visit_array = array();
-		$sql = 'SELECT '.$date_from_gadd.' as fix_date, COUNT(*) as visits
+		$visitArray = array();
+		$sql = 'SELECT '.$dateFromGAdd.' as fix_date, COUNT(*) as visits
 				FROM '._DB_PREFIX_.'connections c
 				WHERE c.date_add BETWEEN '.ModuleGraph::getDateBetween().'
 				'.Shop::addSqlRestriction(false, 'c').'
-				GROUP BY '.$date_from_gadd;
+				GROUP BY '.$dateFromGAdd;
 		$visits = Db::getInstance()->query($sql);
 		while ($row = $db->nextRow($visits))
-			$visit_array[$row['fix_date']] = $row['visits'];
+			$visitArray[$row['fix_date']] = $row['visits'];
 
-		foreach ($data_table as $row)
+		$today = date('Y-m-d');
+		foreach ($dataTable as $row)
 		{
-			$visits_today = (int)(isset($visit_array[$row['fix_date']]) ? $visit_array[$row['fix_date']] : 0);
+			$visitsToday = (int)(isset($visitArray[$row['fix_date']]) ? $visitArray[$row['fix_date']] : 0);
 
-			$date_from_greg = ($this->context->cookie->stats_granularity != 42
+			$dateFromGReg = ($this->context->cookie->stats_granularity != 42
 				? 'LIKE \''.$row['fix_date'].'%\''
-				: 'BETWEEN \''.Tools::substr($row['fix_date'], 0, 10).' 00:00:00\' AND DATE_ADD(\''.Tools::substr($row['fix_date'], 0, 8).Tools::substr($row['fix_date'], 8, 2).' 23:59:59\', INTERVAL 7 DAY)');
+				: 'BETWEEN \''.substr($row['fix_date'], 0, 10).' 00:00:00\' AND DATE_ADD(\''.substr($row['fix_date'], 0, 8).substr($row['fix_date'], 8, 2).' 23:59:59\', INTERVAL 7 DAY)');
 			$row['registrations'] = Db::getInstance()->getValue('
 			SELECT COUNT(*) FROM '._DB_PREFIX_.'customer
 			WHERE date_add BETWEEN '.ModuleGraph::getDateBetween().'
-			AND date_add '.$date_from_greg
-				.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER));
+			AND date_add '.$dateFromGReg
+			.Shop::addSqlRestriction(Shop::SHARE_CUSTOMER));
 
-			$this->html .= '
+			$this->_html .= '
 			<tr>
 				<td>'.$row['fix_date'].'</td>
-				<td align="center">'.$visits_today.'</td>
-				<td align="center">'.(int)$row['registrations'].'</td>
-				<td align="center">'.(int)$row['countOrders'].'</td>
-				<td align="center">'.(int)$row['countProducts'].'</td>
-				<td align="center">'.($visits_today ? round(100 * (int)$row['registrations'] / $visits_today, 2).' %' : '-').'</td>
-				<td align="center">'.($visits_today ? round(100 * (int)$row['countOrders'] / $visits_today, 2).' %' : '-').'</td>
-				<td align="right">'.Tools::displayPrice($row['totalSales'], $currency).'</td>
+				<td align="center">'.$visitsToday.'</td>
+				<td align="center">'.(int)($row['registrations']).'</td>
+				<td align="center">'.(int)($row['countOrders']).'</td>
+				<td align="center">'.(int)($row['countProducts']).'</td>
+				<td align="center">'.($visitsToday ? round(100 * (int)($row['registrations']) / $visitsToday, 2).' %' : '-').'</td>
+				<td align="center">'.($visitsToday ? round(100 * (int)($row['countOrders']) / $visitsToday, 2).' %' : '-').'</td>
+				<td align="right" >'.Tools::displayPrice($row['totalSales'], $currency).'</td>
 			</tr>';
 
-			$this->t1 += $visits_today;
-			$this->t2 += (int)$row['registrations'];
-			$this->t3 += (int)$row['countOrders'];
-			$this->t4 += (int)$row['countProducts'];
+			$this->t1 += $visitsToday;
+			$this->t2 += (int)($row['registrations']);
+			$this->t3 += (int)($row['countOrders']);
+			$this->t4 += (int)($row['countProducts']);
 			$this->t8 += $row['totalSales'];
 		}
 
-		$this->html .= '
+		$this->_html .= '
 				<tr>
-					<th></th>
-					<th class="center"><span class="title_box active">'.$this->l('Visits').'</span></th>
-					<th class="center"><span class="title_box active">'.$this->l('Registrations').'</span></th>
-					<th class="center"><span class="title_box active">'.$this->l('Placed orders').'</span></th>
-					<th class="center"><span class="title_box active">'.$this->l('Bought items').'</span></th>
-					<th class="center"><span class="title_box active">'.$this->l('Percentage of registrations').'</span></th>
-					<th class="center"><span class="title_box active">'.$this->l('Percentage of orders').'</span></th>
-					<th class="center"><span class="title_box active">'.$this->l('Revenue').'</span></th>
+					<th style="width:70px;text-align:center"></th>
+					<th style="text-align:center">'.$this->l('Visits').'</th>
+					<th style="text-align:center">'.$this->l('Reg.').'</th>
+					<th style="text-align:center">'.$this->l('orders').'</th>
+					<th style="text-align:center">'.$this->l('Items').'</th>
+					<th style="text-align:center">'.$this->l('% Reg.').'</th>
+					<th style="text-align:center">'.$this->l('% Orders').'</th>
+					<th style="width:100px;text-align:center">'.$this->l('Sales').'</th>
 				</tr>
 				<tr>
-					<td>'.$this->l('Total').'</td>
-					<td class="center">'.(int)$this->t1.'</td>
-					<td class="center">'.(int)$this->t2.'</td>
-					<td class="center">'.(int)$this->t3.'</td>
-					<td class="center">'.(int)$this->t4.'</td>
-					<td class="center">--</td>
-					<td class="center">--</td>
-					<td align="right">'.Tools::displayPrice($this->t8, $currency).'</td>
+					<th>'.$this->l('Total').'</th>
+					<td style="font-weight: 700" align="center">'.(int)($this->t1).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t2).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t3).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t4).'</td>
+					<td style="font-weight: 700" align="center">--</td>
+					<td style="font-weight: 700" align="center">--</td>
+					<td style="font-weight: 700" align="right">'.Tools::displayPrice($this->t8, $currency).'</td>
 				</tr>
 				<tr>
-					<td>'.$this->l('Average').'</td>
-					<td class="center">'.(int)($this->t1 / $interval_avg).'</td>
-					<td class="center">'.(int)($this->t2 / $interval_avg).'</td>
-					<td class="center">'.(int)($this->t3 / $interval_avg).'</td>
-					<td class="center">'.(int)($this->t4 / $interval_avg).'</td>
-					<td class="center">'.($this->t1 ? round(100 * $this->t2 / $this->t1, 2).' %' : '-').'</td>
-					<td class="center">'.($this->t1 ? round(100 * $this->t3 / $this->t1, 2).' %' : '-').'</td>
-					<td align="right">'.Tools::displayPrice($this->t8 / $interval_avg, $currency).'</td>
+					<th>'.$this->l('Average').'</th>
+					<td style="font-weight: 700" align="center">'.(int)($this->t1 / $intervalAvg).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t2 / $intervalAvg).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t3 / $intervalAvg).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t4 / $intervalAvg).'</td>
+					<td style="font-weight: 700" align="center">'.($this->t1 ? round(100 * $this->t2 / $this->t1, 2) .' %' : '-').'</td>
+					<td style="font-weight: 700" align="center">'.($this->t1 ? round(100 * $this->t3 / $this->t1, 2) .' %' : '-').'</td>
+					<td style="font-weight: 700" align="right">'.Tools::displayPrice($this->t8 / $intervalAvg, $currency).'</td>
 				</tr>
 				<tr>
-					<td>'.$this->l('Forecast').'</td>
-					<td class="center">'.(int)($this->t1 * $prop30).'</td>
-					<td class="center">'.(int)($this->t2 * $prop30).'</td>
-					<td class="center">'.(int)($this->t3 * $prop30).'</td>
-					<td class="center">'.(int)($this->t4 * $prop30).'</td>
-					<td class="center">--</td>
-					<td class="center"class="center">--</td>
-					<td align="right">'.Tools::displayPrice($this->t8 * $prop30, $currency).'</td>
+					<th>'.$this->l('Forecast').'</th>
+					<td style="font-weight: 700" align="center">'.(int)($this->t1 * $prop30).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t2 * $prop30).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t3 * $prop30).'</td>
+					<td style="font-weight: 700" align="center">'.(int)($this->t4 * $prop30).'</td>
+					<td style="font-weight: 700" align="center">--</td>
+					<td style="font-weight: 700" align="center">--</td>
+					<td style="font-weight: 700" align="right">'.Tools::displayPrice($this->t8 * $prop30, $currency).'</td>
 				</tr>
-			</table>';
+			</table>
+		</div>';
 
 		$ca = $this->getRealCA();
 
 		$sql = 'SELECT COUNT(DISTINCT c.id_guest)
-		FROM '._DB_PREFIX_.'connections c
-		WHERE c.date_add BETWEEN '.ModuleGraph::getDateBetween().'
-		'.Shop::addSqlRestriction(false, 'c');
+				FROM '._DB_PREFIX_.'connections c
+				WHERE c.date_add BETWEEN '.ModuleGraph::getDateBetween()
+					.Shop::addSqlRestriction(false, 'c');
 		$visitors = Db::getInstance()->getValue($sql);
 
 		$sql = 'SELECT COUNT(DISTINCT g.id_customer)
-		FROM '._DB_PREFIX_.'connections c
-		INNER JOIN '._DB_PREFIX_.'guest g ON c.id_guest = g.id_guest
-		WHERE g.id_customer != 0
-		AND c.date_add BETWEEN '.ModuleGraph::getDateBetween().'
-		'.Shop::addSqlRestriction(false, 'c');
+				FROM '._DB_PREFIX_.'connections c
+				INNER JOIN '._DB_PREFIX_.'guest g ON c.id_guest = g.id_guest
+				WHERE g.id_customer != 0
+					AND c.date_add BETWEEN '.ModuleGraph::getDateBetween()
+					.Shop::addSqlRestriction(false, 'c');
 		$customers = Db::getInstance()->getValue($sql);
 
-		$sql = 'SELECT COUNT(DISTINCT c.id_cart)
-		FROM '._DB_PREFIX_.'cart c 
-		INNER JOIN '._DB_PREFIX_.'cart_product cp on c.id_cart = cp.id_cart
-		WHERE (c.date_add BETWEEN '.ModuleGraph::getDateBetween().' OR c.date_upd BETWEEN '.ModuleGraph::getDateBetween().')
-		'.Shop::addSqlRestriction(false, 'c');
+		$sql = 'SELECT COUNT(*)
+				FROM '._DB_PREFIX_.'cart
+				WHERE id_cart IN (
+						SELECT id_cart FROM '._DB_PREFIX_.'cart_product
+					) AND (
+						date_add BETWEEN '.ModuleGraph::getDateBetween().' OR date_upd BETWEEN '.ModuleGraph::getDateBetween().'
+					)'.Shop::addSqlRestriction();
 		$carts = Db::getInstance()->getValue($sql);
 
-		$sql = 'SELECT COUNT(DISTINCT c.id_cart)
-		FROM '._DB_PREFIX_.'cart c 
-		INNER JOIN '._DB_PREFIX_.'cart_product cp on c.id_cart = cp.id_cart
-		WHERE (c.date_add BETWEEN '.ModuleGraph::getDateBetween().' OR c.date_upd BETWEEN '.ModuleGraph::getDateBetween().')
-		AND id_address_invoice != 0
-		'.Shop::addSqlRestriction(false, 'c');
+		$sql = 'SELECT COUNT(*)
+				FROM '._DB_PREFIX_.'cart
+				WHERE id_cart IN (
+						SELECT id_cart FROM '._DB_PREFIX_.'cart_product
+					) AND id_address_invoice != 0
+					AND (
+						date_add BETWEEN '.ModuleGraph::getDateBetween().' OR date_upd BETWEEN '.ModuleGraph::getDateBetween().'
+					)'.Shop::addSqlRestriction();
 		$fullcarts = Db::getInstance()->getValue($sql);
 
 		$sql = 'SELECT COUNT(*)
-		FROM '._DB_PREFIX_.'orders o
-		WHERE o.valid = 1
-		AND o.date_add BETWEEN '.ModuleGraph::getDateBetween().'
-		'.Shop::addSqlRestriction(Shop::SHARE_ORDER, 'o');
+				FROM '._DB_PREFIX_.'orders o
+				WHERE o.valid = 1
+					AND o.date_add BETWEEN '.ModuleGraph::getDateBetween()
+					.Shop::addSqlRestriction(Shop::SHARE_ORDER, 'o');
 		$orders = Db::getInstance()->getValue($sql);
 
-		$this->html .= '
-		<div class="row row-margin-bottom">
-			<h4><i class="icon-filter"></i> '.$this->l('Conversion').'</h4>
-		</div>
-		<div class="row row-margin-bottom">
-			<table class="table">
-				<tbody>
-					<tr>
-						<td rowspan="2" class="center" valign="middle">
-							<p>'.$this->l('Visitors').'</p>
-							<p>'.$visitors.'</p>
-						</td>
-						<td class="center">
-							<p><i class="icon-chevron-right"></i></p>
-							<p>'.round(100 * $customers / max(1, $visitors)).' %</p>
-						</td>
-						<td class="center">
-							<p>'.$this->l('Accounts').'</p>
-							<p>'.$customers.'</p>
-						</td>
-						<td class="center">
-							<p><i class="icon-chevron-right"></i></p>
-							<p>'.round(100 * $fullcarts / max(1, $customers)).' %</p>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.$this->l('Full carts').'</p>
-							<p>'.$fullcarts.'</p>
-						</td>
-						<td rowspan="2" class="center">
-							<p><i class="icon-chevron-right"></i></p>
-							<p>'.round(100 * $orders / max(1, $fullcarts)).' %</p>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.$this->l('Orders').'</p>
-							<p>'.$orders.'</p>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.$this->l('Registered visitors').'</p>
-						</td>
-						<td rowspan="2" class="center">
-							<i class="icon-chevron-right"></i>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.round(100 * $orders / max(1, $customers), 2).' %</p>
-						</td>
-						<td rowspan="2" class="center">
-							<i class="icon-chevron-right"></i>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.$this->l('Orders').'</p>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.$this->l('Visitors').'</p>
-						</td>
-						<td rowspan="2" class="center">
-							<i class="icon-chevron-right"></i>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.round(100 * $orders / max(1, $visitors), 2).' %</p>
-						</td>
-						<td rowspan="2" class="center">
-							<i class="icon-chevron-right"></i>
-						</td>
-						<td rowspan="2" class="center">
-							<p>'.$this->l('Orders').'</p>
-						</td>
-					</tr>
-					<tr>
-						<td class="center">
-							<p><i class="icon-chevron-right"></i></p>
-							<p>'.round(100 * $carts / max(1, $visitors)).' %</p>
-						</td>
-						<td class="center">
-							<p>'.$this->l('Carts').'</p>
-							<p>'.$carts.'</p>
-						</td>
-						<td class="center">
-							<p><i class="icon-chevron-right"></i></p>
-							<p>'.round(100 * $fullcarts / max(1, $carts)).' %</p>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<div class="alert alert-info">
-			<p>'.$this->l('A simple statistical calculation lets you know the monetary value of your visitors:').'</p>
-			<p>'.$this->l('On average, each visitor places an order for this amount:').' <b>'.Tools::displayPrice($ca['ventil']['total'] / max(1, $visitors), $currency).'.</b></p>
-			<p>'.$this->l('On average, each registered visitor places an order for this amount:').' <b>'.Tools::displayPrice($ca['ventil']['total'] / max(1, $customers), $currency).'</b>.</p>
+		$this->_html .= '<br />
+		<div class="blocStats"><h2 class="icon-conversion"><span></span>'.$this->l('Conversion').'</h2>
+		<br/>
+		
+		<div class="blocConversion">
+			<span style="float:left;text-align:center;margin-right:10px;padding-top:15px; width:100px;">'.$this->l('Visitors').'<br />'.$visitors.'</span>
+			<span style="float:left;text-align:center;margin-right:10px;">
+				<img src="../modules/'.$this->name.'/next.png"><br />'.round(100 * $customers / max(1, $visitors)).' %<br />
+				<img src="../modules/'.$this->name.'/next.png"><br />'.round(100 * $carts / max(1, $visitors)).' %
+			</span>
+			<span style="float:left;text-align:center;margin-right:10px">
+				'.$this->l('Accounts').'<br />'.$customers.'<br />
+				'.$this->l('Carts').'<br />'.$carts.'
+			</span>
+			<span style="float:left;text-align:center;margin-right:10px">
+				<img src="../modules/'.$this->name.'/next.png"><br />'.round(100 * $fullcarts / max(1, $customers)).' %<br />
+				<img src="../modules/'.$this->name.'/next.png"><br />'.round(100 * $fullcarts / max(1, $carts)).' %<br />
+			</span>
+			<span style="float:left;text-align:center;margin-right:10px;padding-top:15px">'.$this->l('Full carts').'<br />'.$fullcarts.'</span>
+			<span style="float:left;text-align:center;margin-right:10px;padding-top:15px"><img src="../modules/'.$this->name.'/next.png"><br />'.round(100 * $orders / max(1, $fullcarts)).' %</span>
+			<span style="float:left;text-align:center;margin-right:10px;padding-top:15px">'.$this->l('orders').'<br />'.$orders.'</span>
+			</div>
+			
+			<div class="separation"></div>
+			<div class="blocConversion">
+				<span style="float:left;text-align:center;margin-right:10px; width:100px;">'.$this->l('Registered visitors').'</span>
+				<span style="float:left;text-align:center;margin-right:10px">
+					<img src="../modules/'.$this->name.'/next.png"> '.round(100 * $orders / max(1, $customers), 2).' % <img src="../modules/'.$this->name.'/next.png">
+				</span>
+				<span style="float:left;text-align:center;margin-right:10px">'.$this->l('orders').'</span>
+			</div>
+			<div class="separation"></div>
+			<div class="blocConversion">
+				<span style="float:left;text-align:center;margin-right:10px; width:100px;">'.$this->l('Visitors').'</span>
+				<span style="float:left;text-align:center;margin-right:10px">
+					<img src="../modules/'.$this->name.'/next.png"> '.round(100 * $orders / max(1, $visitors), 2).' % <img src="../modules/'.$this->name.'/next.png">
+				</span>
+				<span style="float:left;text-align:center;margin-right:10px">'.$this->l('orders').'</span>
+			</div>
+			<div class="separation"></div>
+			<p>
+				'.$this->l('Turn your visitors into money:').'
+				<br />'.$this->l('Each visitor yields').' <b style="color:#000;">'.Tools::displayPrice($ca['ventil']['total'] / max(1, $visitors), $currency).'.</b>
+				<br />'.$this->l('Each registered visitor yields').' <b style="color:#000;">'.Tools::displayPrice($ca['ventil']['total'] / max(1, $customers), $currency).'</b>.
 			</p>
 		</div>';
 
 		$from = strtotime($employee->stats_date_from.' 00:00:00');
 		$to = strtotime($employee->stats_date_to.' 23:59:59');
 		$interval = ($to - $from) / 60 / 60 / 24;
+		$prop5000 = 5000 / 30 * $interval;
 
-		$this->html .= '
-			<div class="row row-margin-bottom">
-				<h4><i class="icon-money"></i> '.$this->l('Payment distribution').'</h4>
-				<div class="alert alert-info">'
-			.$this->l('The amounts include taxes, so you can get an estimation of the commission due to the payment method.').'
-				</div>
-				<form id="cat" action="'.$ru.'#payment" method="post" class="form-horizontal">
-					<div class="row row-margin-bottom">
-						<label class="control-label col-lg-3">
-							'.$this->l('Zone:').'
-						</label>
-						<div class="col-lg-3">
-							<input type="hidden" name="submitIdZone" value="1" />
-							<select name="stats_id_zone" onchange="this.form.submit();">
-								<option value="0">'.$this->l('-- No filter --').'</option>';
+		$this->_html .= '
+		<br />';
+		$this->_html .= '
+		<div class="blocStats">
+			<h2 class="icon-payment"><span></span>'.$this->l('Payment distribution').'</h2>
+			<p>'.$this->l('The amounts are <b>with</b> taxes, so you can get an estimation of the commission due to the payment method.').'</p>
+			<form id="cat" action="'.$ru.'#payment" method="post" >
+				<input type="hidden" name="submitIdZone" value="1" />
+				'.$this->l('Zone:').' <select name="stats_id_zone" onchange="this.form.submit();">
+					<option value="0">'.$this->l('-- No filter --').'</option>';
 		foreach (Zone::getZones() as $zone)
-			$this->html .= '<option value="'.(int)$zone['id_zone'].'" '.($this->context->cookie->stats_id_zone == $zone['id_zone'] ? 'selected="selected"' : '').'>'.$zone['name'].'</option>';
-		$this->html .= '
-							</select>
-						</div>
-					</div>
-				</form>
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="center"><span class="title_box active">'.$this->l('Module').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Orders').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Sales').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Average cart value').'</span></th>
-						</tr>
-					</thead>
-					<tbody>';
-		foreach ($ca['payment'] as $payment)
-			$this->html .= '
-						<tr>
-							<td class="center">'.$payment['payment_method'].'</td>
-							<td class="center">'.(int)$payment['nb'].'</td>
-							<td align="right">'.Tools::displayPrice($payment['total'], $currency).'</td>
-							<td align="right">'.Tools::displayPrice($payment['cart'], $currency).'</td>
-						</tr>';
-		$this->html .= '
-					</tbody>
-				</table>
-			</div>
-			<div class="row row-margin-bottom">
-				<h4><i class="icon-sitemap"></i> '.$this->l('Category distribution').'</h4>
-				<form id="cat" action="'.$ru.'#cat" method="post" class="form-horizontal">
-					<div class="row row-margin-bottom">
-						<label class="control-label col-lg-3">
-							'.$this->l('Zone').'
-						</label>
-						<div class="col-lg-3">
-							<input type="hidden" name="submitIdZone" value="1" />
-							<select name="stats_id_zone" onchange="this.form.submit();">
-								<option value="0">'.$this->l('-- No filter --').'</option>';
+			$this->_html .= '<option value="'.(int)$zone['id_zone'].'" '.($this->context->cookie->stats_id_zone == $zone['id_zone'] ? 'selected="selected"' : '').'>'.$zone['name'].'</option>';
+		$this->_html .= '</select>
+			</form>
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr><th>'.$this->l('Module').'</th><th>'.$this->l('Count').'</th><th>'.$this->l('Total').'</th><th>'.$this->l('Cart').'</th></tr>';
+			foreach ($ca['payment'] as $payment)
+				$this->_html .= '
+					<tr>
+						<td>'.$payment['payment_method'].'</td>
+						<td style="text-align:center;padding:4px">'.(int)$payment['nb'].'</td>
+						<td style="text-align:center;padding:4px">'.Tools::displayPrice($payment['total'], $currency).'</td>
+						<td style="text-align:center;padding:4px">'.Tools::displayPrice($payment['cart'], $currency).'</td>
+					</tr>';
+			$this->_html .= '
+			</table>
+		</div>
+		<br />
+		<div class="blocStats"><h2 class="icon-category"><span></span>'.$this->l('Category distribution').'</h2>
+			<form id="cat" action="'.$ru.'#cat" method="post" >
+				<input type="hidden" name="submitIdZone" value="1" />
+				'.$this->l('Zone:').' <select name="stats_id_zone" onchange="this.form.submit();">
+					<option value="0">'.$this->l('-- No filter --').'</option>';
 		foreach (Zone::getZones() as $zone)
-			$this->html .= '<option value="'.(int)$zone['id_zone'].'" '.($this->context->cookie->stats_id_zone == $zone['id_zone'] ? 'selected="selected"' : '').'>'.$zone['name'].'</option>';
-		$this->html .= '
-							</select>
-						</div>
-					</div>
-				</form>
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="center"><span class="title_box active">'.$this->l('Category').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Products sold').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Sales').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage of products sold').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage of sales').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Average price').'</span></th>
-						</tr>
-					</thead>
-					<tbody>';
-		foreach ($ca['cat'] as $catrow)
-			$this->html .= '
-						<tr>
-							<td class="center">'.(empty($catrow['name']) ? $this->l('Unknown') : $catrow['name']).'</td>
-							<td class="center">'.$catrow['orderQty'].'</td>
-							<td align="right">'.Tools::displayPrice($catrow['orderSum'], $currency).'</td>
-							<td class="center">'.number_format((100 * $catrow['orderQty'] / $this->t4), 1, '.', ' ').'%</td>
-							<td class="center">'.((int)$ca['ventil']['total'] ? number_format((100 * $catrow['orderSum'] / $ca['ventil']['total']), 1, '.', ' ') : '0').'%</td>
-							<td align="right">'.Tools::displayPrice($catrow['priveAvg'], $currency).'</td>
-						</tr>';
-		$this->html .= '
-					</tbody>
-				</table>
-			</div>
-			<div class="row row-margin-bottom">
-				<h4><i class="icon-flag"></i> '.$this->l('Language distribution').'</h4>
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="center"><span class="title_box active">'.$this->l('Language').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Sales').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage').'</span></th>
-							<th class="center" colspan="2"><span class="title_box active">'.$this->l('Growth').'</span></th>
-						</tr>
-					</thead>
-					<tbody>';
+			$this->_html .= '<option value="'.(int)$zone['id_zone'].'" '.($this->context->cookie->stats_id_zone == $zone['id_zone'] ? 'selected="selected"' : '').'>'.$zone['name'].'</option>';
+		$this->_html .= '	</select>
+			</form>
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr><th style="width:50px">'.$this->l('Category').'</th><th>'.$this->l('Count').'</th><th>'.$this->l('Sales').'</th><th>'.$this->l('% Count').'</th><th>'.$this->l('% Sales').'</th><th>'.$this->l('Avgerage price').'</th></tr>';
+			foreach ($ca['cat'] as $catrow)
+				$this->_html .= '
+				<tr>
+					<td>'.(empty($catrow['name']) ? $this->l('Unknown') : $catrow['name']).'</td>
+					<td align="right">'.$catrow['orderQty'].'</td>
+					<td align="right">'.Tools::displayPrice($catrow['orderSum'], $currency).'</td>
+					<td align="right">'.number_format((100 * $catrow['orderQty'] / $this->t4), 1, '.', ' ').'%</td>
+					<td align="right">'.((int)$ca['ventil']['total'] ? number_format((100 * $catrow['orderSum'] / $ca['ventil']['total']), 1, '.', ' ') : '0').'%</td>
+					<td align="right">'.Tools::displayPrice($catrow['priveAvg'], $currency).'</td>
+				</tr>';
+			$this->_html .= '
+			</table>
+		</div>
+		<br />
+		<div class="blocStats"><h2 class="icon-language"><span></span>'.$this->l('Language distribution').'</h2>
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr><th>'.$this->l('customers').'</th><th>'.$this->l('Sales').'</th><th>'.$this->l('%').'</th><th colspan="2">'.$this->l('Growth').'</th></tr>';
 		foreach ($ca['lang'] as $ophone => $amount)
 		{
 			$percent = (int)($ca['langprev'][$ophone]) ? number_format((100 * $amount / $ca['langprev'][$ophone]) - 100, 1, '.', ' ') : '&#x221e;';
-			$this->html .= '
-					<tr '.(($percent < 0) ? 'class="alt_row"' : '').'>
-						<td class="center">'.$ophone.'</td>
-						<td align="right">'.Tools::displayPrice($amount, $currency).'</td>
-						<td class="center">'.((int)$ca['ventil']['total'] ? number_format((100 * $amount / $ca['ventil']['total']), 1, '.', ' ').'%' : '-').'</td>
-						<td class="center">'.(($percent > 0 || $percent == '&#x221e;') ? '<img src="../img/admin/arrow_up.png" />' : '<img src="../img/admin/arrow_down.png" /> ').'</td>
-						<td class="center">'.(($percent > 0 || $percent == '&#x221e;') ? '+' : '').$percent.'%</td>
-					</tr>';
+			$this->_html .= '
+				<tr '.(($percent < 0) ? 'class="alt_row"' : '').'>
+					<td>'.$ophone.'</td>
+					<td align="right">'.Tools::displayPrice($amount, $currency).'</td>
+					<td align="right">'.((int)$ca['ventil']['total'] ? number_format((100 * $amount / $ca['ventil']['total']), 1, '.', ' ').'%' : '-').'</td>
+					<td>'.(($percent > 0 OR $percent == '&#x221e;') ? '<img src="../img/admin/arrow_up.png" />' : '<img src="../img/admin/arrow_down.png" /> ').'</td>
+					<td align="right">'.(($percent > 0 OR $percent == '&#x221e;') ? '+' : '').$percent.'%</td>
+				</tr>';
 		}
-		$this->html .= '
-					</tbody>
-				</table>
-			</div>
-			<div class="row row-margin-bottom">
-				<h4><i class="icon-map-marker"></i> '.$this->l('Zone distribution').'</h4>
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="center"><span class="title_box active">'.$this->l('Zone').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Orders').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Sales').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage of orders').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage of sales').'</span></th>
-						</tr>
-					</thead>
-					<tbody>';
+		$this->_html .= '
+			</table>
+		</div>
+		<br />
+		<div class="blocStats"><h2 class="icon-'.$this->name.'"><span></span>'.$this->l('Zone distribution').'</h2>
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr><th>'.$this->l('Zone').'</th><th>'.$this->l('Count').'</th><th>'.$this->l('Total').'</th><th>'.$this->l('% Count').'</th><th>'.$this->l('% Sales').'</th></tr>';
 		foreach ($ca['zones'] as $zone)
-			$this->html .= '
-					<tr>
-						<td class="center">'.(isset($zone['name']) ? $zone['name'] : $this->l('Undefined')).'</td>
-						<td class="center">'.(int)($zone['nb']).'</td>
-						<td align="right">'.Tools::displayPrice($zone['total'], $currency).'</td>
-						<td class="center">'.($ca['ventil']['nb'] ? number_format((100 * $zone['nb'] / $ca['ventil']['nb']), 1, '.', ' ') : '0').'%</td>
-						<td class="center">'.((int)$ca['ventil']['total'] ? number_format((100 * $zone['total'] / $ca['ventil']['total']), 1, '.', ' ') : '0').'%</td>
-					</tr>';
-		$this->html .= '
-					</tbody>
-				</table>
-			</div>
-			<div class="row row-margin-bottom">
-				<h4><i class="icon-money"></i> '.$this->l('Currency distribution').'</h4>
-				<form id="cat" action="'.$ru.'#currencies" method="post" class="form-horizontal">
-					<div class="row row-margin-bottom">
-						<label class="control-label col-lg-3">
-							'.$this->l('Zone:').'
-						</label>
-						<div class="col-lg-3">
-							<input type="hidden" name="submitIdZone" value="1" />
-							<select name="stats_id_zone" onchange="this.form.submit();">
-								<option value="0">'.$this->l('-- No filter --').'</option>';
+			$this->_html .= '
+				<tr>
+					<td>'.(isset($zone['name']) ? $zone['name'] : $this->l('Undefined')).'</td>
+					<td align="right">'.(int)($zone['nb']).'</td>
+					<td align="right">'.Tools::displayPrice($zone['total'], $currency).'</td>
+					<td align="right">'.($ca['ventil']['nb'] ? number_format((100 * $zone['nb'] / $ca['ventil']['nb']), 1, '.', ' ') : '0').'%</td>
+					<td align="right">'.((int)$ca['ventil']['total'] ? number_format((100 * $zone['total'] / $ca['ventil']['total']), 1, '.', ' ') : '0').'%</td>
+				</tr>';
+		$this->_html .= '
+			</table>
+		</div>
+		<br />
+		<div class="blocStats"><h2 class="icon-currency"><span></span>'.$this->l('Currency distribution').'</h2>
+			<form id="cat" action="'.$ru.'#currencies" method="post" >
+				<input type="hidden" name="submitIdZone" value="1" />
+				'.$this->l('Zone:').' <select name="stats_id_zone" onchange="this.form.submit();">
+					<option value="0">'.$this->l('-- No filter --').'</option>';
 		foreach (Zone::getZones() as $zone)
-			$this->html .= '<option value="'.(int)$zone['id_zone'].'" '.($this->context->cookie->stats_id_zone == $zone['id_zone'] ? 'selected="selected"' : '').'>'.$zone['name'].'</option>';
-		$this->html .= '
-							</select>
-						</div>
-					</div>
-				</form>
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="center"><span class="title_box active">'.$this->l('Currency').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Orders').'</span></th>
-							<th align="right"><span class="title_box active">'.$this->l('Sales (converted)').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage of orders').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Percentage of sales').'</span></th>
-						</tr>
-					</thead>
-					<tbody>';
-		foreach ($ca['currencies'] as $currency_row)
-			$this->html .= '
-						<tr>
-							<td class="center">'.$currency_row['name'].'</td>
-							<td class="center">'.(int)($currency_row['nb']).'</td>
-							<td align="right">'.Tools::displayPrice($currency_row['total'], $currency).'</td>
-							<td class="center">'.($ca['ventil']['nb'] ? number_format((100 * $currency_row['nb'] / $ca['ventil']['nb']), 1, '.', ' ') : '0').'%</td>
-							<td class="center">'.((int)$ca['ventil']['total'] ? number_format((100 * $currency_row['total'] / $ca['ventil']['total']), 1, '.', ' ') : '0').'%</td>
-						</tr>';
-		$this->html .= '
-					</tbody>
-				</table>
-			</div>
-			<div class="row row-margin-bottom">
-				<h4><i class="icon-ticket"></i> '.$this->l('Attribute distribution').'</h4>
-				<table class="table">
-					<thead>
-						<tr>
-							<th class="center"><span class="title_box active">'.$this->l('Group').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Attribute').'</span></th>
-							<th class="center"><span class="title_box active">'.$this->l('Quantity of products sold').'</span></th>
-						</tr>
-					</thead>
-					<tbody>';
+			$this->_html .= '<option value="'.(int)$zone['id_zone'].'" '.($this->context->cookie->stats_id_zone == $zone['id_zone'] ? 'selected="selected"' : '').'>'.$zone['name'].'</option>';
+		$this->_html .= '</select>
+			</form>
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr><th>'.$this->l('Currency').'</th><th>'.$this->l('Count').'</th><th>'.$this->l('Sales (converted)').'</th><th>'.$this->l('% Count').'</th><th>'.$this->l('% Sales').'</th></tr>';
+			foreach ($ca['currencies'] as $currencyRow)
+				$this->_html .= '
+					<tr>
+						<td>'.$currencyRow['name'].'</td>
+						<td align="right">'.(int)($currencyRow['nb']).'</td>
+						<td align="right">'.Tools::displayPrice($currencyRow['total'], $currency).'</td>
+						<td align="right">'.($ca['ventil']['nb'] ? number_format((100 * $currencyRow['nb'] / $ca['ventil']['nb']), 1, '.', ' ') : '0').'%</td>
+						<td align="right">'.((int)$ca['ventil']['total'] ? number_format((100 * $currencyRow['total'] / $ca['ventil']['total']), 1, '.', ' ') : '0').'%</td>
+					</tr>';
+			$this->_html .= '
+			</table>
+		</div>
+		<br />
+		<div class="blocStats"><h2 class="icon-attribute"><span></span>'.$this->l('Attribute distribution').'</h2>
+			<table class="table" border="0" cellspacing="0" cellspacing="0">
+				<tr><th>'.$this->l('Group').'</th><th>'.$this->l('Attribute').'</th><th>'.$this->l('Count').'</th></tr>';
 		foreach ($ca['attributes'] as $attribut)
-			$this->html .= '
-						<tr>
-							<td class="center">'.$attribut['gname'].'</td>
-							<td class="center">'.$attribut['aname'].'</td>
-							<td class="center">'.(int)($attribut['total']).'</td>
-						</tr>';
-		$this->html .= '
-					</tbody>
-				</table>
-			</div>';
+			$this->_html .= '
+				<tr>
+					<td>'.$attribut['gname'].'</td>
+					<td>'.$attribut['aname'].'</td>
+					<td align="right">'.(int)($attribut['total']).'</td>
+				</tr>';
+		$this->_html .= '</table>
+		</div>
+		</div>';
 
-		return $this->html;
+		return $this->_html;
 	}
 
 	private function getRealCA()
@@ -598,13 +466,13 @@ class StatsForecast extends Module
 		$where = $join = '';
 		if ((int)$this->context->cookie->stats_id_zone)
 		{
-			$join = ' LEFT JOIN `'._DB_PREFIX_.'address` a ON o.id_address_invoice = a.id_address LEFT JOIN `'._DB_PREFIX_.'country` co ON co.id_country = a.id_country';
+			$join =  ' LEFT JOIN `'._DB_PREFIX_.'address` a ON o.id_address_invoice = a.id_address LEFT JOIN `'._DB_PREFIX_.'country` co ON co.id_country = a.id_country';
 			$where = ' AND co.id_zone = '.(int)$this->context->cookie->stats_id_zone.' ';
 		}
 
-		$sql = 'SELECT SUM(od.`product_price` * od.`product_quantity` / o.conversion_rate) as orderSum, SUM(od.product_quantity) as orderQty, cl.name, AVG(od.`product_price` / o.conversion_rate) as priveAvg
+		$sql = 'SELECT SUM(od.`product_price` * od.`product_quantity` / o.conversion_rate) as orderSum, COUNT(*) AS orderQty, cl.name, AVG(od.`product_price` / o.conversion_rate) as priveAvg
 				FROM `'._DB_PREFIX_.'orders` o
-				STRAIGHT_JOIN `'._DB_PREFIX_.'order_detail` od ON o.id_order = od.id_order
+				LEFT JOIN `'._DB_PREFIX_.'order_detail` od ON o.id_order = od.id_order
 				LEFT JOIN `'._DB_PREFIX_.'product` p ON p.id_product = od.product_id
 				'.Shop::addSqlAssociation('product', 'p').'
 				LEFT JOIN `'._DB_PREFIX_.'category_lang` cl ON (product_shop.id_category_default = cl.id_category AND cl.id_lang = '.(int)$this->context->language->id.Shop::addSqlRestrictionOnLang('cl').')
@@ -617,19 +485,19 @@ class StatsForecast extends Module
 		$ca['cat'] = Db::getInstance()->executeS($sql);
 		uasort($ca['cat'], 'statsforecast_sort');
 
-		$lang_values = '';
+		$langValues = '';
 		$sql = 'SELECT l.id_lang, l.iso_code
 				FROM `'._DB_PREFIX_.'lang` l
 				'.Shop::addSqlAssociation('lang', 'l').'
 				WHERE l.active = 1';
 		$languages = Db::getInstance()->executeS($sql);
 		foreach ($languages as $language)
-			$lang_values .= 'SUM(IF(o.id_lang = '.(int)$language['id_lang'].', total_paid_tax_excl / o.conversion_rate, 0)) as '.pSQL($language['iso_code']).',';
-		$lang_values = rtrim($lang_values, ',');
+			$langValues .= 'SUM(IF(o.id_lang = '.(int)$language['id_lang'].', total_paid_tax_excl / o.conversion_rate, 0)) as '.pSQL($language['iso_code']).',';
+		$langValues = rtrim($langValues, ',');
 
-		if ($lang_values)
+		if ($langValues)
 		{
-			$sql = 'SELECT '.$lang_values.'
+			$sql = 'SELECT '.$langValues.'
 					FROM `'._DB_PREFIX_.'orders` o
 					WHERE o.valid = 1
 					AND o.`invoice_date` BETWEEN '.ModuleGraph::getDateBetween().'
@@ -637,7 +505,7 @@ class StatsForecast extends Module
 			$ca['lang'] = Db::getInstance()->getRow($sql);
 			arsort($ca['lang']);
 
-			$sql = 'SELECT '.$lang_values.'
+			$sql = 'SELECT '.$langValues.'
 					FROM `'._DB_PREFIX_.'orders` o
 					WHERE o.valid = 1
 						AND ADDDATE(o.`invoice_date`, interval 30 day) BETWEEN \''.$employee->stats_date_from.' 00:00:00\' AND \''.min(date('Y-m-d H:i:s'), $employee->stats_date_to.' 23:59:59').'\'
@@ -714,6 +582,5 @@ function statsforecast_sort($a, $b)
 {
 	if ($a['orderSum'] == $b['orderSum'])
 		return 0;
-
 	return ($a['orderSum'] > $b['orderSum']) ? -1 : 1;
 }

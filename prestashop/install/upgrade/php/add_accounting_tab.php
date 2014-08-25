@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,14 +19,13 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 function add_accounting_tab()
 {
-	include_once(_PS_INSTALL_PATH_.'upgrade/php/add_new_tab.php');
 	$id_parent = add_new_tab(
 		'AdminAccounting', 
 		'en:Accounting|fr:Comptabilité|es:Accounting|de:Accounting|it:Accounting', 

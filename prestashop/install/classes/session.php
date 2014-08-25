@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -30,8 +30,6 @@
 class InstallSession
 {
 	protected static $_instance;
-	protected static $_cookie_mode = false;
-	protected static $_cookie = false;
 
 	public static function getInstance()
 	{
@@ -42,78 +40,40 @@ class InstallSession
 
 	public function __construct()
 	{
-		session_name('install_'.md5($_SERVER['HTTP_HOST']));
-		$session_started = session_start();
-		if (!($session_started)
-		|| (!isset($_SESSION['session_mode']) && (isset($_GET['_']) || isset($_POST['submitNext']) || isset($_POST['submitPrevious']) || isset($_POST['language']))))
-		{
-			InstallSession::$_cookie_mode = true;
-			InstallSession::$_cookie = new Cookie('ps_install', null, time() + 7200, null, true);
-		}
-		if ($session_started && !isset($_SESSION['session_mode']))
-		{
-			$_SESSION['session_mode'] = 'session';
-			session_write_close();
-		}
+		session_name('install_'.md5(__PS_BASE_URI__));
+		session_start();
 	}
 
 	public function clean()
 	{
-		if (InstallSession::$_cookie_mode)
-			InstallSession::$_cookie->logout();
-		else
-			foreach ($_SESSION as $k => $v)
-				unset($_SESSION[$k]);
+		foreach ($_SESSION as $k => $v)
+			unset($_SESSION[$k]);
 	}
 
 	public function &__get($varname)
 	{
-		if (InstallSession::$_cookie_mode)
-		{
-			$ref = InstallSession::$_cookie->{$varname};
-			if (0 === strncmp($ref, 'serialized_array:', strlen('serialized_array:')))
-				$ref = unserialize(substr($ref, strlen('serialized_array:')));
-		}
+		if (isset($_SESSION[$varname]))
+			$ref = &$_SESSION[$varname];
 		else
 		{
-			if (isset($_SESSION[$varname]))
-				$ref = &$_SESSION[$varname];
-			else
-			{
-				$null = null;
-				$ref = &$null;
-			}
+			$null = null;
+			$ref = &$null;
 		}
 		return $ref;
 	}
 
 	public function __set($varname, $value)
 	{
-		if (InstallSession::$_cookie_mode)
-		{
-			if ($varname == 'xml_loader_ids')
-				return;
-			if (is_array($value))
-				$value = 'serialized_array:'.serialize($value);
-			InstallSession::$_cookie->{$varname} = $value;
-		}
-		else
-			$_SESSION[$varname] = $value;
+		$_SESSION[$varname] = $value;
 	}
 
 	public function __isset($varname)
 	{
-		if (InstallSession::$_cookie_mode)
-			return isset(InstallSession::$_cookie->{$varname});
-		else
-			return isset($_SESSION[$varname]);
+		return isset($_SESSION[$varname]);
 	}
 
 	public function __unset($varname)
 	{
-		if (InstallSession::$_cookie_mode)
-			unset(InstallSession::$_cookie->{$varname});
-		else
-			unset($_SESSION[$varname]);
+		unset($_SESSION[$varname]);
 	}
 }

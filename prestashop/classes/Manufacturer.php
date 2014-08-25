@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -78,8 +78,8 @@ class ManufacturerCore extends ObjectModel
 			'date_upd' => 			array('type' => self::TYPE_DATE),
 
 			// Lang fields
-			'description' => 		array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml'),
-			'short_description' => 	array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml'),
+			'description' => 		array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isString'),
+			'short_description' => 	array('type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isString', 'size' => 254),
 			'meta_title' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 128),
 			'meta_description' => 	array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 255),
 			'meta_keywords' => 		array('type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName'),
@@ -92,7 +92,7 @@ class ManufacturerCore extends ObjectModel
 			'link_rewrite' => array('getter' => 'getLink', 'setter' => false),
 		),
 		'associations' => array(
-			'addresses' => array('resource' => 'addresses', 'setter' => false, 'fields' => array(
+			'addresses' => array('resource' => 'address', 'setter' => false, 'fields' => array(
 				'id' => array('xlink_resource' => 'addresses'),
 			)),
 		),
@@ -153,29 +153,30 @@ class ManufacturerCore extends ObjectModel
 	  * Return manufacturers
 	  *
 	  * @param boolean $get_nb_products [optional] return products numbers for each
-	  * @param int $id_lang
-	  * @param bool $active
-	  * @param int $p
-	  * @param int $n
-	  * @param bool $all_group
 	  * @return array Manufacturers
 	  */
-	public static function getManufacturers($get_nb_products = false, $id_lang = 0, $active = true, $p = false, $n = false, $all_group = false, $group_by = false)
+	public static function getManufacturers($get_nb_products = false, $id_lang = 0, $active = true, $p = false,
+		$n = false, $all_group = false)
 	{
 		if (!$id_lang)
 			$id_lang = (int)Configuration::get('PS_LANG_DEFAULT');
-		if (!Group::isFeatureActive())
-			$all_group = true;
 
-		$manufacturers = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
-		SELECT m.*, ml.`description`, ml.`short_description`
-		FROM `'._DB_PREFIX_.'manufacturer` m
-		'.Shop::addSqlAssociation('manufacturer', 'm').'
-		INNER JOIN `'._DB_PREFIX_.'manufacturer_lang` ml ON (m.`id_manufacturer` = ml.`id_manufacturer` AND ml.`id_lang` = '.(int)$id_lang.')
-		'.($active ? 'WHERE m.`active` = 1' : '')
-		.($group_by ? ' GROUP BY m.`id_manufacturer`' : '' ).'
-		ORDER BY m.`name` ASC
-		'.($p ? ' LIMIT '.(((int)$p - 1) * (int)$n).','.(int)$n : ''));
+		$sql = 'SELECT m.*, ml.`description`, ml.`short_description`
+			FROM `'._DB_PREFIX_.'manufacturer` m
+			LEFT JOIN `'._DB_PREFIX_.'manufacturer_lang` ml ON (
+				m.`id_manufacturer` = ml.`id_manufacturer`
+				AND ml.`id_lang` = '.(int)$id_lang.'
+			)
+			'.Shop::addSqlAssociation('manufacturer', 'm');
+			if ($active)
+				$sql .= '
+			WHERE m.`active` = 1';
+			$sql .= '
+			GROUP BY m.id_manufacturer
+			ORDER BY m.`name` ASC'.
+			($p ? ' LIMIT '.(((int)$p - 1) * (int)$n).','.(int)$n : '');
+
+		$manufacturers = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
 		if ($manufacturers === false)
 			return false;
 
@@ -190,26 +191,34 @@ class ManufacturerCore extends ObjectModel
 
 			foreach ($manufacturers as $key => $manufacturer)
 			{
-				$manufacturers[$key]['nb_products'] = Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue('
-				SELECT COUNT(DISTINCT p.`id_product`)
-				FROM `'._DB_PREFIX_.'product` p
-				'.Shop::addSqlAssociation('product', 'p').'
-				WHERE p.`id_manufacturer` = '.(int)$manufacturer['id_manufacturer'].'
-				AND product_shop.`visibility` NOT IN ("none")
-				'.($active ? ' AND product_shop.`active` = 1 ' : '').'
-				'.($all_group ? '' : ' AND p.`id_product` IN (
-					SELECT cp.`id_product`
-					FROM `'._DB_PREFIX_.'category_group` cg
-					LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)
-					WHERE cg.`id_group` '.$sql_groups.'
-				)'));
+				$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS(
+					'SELECT p.`id_product`
+					FROM `'._DB_PREFIX_.'product` p
+					'.Shop::addSqlAssociation('product', 'p').'
+					LEFT JOIN `'._DB_PREFIX_.'manufacturer` as m ON (m.`id_manufacturer`= p.`id_manufacturer`)
+					WHERE m.`id_manufacturer` = '.(int)$manufacturer['id_manufacturer'].
+					($active ? ' AND product_shop.`active` = 1 ' : '').
+					($all_group ? '' : ' AND p.`id_product` IN (
+						SELECT cp.`id_product`
+						FROM `'._DB_PREFIX_.'category_group` cg
+						LEFT JOIN `'._DB_PREFIX_.'category_product` cp ON (cp.`id_category` = cg.`id_category`)
+						WHERE cg.`id_group` '.$sql_groups.'
+					)')
+				);
+
+				$manufacturers[$key]['nb_products'] = count($result);
 			}
 		}
 
 		$total_manufacturers = count($manufacturers);
 		$rewrite_settings = (int)Configuration::get('PS_REWRITING_SETTINGS');
+
 		for ($i = 0; $i < $total_manufacturers; $i++)
-			$manufacturers[$i]['link_rewrite'] = ($rewrite_settings ? Tools::link_rewrite($manufacturers[$i]['name']) : 0);
+			if ($rewrite_settings)
+				$manufacturers[$i]['link_rewrite'] = Tools::link_rewrite($manufacturers[$i]['name'], false);
+			else
+				$manufacturers[$i]['link_rewrite'] = 0;
+
 		return $manufacturers;
 	}
 
@@ -249,7 +258,7 @@ class ManufacturerCore extends ObjectModel
 
 	public function getLink()
 	{
-		return Tools::link_rewrite($this->name);
+		return Tools::link_rewrite($this->name, false);
 	}
 
 	public static function getProducts($id_manufacturer, $id_lang, $p, $n, $order_by = null, $order_way = null,
@@ -318,7 +327,7 @@ class ManufacturerCore extends ObjectModel
 			$alias = 'p.';
 		$sql = 'SELECT p.*, product_shop.*, stock.out_of_stock, IFNULL(stock.quantity, 0) as quantity, MAX(product_attribute_shop.`id_product_attribute`) id_product_attribute,
 					pl.`description`, pl.`description_short`, pl.`link_rewrite`, pl.`meta_description`, pl.`meta_keywords`,
-					pl.`meta_title`, pl.`name`, pl.`available_now`, pl.`available_later`, MAX(image_shop.`id_image`) id_image, il.`legend`, m.`name` AS manufacturer_name,
+					pl.`meta_title`, pl.`name`, MAX(image_shop.`id_image`) id_image, il.`legend`, m.`name` AS manufacturer_name,
 					DATEDIFF(
 						product_shop.`date_add`,
 						DATE_SUB(
@@ -330,7 +339,7 @@ class ManufacturerCore extends ObjectModel
 				'.Shop::addSqlAssociation('product', 'p').'
 				LEFT JOIN `'._DB_PREFIX_.'product_attribute` pa
 					ON (p.`id_product` = pa.`id_product`)
-				'.Shop::addSqlAssociation('product_attribute', 'pa', false, 'product_attribute_shop.`default_on` = 1').'
+				'.Shop::addSqlAssociation('product_attribute', 'pa', false).'
 				LEFT JOIN `'._DB_PREFIX_.'product_lang` pl
 					ON (p.`id_product` = pl.`id_product` AND pl.`id_lang` = '.(int)$id_lang.Shop::addSqlRestrictionOnLang('pl').')
 				LEFT JOIN `'._DB_PREFIX_.'image` i

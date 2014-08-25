@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -33,7 +33,7 @@ class BlockUserInfo extends Module
 	{
 		$this->name = 'blockuserinfo';
 		$this->tab = 'front_office_features';
-		$this->version = '0.3.1';
+		$this->version = 0.1;
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -41,12 +41,11 @@ class BlockUserInfo extends Module
 
 		$this->displayName = $this->l('User info block');
 		$this->description = $this->l('Adds a block that displays information about the customer.');
-		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
 	}
 
 	public function install()
 	{
-		return (parent::install() && $this->registerHook('displayTop') && $this->registerHook('displayNav') && $this->registerHook('displayHeader'));
+		return (parent::install() AND $this->registerHook('top') AND $this->registerHook('header'));
 	}
 
 	/**
@@ -55,7 +54,7 @@ class BlockUserInfo extends Module
 	* @param array $params Parameters
 	* @return string Content
 	*/
-	public function hookDisplayTop($params)
+	public function hookTop($params)
 	{
 		if (!$this->active)
 			return;
@@ -72,13 +71,10 @@ class BlockUserInfo extends Module
 		return $this->display(__FILE__, 'blockuserinfo.tpl');
 	}
 
-	public function hookDisplayHeader($params)
+	public function hookHeader($params)
 	{
 		$this->context->controller->addCSS(($this->_path).'blockuserinfo.css', 'all');
 	}
-
-	public function hookDisplayNav($params)
-	{
-		return $this->display(__FILE__, 'nav.tpl');
-	}
 }
+
+

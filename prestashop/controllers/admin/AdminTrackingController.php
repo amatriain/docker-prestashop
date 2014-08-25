@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2013 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,16 +19,15 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2013 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
 class AdminTrackingControllerCore extends AdminController
 {
-	public $bootstrap = true ;
 	protected $_helper_list;
-
+	
 	public function postprocess()
 	{
 		if (Tools::getValue('id_product') && Tools::isSubmit('statusproduct'))
@@ -53,17 +52,11 @@ class AdminTrackingControllerCore extends AdminController
 
 	public function initContent()
 	{
-		$this->initTabModuleList();
-		$this->initPageHeaderToolbar();
-
-		if ($id_category = Tools::getValue('id_category') && Tools::getIsset('viewcategory'))
-			Tools::redirectAdmin($this->context->link->getAdminLink('AdminProducts').'&id_category='.(int)$id_category.'&viewcategory');
-
 		$this->_helper_list = new HelperList();
-
+		
 		if (!Configuration::get('PS_STOCK_MANAGEMENT'))
 			$this->warnings[] = $this->l('List of products without available quantities for sale are not displayed because stock management is disabled.');
-
+		
 		$methods = get_class_methods($this);
 		$tpl_vars['arrayList'] = array();
 		foreach ($methods as $method_name)
@@ -75,16 +68,12 @@ class AdminTrackingControllerCore extends AdminController
 		$this->context->smarty->assign(array(
 			'content' => $this->content,
 			'url_post' => self::$currentIndex.'&token='.$this->token,
-			'show_page_header_toolbar' => $this->show_page_header_toolbar,
-			'page_header_toolbar_title' => $this->page_header_toolbar_title,
-			'page_header_toolbar_btn' => $this->page_header_toolbar_btn
 		));
 	}
 
 	public function getCustomListCategoriesEmpty()
 	{
 		$this->table = 'category';
-		$this->list_id = 'empty_categories';
 		$this->lang = true;
 		$this->className = 'Category';
 		$this->identifier = 'id_category';
@@ -94,26 +83,30 @@ class AdminTrackingControllerCore extends AdminController
 		$this->_list_token = Tools::getAdminTokenLite('AdminCategories');
 
 		$this->addRowAction('edit');
-		$this->addRowAction('view');
 		$this->addRowAction('delete');
+		$this->addRowAction('view');
 		$this->addRowActionSkipList('delete', array(Category::getTopCategory()->id));
 		$this->addRowActionSkipList('edit', array(Category::getTopCategory()->id));
 
 		$this->fields_list = (array(
-			'id_category' => array('title' => $this->l('ID'), 'class' => 'fixed-width-xs', 'align' => 'center'),
+			'id_category' => array('title' => $this->l('ID'), 'width' => 50),
 			'name' => array('title' => $this->l('Name'), 'filter_key' => 'b!name'),
-			'description' => array('title' => $this->l('Description'), 'callback' => 'getDescriptionClean'),
-			'active' => array('title' => $this->l('Status'), 'type' => 'bool', 'active' => 'status', 'align' => 'center', 'class' => 'fixed-width-xs')
+			'description' => array('title' => $this->l('Description')),
+			'active' => array('title' => $this->l('Status'), 'type' => 'bool', 'active' => 'status', 'width' => 50)
 		));
 		$this->clearFilters();
-
+		
 		$this->_join = Shop::addSqlAssociation('category', 'a');
 		$this->_filter = ' AND a.`id_category` NOT IN (
 			SELECT DISTINCT(cp.id_category)
 			FROM `'._DB_PREFIX_.'category_product` cp
 		)
 		AND a.`id_category` != '.(int)Category::getTopCategory()->id;
-		$this->toolbar_title = $this->l('List of empty categories:');
+
+		$this->tpl_list_vars = array('sub_title' => $this->l('List of empty categories:'));
+
+		
+
 		return $this->renderList();
 	}
 
@@ -121,9 +114,8 @@ class AdminTrackingControllerCore extends AdminController
 	{
 		if (!Configuration::get('PS_STOCK_MANAGEMENT'))
 			return;
-
+		
 		$this->table = 'product';
-		$this->list_id = 'no_stock_products_attributes';
 		$this->lang = true;
 		$this->identifier = 'id_product';
 		$this->_orderBy = 'id_product';
@@ -137,14 +129,14 @@ class AdminTrackingControllerCore extends AdminController
 		$this->addRowAction('delete');
 
 		$this->fields_list = array(
-			'id_product' => array('title' => $this->l('ID'), 'class' => 'fixed-width-xs', 'align' => 'center'),
-			'reference' => array('title' => $this->l('Reference')),
+			'id_product' => array('title' => $this->l('ID'), 'width' => 50),
+			'reference' => array('title' => $this->l('Reference'), 'width' => 150),
 			'name' => array('title' => $this->l('Name'), 'filter_key' => 'b!name'),
-			'active' => array('title' => $this->l('Status'), 'type' => 'bool', 'active' => 'status', 'align' => 'center', 'class' => 'fixed-width-xs')
+			'active' => array('title' => $this->l('Status'), 'type' => 'bool', 'active' => 'status', 'width' => 50)
 		);
-
+		
 		$this->clearFilters();
-
+		
 		$this->_join = Shop::addSqlAssociation('product', 'a');
 		$this->_filter = 'AND a.id_product IN (
 			SELECT p.id_product
@@ -156,17 +148,20 @@ class AdminTrackingControllerCore extends AdminController
 			)
 			AND IFNULL(stock.quantity, 0) <= 0
 		)';
-		$this->toolbar_title = $this->l('List of products with attributes but without available quantities for sale:');
+
+		$this->tpl_list_vars = array('sub_title' => $this->l('List of products with attributes but without available quantities for sale:'));
+
+
+
 		return $this->renderList();
 	}
 
 	public function getCustomListProductsNoStock()
-	{
+	{	
 		if (!Configuration::get('PS_STOCK_MANAGEMENT'))
 			return;
-
+		
 		$this->table = 'product';
-		$this->list_id = 'no_stock_products';
 		$this->className = 'Product';
 		$this->lang = true;
 		$this->identifier = 'id_product';
@@ -180,13 +175,13 @@ class AdminTrackingControllerCore extends AdminController
 		$this->addRowAction('delete');
 
 		$this->fields_list = array(
-			'id_product' => array('title' => $this->l('ID'), 'class' => 'fixed-width-xs', 'align' => 'center'),
-			'reference' => array('title' => $this->l('Reference')),
+			'id_product' => array('title' => $this->l('ID'), 'width' => 50),
+			'reference' => array('title' => $this->l('Reference'), 'width' => 150),
 			'name' => array('title' => $this->l('Name')),
-			'active' => array('title' => $this->l('Status'), 'type' => 'bool', 'active' => 'status', 'align' => 'center', 'class' => 'fixed-width-xs')
+			'active' => array('title' => $this->l('Status'), 'type' => 'bool', 'active' => 'status', 'width' => 50)
 		);
 		$this->clearFilters();
-
+		
 		$this->_join = Shop::addSqlAssociation('product', 'a');
 		$this->_filter = 'AND a.id_product IN (
 			SELECT p.id_product
@@ -199,20 +194,22 @@ class AdminTrackingControllerCore extends AdminController
 			AND IFNULL(stock.quantity, 0) <= 0
 		)';
 
-		$this->toolbar_title = $this->l('List of products without attributes and without available quantities for sale:');
+		$this->tpl_list_vars = array('sub_title' => $this->l('List of products without attributes and without available quantities for sale:'));
+		
 		return $this->renderList();
 	}
 
 	public function getCustomListProductsDisabled()
 	{
 		$this->table = 'product';
-		$this->list_id = 'disabled_products';
 		$this->className = 'Product';
 		$this->lang = true;
 		$this->identifier = 'id_product';
 		$this->_orderBy = 'id_product';
 		$this->_orderWay = 'DESC';
 		$this->_filter = 'AND product_shop.`active` = 0';
+		$this->list_no_filter = true;
+		$this->tpl_list_vars = array('sub_title' => $this->l('List of disabled products:'));
 		$this->show_toolbar = false;
 		$this->_list_index = 'index.php?controller=AdminProducts';
 		$this->_list_token = Tools::getAdminTokenLite('AdminProducts');
@@ -221,99 +218,61 @@ class AdminTrackingControllerCore extends AdminController
 		$this->addRowAction('delete');
 
 		$this->fields_list = array(
-			'id_product' => array('title' => $this->l('ID'), 'class' => 'fixed-width-xs', 'align' => 'center'),
-			'reference' => array('title' => $this->l('Reference')),
+			'id_product' => array('title' => $this->l('ID'), 'width' => 50),
+			'reference' => array('title' => $this->l('Reference'), 'width' => 150),
 			'name' => array('title' => $this->l('Name'), 'filter_key' => 'b!name')
 		);
 
 		$this->clearFilters();
-
+		
 		$this->_join = Shop::addSqlAssociation('product', 'a');
-		$this->toolbar_title = $this->l('List of disabled products:');
 		return $this->renderList();
 	}
-
-
+	
+	
 	public function renderList()
 	{
 		$this->processFilter();
-
-		if (!($this->fields_list && is_array($this->fields_list)))
-			return false;
-		$this->getList($this->context->language->id);
-
-		$helper = new HelperList();
-
-		// Empty list is ok
-		if (!is_array($this->_list))
-		{
-			$this->displayWarning($this->l('Bad SQL query', 'Helper').'<br />'.htmlspecialchars($this->_list_error));
-			return false;
-		}
-
-		$this->setHelperDisplay($helper);
-		$helper->tpl_vars = $this->tpl_list_vars;
-		$helper->tpl_delete_link_vars = $this->tpl_delete_link_vars;
-
-		// For compatibility reasons, we have to check standard actions in class attributes
-		foreach ($this->actions_available as $action)
-		{
-			if (!in_array($action, $this->actions) && isset($this->$action) && $this->$action)
-				$this->actions[] = $action;
-		}
-		$helper->is_cms = $this->is_cms;
-		$list = $helper->generateList($this->_list, $this->fields_list);
-
-		return $list;
+		return parent::renderList();
 	}
-
+	
 	public function displayEnableLink($token, $id, $value, $active, $id_category = null, $id_product = null)
 	{
 		$this->_helper_list->currentIndex = $this->_list_index;
 		$this->_helper_list->identifier = $this->identifier;
 		$this->_helper_list->table = $this->table;
-
+		
 		return $this->_helper_list->displayEnableLink($this->_list_token, $id, $value, $active, $id_category, $id_product);
 	}
-
+	
 	public function displayDeleteLink($token = null, $id, $name = null)
 	{
 		$this->_helper_list->currentIndex = $this->_list_index;
 		$this->_helper_list->identifier = $this->identifier;
 		$this->_helper_list->table = $this->table;
-
+		
 		return $this->_helper_list->displayDeleteLink($this->_list_token, $id, $name);
 	}
-
+	
 	public function displayEditLink($token = null, $id, $name = null)
 	{
 		$this->_helper_list->currentIndex = $this->_list_index;
 		$this->_helper_list->identifier = $this->identifier;
 		$this->_helper_list->table = $this->table;
-
+		
 		return $this->_helper_list->displayEditLink($this->_list_token, $id, $name);
 	}
-
+	
 	protected function clearFilters()
 	{
-		if (Tools::isSubmit('submitResetempty_categories'))
-			$this->processResetFilters('empty_categories');
-
-		if (Tools::isSubmit('submitResetno_stock_products_attributes'))
-			$this->processResetFilters('no_stock_products_attributes');
-
-		if (Tools::isSubmit('submitResetno_stock_products'))
-			$this->processResetFilters('no_stock_products');
-
-		if (Tools::isSubmit('submitResetdisabled_products'))
-			$this->processResetFilters('disabled_products');
+		if ((Tools::isSubmit('submitResetcategory') && $this->table == 'category' ) || (Tools::isSubmit('submitResetproduct') && $this->table == 'product' ))
+			$this->processResetFilters();
 	}
 
 	public function clearListOptions()
 	{
 		$this->table = '';
 		$this->actions = array();
-		$this->list_skip_actions = array();
 		$this->lang = false;
 		$this->identifier = '';
 		$this->_orderBy = '';
@@ -321,17 +280,13 @@ class AdminTrackingControllerCore extends AdminController
 		$this->_filter = '';
 		$this->_group = '';
 		$this->_where = '';
+		$this->list_no_filter = true;
 		$this->list_title = $this->l('Product disabled');
 	}
 
 	public function getList($id_lang, $order_by = null, $order_way = null, $start = 0, $limit = null, $id_lang_shop = false)
 	{
 		parent::getList($id_lang, $order_by, $order_way, $start, $limit, Context::getContext()->shop->id);
-	}
-
-	public static function getDescriptionClean($description)
-	{
-		return Tools::getDescriptionClean($description);
 	}
 }
 

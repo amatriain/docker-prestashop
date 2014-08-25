@@ -3,8 +3,7 @@
 include('../config/config.inc.php');
 header('content-type: application/x-javascript');
 
-$jquery_folder = dirname(__FILE__).'/jquery/';
-$plugins_folder = $jquery_folder.'plugins/';
+$plugins_folder = __DIR__.'/jquery/plugins/';
 
 $plugins = array(
 				'ajaxfileupload.js' => 
@@ -52,7 +51,7 @@ $plugins = array(
 				'jquery.hoverIntent.minified.js' => 
 					array('new_file' => $plugins_folder.'jquery.hoverIntent.js', 'name' => 'hoverIntent'),
 				'jquery-ui-1.8.10.custom.min.js' =>
-					array('new_file' => $jquery_folder.'ui/jquery.ui.core.min.js', 'name' => ''),
+					array('new_file' => __DIR__.'/jquery/jquery-ui.will.be.removed.in.1.6.js', 'name' => ''),
 				'jquery.treeview.async.js' =>
 					array('new_file' => $plugins_folder.'treeview-categories/jquery.treeview-categories.async.js', 'name' => 'treeview-categories.async'),
 				'jquery.treeview.edit.js' =>
