@@ -37,9 +37,10 @@ RUN chmod 755 /*.sh
 ADD apache_default /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
-# Copy prestashop app to /app folder and set it as the default apache web app
-ADD prestashop /app
-RUN rm -rf /var/www/html && ln -s /app /var/www/html && chmod -R 777 /app
+# Copy prestashop app to /var/www/html folder (default apache web app)
+RUN rm -rf /var/www/html
+ADD prestashop /var/www/html
+RUN chmod -R 777 /var/www/html
 
 # Add volumes for MySQL 
 VOLUME  ["/etc/mysql", "/var/lib/mysql"]
