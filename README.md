@@ -39,10 +39,6 @@ Be aware that the default database passwords should be changed if you use this i
 
 You can create a [data volume container](http://docs.docker.com/userguide/dockervolumes/#creating-and-mounting-a-data-volume-container) from this image, and afterwards start a container for the Prestashop app with the `--volumes-from` option so that volumes are shared (the data volume container can be stopped, it is only required that it exists). This way an interactive container can be started with the `--volumes-from` option and `/bin/bash` as a command to examine the logs, php files etc of the running Prestashop app.
 
-## Important: Bug in Prestashop 1.6.0.9
-
-Be aware that Prestashop 1.6.0.9 is affected by [this bug](http://www.prestashop.com/forums/topic/352768-fatal-error/), which you will likely want to fix by hand after starting the container. To make the necessary php file modification you can follow the procedure described above under **Inspecting and editing a running container logs and Prestashop files**.
-
 ## Licensing
 
 Licensed under the [Open Software License (OSL) v3.0](http://www.prestashop.com/en/osl-license) for compliance with the Prestashop license.
