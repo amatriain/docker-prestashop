@@ -26,7 +26,6 @@
 
 /**
  * @since   1.5.0
- * @version 1.3 (2012-03-14)
  */
 
 if (!defined('_PS_VERSION_'))
@@ -37,12 +36,16 @@ include_once(_PS_MODULE_DIR_.'homeslider/HomeSlide.php');
 class HomeSlider extends Module
 {
 	private $_html = '';
+	private $default_width = 779;
+	private $default_speed = 500;
+	private $default_pause = 3000;
+	private $default_loop = 1;
 
 	public function __construct()
 	{
 		$this->name = 'homeslider';
 		$this->tab = 'front_office_features';
-		$this->version = '1.3.9';
+		$this->version = '1.4.5';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 		$this->secure_key = Tools::encrypt($this->name);
@@ -67,11 +70,42 @@ class HomeSlider extends Module
 			$this->registerHook('actionShopDataDuplication')
 		)
 		{
-			/* Sets up configuration */
-			$res = Configuration::updateValue('HOMESLIDER_WIDTH', '779');
-			$res &= Configuration::updateValue('HOMESLIDER_SPEED', '500');
-			$res &= Configuration::updateValue('HOMESLIDER_PAUSE', '3000');
-			$res &= Configuration::updateValue('HOMESLIDER_LOOP', '1');
+			$shops = Shop::getContextListShopID();
+			$shop_groups_list = array();
+
+			/* Setup each shop */
+			foreach ($shops as $shop_id)
+			{
+				$shop_group_id = (int)Shop::getGroupFromShop($shop_id, true);
+
+				if (!in_array($shop_group_id, $shop_groups_list))
+					$shop_groups_list[] = $shop_group_id;
+
+				/* Sets up configuration */
+				$res = Configuration::updateValue('HOMESLIDER_WIDTH', $this->default_width, false, $shop_group_id, $shop_id);
+				$res &= Configuration::updateValue('HOMESLIDER_SPEED', $this->default_speed, false, $shop_group_id, $shop_id);
+				$res &= Configuration::updateValue('HOMESLIDER_PAUSE', $this->default_pause, false, $shop_group_id, $shop_id);
+				$res &= Configuration::updateValue('HOMESLIDER_LOOP', $this->default_loop, false, $shop_group_id, $shop_id);
+			}
+
+			/* Sets up Shop Group configuration */
+			if (count($shop_groups_list))
+			{
+				foreach ($shop_groups_list as $shop_group_id)
+				{
+					$res = Configuration::updateValue('HOMESLIDER_WIDTH', $this->default_width, false, $shop_group_id);
+					$res &= Configuration::updateValue('HOMESLIDER_SPEED', $this->default_speed, false, $shop_group_id);
+					$res &= Configuration::updateValue('HOMESLIDER_PAUSE', $this->default_pause, false, $shop_group_id);
+					$res &= Configuration::updateValue('HOMESLIDER_LOOP', $this->default_loop, false, $shop_group_id);
+				}
+			}
+
+			/* Sets up Global configuration */
+			$res = Configuration::updateValue('HOMESLIDER_WIDTH', $this->default_width);
+			$res &= Configuration::updateValue('HOMESLIDER_SPEED', $this->default_speed);
+			$res &= Configuration::updateValue('HOMESLIDER_PAUSE', $this->default_pause);
+			$res &= Configuration::updateValue('HOMESLIDER_LOOP', $this->default_loop);
+
 			/* Creates tables */
 			$res &= $this->createTables();
 
@@ -106,7 +140,9 @@ class HomeSlider extends Module
 				<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin tristique in tortor et dignissim. Quisque non tempor leo. Maecenas egestas sem elit</p>
 				<p><button class="btn btn-default" type="button">Shop now !</button></p>';
 				$slide->legend[$language['id_lang']] = 'sample-'.$i;
-				$slide->url[$language['id_lang']] = 'http://www.prestashop.com/?utm_source=v16_homeslider';
+				$slide->url[$language['id_lang']] = 'http://www.prestashop.com/?utm_source=back-office&utm_medium=v16_homeslider'
+					.'&utm_campaign=back-office-'.Tools::strtoupper($this->context->language->iso_code)
+					.'&utm_content='.(defined('_PS_HOST_MODE_') ? 'ondemand' : 'download');
 				$slide->image[$language['id_lang']] = 'sample-'.$i.'.jpg';
 			}
 			$slide->add();
@@ -123,6 +159,7 @@ class HomeSlider extends Module
 		{
 			/* Deletes tables */
 			$res = $this->deleteTables();
+
 			/* Unsets configuration */
 			$res &= Configuration::deleteByName('HOMESLIDER_WIDTH');
 			$res &= Configuration::deleteByName('HOMESLIDER_SPEED');
@@ -215,11 +252,50 @@ class HomeSlider extends Module
 			$this->clearCache();
 		}
 		elseif (Tools::isSubmit('addSlide') || (Tools::isSubmit('id_slide') && $this->slideExists((int)Tools::getValue('id_slide'))))
-			$this->_html .= $this->renderAddForm();
-		else
 		{
-			$this->_html .= $this->renderForm();
-			$this->_html .= $this->renderList();
+			if (Tools::isSubmit('addSlide'))
+				$mode = 'add';
+			else
+				$mode = 'edit';
+
+			if ($mode == 'add')
+			{
+				if (Shop::getContext() != Shop::CONTEXT_GROUP && Shop::getContext() != Shop::CONTEXT_ALL)
+					$this->_html .= $this->renderAddForm();
+				else
+					$this->_html .= $this->getShopContextError(null, $mode);
+			}
+			else
+			{
+				$associated_shop_ids = HomeSlide::getAssociatedIdsShop((int)Tools::getValue('id_slide'));
+				$context_shop_id = (int)Shop::getContextShopID();
+
+				if ($associated_shop_ids === false)
+					$this->_html .= $this->getShopAssociationError((int)Tools::getValue('id_slide'));
+				else if (Shop::getContext() != Shop::CONTEXT_GROUP && Shop::getContext() != Shop::CONTEXT_ALL && in_array($context_shop_id, $associated_shop_ids))
+				{
+					if (count($associated_shop_ids) > 1)
+						$this->_html = $this->getSharedSlideWarning();
+					$this->_html .= $this->renderAddForm();
+				}
+				else
+				{
+					$shops_name_list = array();
+					foreach ($associated_shop_ids as $shop_id)
+					{
+						$associated_shop = new Shop((int)$shop_id);
+						$shops_name_list[] = $associated_shop->name;
+					}
+					$this->_html .= $this->getShopContextError($shops_name_list, $mode);
+				}
+			}
+		}
+		else // Default viewport
+		{
+			$this->_html .= $this->getWarningMultishopHtml().$this->getCurrentShopInfoMsg().$this->renderForm();
+
+			if (Shop::getContext() != Shop::CONTEXT_GROUP && Shop::getContext() != Shop::CONTEXT_ALL)
+				$this->_html .= $this->renderList();
 		}
 
 		return $this->_html;
@@ -258,7 +334,7 @@ class HomeSlider extends Module
 
 				//d(var_dump(Tools::getValue('id_slide')));
 				if (!Validate::isInt(Tools::getValue('id_slide')) && !$this->slideExists(Tools::getValue('id_slide')))
-					$errors[] = $this->l('Invalid id_slide');
+					$errors[] = $this->l('Invalid slide ID');
 			}
 			/* Checks title/url/legend/description/image */
 			$languages = Language::getLanguages(false);
@@ -294,7 +370,7 @@ class HomeSlider extends Module
 				$errors[] = $this->l('The image is not set.');
 		} /* Validation for deletion */
 		elseif (Tools::isSubmit('delete_id_slide') && (!Validate::isInt(Tools::getValue('delete_id_slide')) || !$this->slideExists((int)Tools::getValue('delete_id_slide'))))
-			$errors[] = $this->l('Invalid id_slide');
+			$errors[] = $this->l('Invalid slide ID');
 
 		/* Display errors if needed */
 		if (count($errors))
@@ -312,15 +388,62 @@ class HomeSlider extends Module
 	private function _postProcess()
 	{
 		$errors = array();
+		$shop_context = Shop::getContext();
 
 		/* Processes Slider */
 		if (Tools::isSubmit('submitSlider'))
 		{
-			$res = Configuration::updateValue('HOMESLIDER_WIDTH', (int)Tools::getValue('HOMESLIDER_WIDTH'));
-			$res &= Configuration::updateValue('HOMESLIDER_SPEED', (int)Tools::getValue('HOMESLIDER_SPEED'));
-			$res &= Configuration::updateValue('HOMESLIDER_PAUSE', (int)Tools::getValue('HOMESLIDER_PAUSE'));
-			$res &= Configuration::updateValue('HOMESLIDER_LOOP', (int)Tools::getValue('HOMESLIDER_LOOP'));
+			$shop_groups_list = array();
+			$shops = Shop::getContextListShopID();
+
+			foreach ($shops as $shop_id)
+			{
+				$shop_group_id = (int)Shop::getGroupFromShop($shop_id, true);
+
+				if (!in_array($shop_group_id, $shop_groups_list))
+					$shop_groups_list[] = $shop_group_id;
+
+				$res = Configuration::updateValue('HOMESLIDER_WIDTH', (int)Tools::getValue('HOMESLIDER_WIDTH'), false, $shop_group_id, $shop_id);
+				$res &= Configuration::updateValue('HOMESLIDER_SPEED', (int)Tools::getValue('HOMESLIDER_SPEED'), false, $shop_group_id, $shop_id);
+				$res &= Configuration::updateValue('HOMESLIDER_PAUSE', (int)Tools::getValue('HOMESLIDER_PAUSE'), false, $shop_group_id, $shop_id);
+				$res &= Configuration::updateValue('HOMESLIDER_LOOP', (int)Tools::getValue('HOMESLIDER_LOOP'), false, $shop_group_id, $shop_id);
+			}
+
+			/* Update global shop context if needed*/
+			switch ($shop_context)
+			{
+				case Shop::CONTEXT_ALL:
+					$res = Configuration::updateValue('HOMESLIDER_WIDTH', (int)Tools::getValue('HOMESLIDER_WIDTH'));
+					$res &= Configuration::updateValue('HOMESLIDER_SPEED', (int)Tools::getValue('HOMESLIDER_SPEED'));
+					$res &= Configuration::updateValue('HOMESLIDER_PAUSE', (int)Tools::getValue('HOMESLIDER_PAUSE'));
+					$res &= Configuration::updateValue('HOMESLIDER_LOOP', (int)Tools::getValue('HOMESLIDER_LOOP'));
+					if (count($shop_groups_list))
+					{
+						foreach ($shop_groups_list as $shop_group_id)
+						{
+							$res = Configuration::updateValue('HOMESLIDER_WIDTH', (int)Tools::getValue('HOMESLIDER_WIDTH'), false, $shop_group_id);
+							$res &= Configuration::updateValue('HOMESLIDER_SPEED', (int)Tools::getValue('HOMESLIDER_SPEED'), false, $shop_group_id);
+							$res &= Configuration::updateValue('HOMESLIDER_PAUSE', (int)Tools::getValue('HOMESLIDER_PAUSE'), false, $shop_group_id);
+							$res &= Configuration::updateValue('HOMESLIDER_LOOP', (int)Tools::getValue('HOMESLIDER_LOOP'), false, $shop_group_id);
+						}
+					}
+					break;
+				case Shop::CONTEXT_GROUP:
+					if (count($shop_groups_list))
+					{
+						foreach ($shop_groups_list as $shop_group_id)
+						{
+							$res = Configuration::updateValue('HOMESLIDER_WIDTH', (int)Tools::getValue('HOMESLIDER_WIDTH'), false, $shop_group_id);
+							$res &= Configuration::updateValue('HOMESLIDER_SPEED', (int)Tools::getValue('HOMESLIDER_SPEED'), false, $shop_group_id);
+							$res &= Configuration::updateValue('HOMESLIDER_PAUSE', (int)Tools::getValue('HOMESLIDER_PAUSE'), false, $shop_group_id);
+							$res &= Configuration::updateValue('HOMESLIDER_LOOP', (int)Tools::getValue('HOMESLIDER_LOOP'), false, $shop_group_id);
+						}
+					}
+					break;
+			}
+
 			$this->clearCache();
+
 			if (!$res)
 				$errors[] = $this->displayError($this->l('The configuration could not be updated.'));
 			else
@@ -346,8 +469,7 @@ class HomeSlider extends Module
 				$slide = new HomeSlide((int)Tools::getValue('id_slide'));
 				if (!Validate::isLoadedObject($slide))
 				{
-					$this->_html .= $this->displayError($this->l('Invalid id_slide'));
-
+					$this->_html .= $this->displayError($this->l('Invalid slide ID'));
 					return false;
 				}
 			}
@@ -360,6 +482,7 @@ class HomeSlider extends Module
 
 			/* Sets each langue fields */
 			$languages = Language::getLanguages(false);
+
 			foreach ($languages as $language)
 			{
 				$slide->title[$language['id_lang']] = Tools::getValue('title_'.$language['id_lang']);
@@ -627,7 +750,14 @@ class HomeSlider extends Module
 	{
 		$slides = $this->getSlides();
 		foreach ($slides as $key => $slide)
+		{
 			$slides[$key]['status'] = $this->displayStatus($slide['id_slide'], $slide['active']);
+			$associated_shop_ids = HomeSlide::getAssociatedIdsShop((int)$slide['id_slide']);
+			if ($associated_shop_ids && count($associated_shop_ids) > 1)
+				$slides[$key]['is_shared'] = true;
+			else
+				$slides[$key]['is_shared'] = false;
+		}
 
 		$this->context->smarty->assign(
 			array(
@@ -645,7 +775,7 @@ class HomeSlider extends Module
 		$fields_form = array(
 			'form' => array(
 				'legend' => array(
-					'title' => $this->l('Slide informations'),
+					'title' => $this->l('Slide information'),
 					'icon' => 'icon-cogs'
 				),
 				'input' => array(
@@ -654,17 +784,17 @@ class HomeSlider extends Module
 						'label' => $this->l('Select a file'),
 						'name' => 'image',
 						'lang' => true,
-						'desc' => $this->l(sprintf('Max image size %s', ini_get('upload_max_filesize')))
+						'desc' => $this->l(sprintf('Maximum image size: %s.', ini_get('upload_max_filesize')))
 					),
 					array(
 						'type' => 'text',
-						'label' => $this->l('Title'),
+						'label' => $this->l('Slide title'),
 						'name' => 'title',
 						'lang' => true,
 					),
 					array(
 						'type' => 'text',
-						'label' => $this->l('URL'),
+						'label' => $this->l('Target URL'),
 						'name' => 'url',
 						'lang' => true,
 					),
@@ -683,7 +813,7 @@ class HomeSlider extends Module
 					),
 					array(
 						'type' => 'switch',
-						'label' => $this->l('Active'),
+						'label' => $this->l('Enabled'),
 						'name' => 'active_slide',
 						'is_bool' => true,
 						'values' => array(
@@ -749,7 +879,12 @@ class HomeSlider extends Module
 
 		$helper->override_folder = '/';
 
-		return $helper->generateForm(array($fields_form));
+		$languages = Language::getLanguages(false);
+
+		if (count($languages) > 1)
+			return $this->getMultiLanguageInfoMsg().$helper->generateForm(array($fields_form));
+		else
+			return $helper->generateForm(array($fields_form));
 	}
 
 	public function renderForm()
@@ -763,21 +898,23 @@ class HomeSlider extends Module
 				'input' => array(
 					array(
 						'type' => 'text',
-						'label' => $this->l('Max width'),
+						'label' => $this->l('Maximum image width'),
 						'name' => 'HOMESLIDER_WIDTH',
-						'suffix' => 'px'
+						'suffix' => 'pixels'
 					),
 					array(
 						'type' => 'text',
 						'label' => $this->l('Speed'),
 						'name' => 'HOMESLIDER_SPEED',
-						'suffix' => 'ms'
+						'suffix' => 'milliseconds',
+						'desc' => $this->l('The duration of the transition between two slides.')
 					),
 					array(
 						'type' => 'text',
 						'label' => $this->l('Pause'),
 						'name' => 'HOMESLIDER_PAUSE',
-						'suffix' => 'ms'
+						'suffix' => 'milliseconds',
+						'desc' => $this->l('The delay between two slides.')
 					),
 					array(
 						'type' => 'switch',
@@ -826,11 +963,14 @@ class HomeSlider extends Module
 
 	public function getConfigFieldsValues()
 	{
+		$id_shop_group = Shop::getContextShopGroupID();
+		$id_shop = Shop::getContextShopID();
+
 		return array(
-			'HOMESLIDER_WIDTH' => Tools::getValue('HOMESLIDER_WIDTH', Configuration::get('HOMESLIDER_WIDTH')),
-			'HOMESLIDER_SPEED' => Tools::getValue('HOMESLIDER_SPEED', Configuration::get('HOMESLIDER_SPEED')),
-			'HOMESLIDER_PAUSE' => Tools::getValue('HOMESLIDER_PAUSE', Configuration::get('HOMESLIDER_PAUSE')),
-			'HOMESLIDER_LOOP' => Tools::getValue('HOMESLIDER_LOOP', Configuration::get('HOMESLIDER_LOOP')),
+			'HOMESLIDER_WIDTH' => Tools::getValue('HOMESLIDER_WIDTH', Configuration::get('HOMESLIDER_WIDTH', null, $id_shop_group, $id_shop)),
+			'HOMESLIDER_SPEED' => Tools::getValue('HOMESLIDER_SPEED', Configuration::get('HOMESLIDER_SPEED', null, $id_shop_group, $id_shop)),
+			'HOMESLIDER_PAUSE' => Tools::getValue('HOMESLIDER_PAUSE', Configuration::get('HOMESLIDER_PAUSE', null, $id_shop_group, $id_shop)),
+			'HOMESLIDER_LOOP' => Tools::getValue('HOMESLIDER_LOOP', Configuration::get('HOMESLIDER_LOOP', null, $id_shop_group, $id_shop)),
 		);
 	}
 
@@ -861,5 +1001,73 @@ class HomeSlider extends Module
 		}
 
 		return $fields;
+	}
+
+	private function getMultiLanguageInfoMsg()
+	{
+		return '<p class="alert alert-warning">'.
+					$this->l('Since multiple languages are activated on your shop, please mind to upload your image for each one of them').
+				'</p>';
+	}
+
+	private function getWarningMultishopHtml()
+	{
+		if (Shop::getContext() == Shop::CONTEXT_GROUP || Shop::getContext() == Shop::CONTEXT_ALL)
+			return '<p class="alert alert-warning">'.
+						$this->l('You cannot manage slides items from a "All Shops" or a "Group Shop" context, select directly the shop you want to edit').
+					'</p>';
+		else
+			return '';
+	}
+
+	private function getShopContextError($shop_contextualized_name, $mode)
+	{
+		if (is_array($shop_contextualized_name))
+			$shop_contextualized_name = implode('<br/>', $shop_contextualized_name);
+
+		if ($mode == 'edit')
+			return '<p class="alert alert-danger">'.
+							$this->l(sprintf('You can only edit this slide from the shop(s) context: %s', $shop_contextualized_name)).
+					'</p>';
+		else
+			return '<p class="alert alert-danger">'.
+							$this->l(sprintf('You cannot add slides from a "All Shops" or a "Group Shop" context')).
+					'</p>';
+	}
+
+	private function getShopAssociationError($id_slide)
+	{
+		return '<p class="alert alert-danger">'.
+						$this->l(sprintf('Unable to get slide shop association information (id_slide: %d)', (int)$id_slide)).
+				'</p>';
+	}
+
+
+	private function getCurrentShopInfoMsg()
+	{
+		$shop_info = null;
+
+		if (Shop::isFeatureActive())
+		{
+			if (Shop::getContext() == Shop::CONTEXT_SHOP)
+				$shop_info = $this->l(sprintf('The modifications will be applied to shop: %s', $this->context->shop->name));
+			else if (Shop::getContext() == Shop::CONTEXT_GROUP)
+				$shop_info = $this->l(sprintf('The modifications will be applied to this group: %s', Shop::getContextShopGroup()->name));
+			else
+				$shop_info = $this->l('The modifications will be applied to all shops and shop groups');
+
+			return '<div class="alert alert-info">'.
+						$shop_info.
+					'</div>';
+		}
+		else
+			return '';
+	}
+
+	private function getSharedSlideWarning()
+	{
+		return '<p class="alert alert-warning">'.
+					$this->l('This slide is shared with other shops! All shops associated to this slide will apply modifications made here').
+				'</p>';
 	}
 }

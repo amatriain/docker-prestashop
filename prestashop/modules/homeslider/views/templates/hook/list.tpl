@@ -43,7 +43,16 @@
 							<img src="{$image_baseurl}{$slide.image}" alt="{$slide.title}" class="img-thumbnail" />
 						</div>
 						<div class="col-md-8">
-							<h4 class="pull-left">#{$slide.id_slide} - {$slide.title}</h4>
+							<h4 class="pull-left">
+								#{$slide.id_slide} - {$slide.title}
+								{if $slide.is_shared}
+									<div>
+										<span class="label color_field pull-left" style="background-color:#108510;color:white;margin-top:5px;">
+											{l s='Shared slide' mod='homeslider'}
+										</span>
+									</div>
+								{/if}
+							</h4>
 							<div class="btn-group-action pull-right">
 								{$slide.status}
 								

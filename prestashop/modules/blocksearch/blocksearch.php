@@ -33,7 +33,7 @@ class BlockSearch extends Module
 	{
 		$this->name = 'blocksearch';
 		$this->tab = 'search_filter';
-		$this->version = '1.5.1';
+		$this->version = '1.5.3';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -50,14 +50,14 @@ class BlockSearch extends Module
 			return false;
 		return true;
 	}
-	
+
 	public function hookdisplayMobileTopSiteMap($params)
 	{
 		$this->smarty->assign(array('hook_mobile' => true, 'instantsearch' => false));
 		$params['hook_mobile'] = true;
 		return $this->hookTop($params);
 	}
-	
+
 	/*
 public function hookDisplayMobileHeader($params)
 	{
@@ -66,14 +66,18 @@ public function hookDisplayMobileHeader($params)
 		$this->context->controller->addCSS(_THEME_CSS_DIR_.'product_list.css');
 	}
 */
-	
+
 	public function hookHeader($params)
 	{
+		$this->context->controller->addCSS(($this->_path).'blocksearch.css', 'all');
+
 		if (Configuration::get('PS_SEARCH_AJAX'))
 			$this->context->controller->addJqueryPlugin('autocomplete');
-		$this->context->controller->addCSS(_THEME_CSS_DIR_.'product_list.css');
-		$this->context->controller->addCSS(($this->_path).'blocksearch.css', 'all');
-		if (Configuration::get('PS_SEARCH_AJAX'))
+
+		if (Configuration::get('PS_INSTANT_SEARCH'))
+			$this->context->controller->addCSS(_THEME_CSS_DIR_.'product_list.css');
+
+		if (Configuration::get('PS_SEARCH_AJAX') || Configuration::get('PS_INSTANT_SEARCH'))
 		{
 			Media::addJsDef(array('search_url' => $this->context->link->getPageLink('search', Tools::usingSecureMode())));
 			$this->context->controller->addJS(($this->_path).'blocksearch.js');
@@ -115,7 +119,7 @@ public function hookDisplayMobileHeader($params)
 		Media::addJsDef(array('blocksearch_type' => 'top'));
 		return $this->display(__FILE__, 'blocksearch-top.tpl', Tools::getValue('search_query') ? null : $key);
 	}
-	
+
 	public function hookDisplayNav($params)
 	{
 		return $this->hookTop($params);

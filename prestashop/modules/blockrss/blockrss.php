@@ -32,9 +32,9 @@ include_once(_PS_PEAR_XML_PARSER_PATH_.'Parser.php');
 
 class Blockrss extends Module
 {
-		
+
 	private static $xmlFields = array('title', 'guid', 'description', 'author', 'comments', 'pubDate', 'source', 'link', 'content');
-	
+
  	function __construct()
  	{
  	 	$this->name = 'blockrss';
@@ -42,12 +42,12 @@ class Blockrss extends Module
 		$this->need_instance = 0;
 
 		$this->bootstrap = true;
-		parent::__construct();	
+		parent::__construct();
 
 		$this->displayName = $this->l('RSS feed block');
 		$this->description = $this->l('Adds a block displaying a RSS feed.');
 
-		$this->version = '1.2.1';
+		$this->version = '1.2.3';
 		$this->author = 'PrestaShop';
 		$this->error = false;
 		$this->valid = false;
@@ -59,27 +59,16 @@ class Blockrss extends Module
  	 	if (!parent::install())
 			return false;
 
-		// Hook the module either on the left or right column
-		$theme = new Theme(Context::getContext()->shop->id_theme);
-		if ((!$theme->default_left_column || !$this->registerHook('leftColumn'))
-			&& (!$theme->default_right_column || !$this->registerHook('rightColumn')))
-		{
-			// If there are no colums implemented by the template, throw an error and uninstall the module
-			$this->_errors[] = $this->l('This module need to be hooked in a column and your theme does not implement one');
-			parent::uninstall();
-			return false;
-		}
-
 		Configuration::updateValue('RSS_FEED_TITLE', $this->l('RSS feed'));
 		Configuration::updateValue('RSS_FEED_NBR', 5);
 
-		return $this->registerHook('header');
+		return ($this->registerHook('header') && $this->registerHook('leftColumn'));
   	}
 
 	public function getContent()
 	{
 		$output = '';
-		
+
 		if (Tools::isSubmit('submitBlockRss'))
 		{
 			$errors = array();
@@ -92,7 +81,7 @@ class Blockrss extends Module
 			elseif (!$title OR empty($title) OR !Validate::isGenericName($title))
 				$errors[] = $this->l('Invalid title');
 			elseif (!$nbr OR $nbr <= 0 OR !Validate::isInt($nbr))
-				$errors[] = $this->l('Invalid number of feeds');				
+				$errors[] = $this->l('Invalid number of feeds');
 			elseif (stristr($urlfeed, $_SERVER['HTTP_HOST'].__PS_BASE_URI__))
 				$errors[] = $this->l('You have selected a feed URL from your own website. Please choose another URL.');
 			elseif (!($contents = Tools::file_get_contents($urlfeed)))
@@ -100,13 +89,16 @@ class Blockrss extends Module
 			/* Even if the feed was reachable, We need to make sure that the feed is well formated */
 			else
 			{
-				try {	
+				try
+				{
 					$xmlFeed = new XML_Feed_Parser($contents);
-				} catch (XML_Feed_Parser_Exception $e) {
+				}
+				catch (XML_Feed_Parser_Exception $e)
+				{
 					$errors[] = $this->l('Invalid feed:').' '.$e->getMessage();
 				}
 			}
-			
+
 			if (!sizeof($errors))
 			{
 				Configuration::updateValue('RSS_FEED_URL', $urlfeed);
@@ -123,11 +115,10 @@ class Blockrss extends Module
 			$errors = array();
 			if (stristr(Configuration::get('RSS_FEED_URL'), $_SERVER['HTTP_HOST'].__PS_BASE_URI__))
 				$errors[] = $this->l('You have selected a feed URL from your own website. Please choose another URL.');
-			
+
 			if (sizeof($errors))
 				$output .= $this->displayError(implode('<br />', $errors));
 		}
-
 		return $output.$this->renderForm();
 	}
 
@@ -151,11 +142,25 @@ class Blockrss extends Module
 							if (@$item = $src->getEntryByOffset($i))
 							{
 								$xmlValues = array();
-								foreach(self::$xmlFields as $xmlField)
+								foreach (self::$xmlFields as $xmlField)
 									$xmlValues[$xmlField] = $item->__get($xmlField);
 								$xmlValues['enclosure'] = $item->getEnclosure();
-								# Compatibility
-								$xmlValues['url'] = $xmlValues['link']; 
+
+								// First image
+								if (isset($xmlValues['content']) && $xmlValues['content'])
+								{
+									preg_match('/< *img[^>]*src *= *["\']?([^"\']*)/', $xmlValues['content'], $image);
+									if (array_key_exists(1, $image) && $image[1])
+									{
+										// Try if distant image exist : timeout 0.3s
+										$context = stream_context_create(array('http' => array('timeout' => 0.3)));
+										if (file_get_contents($image[1], false, $context, -1, 1) !== false)
+											$xmlValues['image'] = $image[1];
+									}
+								}
+
+								// Compatibility
+								$xmlValues['url'] = $xmlValues['link'];
 								$rss_links[] = $xmlValues;
 							}
 				}
@@ -166,7 +171,6 @@ class Blockrss extends Module
 			// Display smarty
 			$this->smarty->assign(array('title' => ($title ? $title : $this->l('RSS feed')), 'rss_links' => $rss_links));
 		}
-
  	 	return $this->display(__FILE__, 'blockrss.tpl', $cacheId);
  	}
 
@@ -174,12 +178,12 @@ class Blockrss extends Module
 	{
 		return $this->hookLeftColumn($params);
 	}
-	
+
 	function hookHeader($params)
 	{
 		$this->context->controller->addCSS(($this->_path).'blockrss.css', 'all');
 	}
-	
+
 	public function renderForm()
 	{
 		$fields_form = array(
@@ -214,7 +218,7 @@ class Blockrss extends Module
 				)
 			),
 		);
-		
+
 		$helper = new HelperForm();
 		$helper->show_toolbar = false;
 		$helper->table =  $this->table;
@@ -233,7 +237,7 @@ class Blockrss extends Module
 
 		return $helper->generateForm(array($fields_form));
 	}
-	
+
 	public function getConfigFieldsValues()
 	{
 		return array(

@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -36,8 +36,8 @@ class AdminLogsControllerCore extends AdminController
 
 		$this->fields_list = array(
 			'id_log' => array(
-				'title' => $this->l('ID'), 
-				'align' => 'text-center', 
+				'title' => $this->l('ID'),
+				'align' => 'text-center',
 				'class' => 'fixed-width-xs'
 			),
 			'employee' => array(
@@ -47,31 +47,31 @@ class AdminLogsControllerCore extends AdminController
 				'callback_object' => $this
 			),
 			'severity' => array(
-				'title' => $this->l('Severity (1-4)'), 
-				'align' => 'text-center', 
+				'title' => $this->l('Severity (1-4)'),
+				'align' => 'text-center',
 				'class' => 'fixed-width-xs'
 			),
 			'message' => array(
 				'title' => $this->l('Message')
 			),
 			'object_type' => array(
-				'title' => $this->l('Object type'), 
+				'title' => $this->l('Object type'),
 				'class' => 'fixed-width-sm'
 			),
 			'object_id' => array(
-				'title' => $this->l('Object ID'), 
-				'align' => 'center', 
+				'title' => $this->l('Object ID'),
+				'align' => 'center',
 				'class' => 'fixed-width-xs'
 			),
 			'error_code' => array(
-				'title' => $this->l('Error code'), 
-				'align' => 'center', 
-				'prefix' => '0x', 
+				'title' => $this->l('Error code'),
+				'align' => 'center',
+				'prefix' => '0x',
 				'class' => 'fixed-width-xs'
 			),
 			'date_add' => array(
 				'title' => $this->l('Date'),
-				'align' => 'right', 
+				'align' => 'right',
 				'type' => 'datetime'
 			)
 		);
@@ -96,10 +96,11 @@ class AdminLogsControllerCore extends AdminController
 		$this->_join .= ' LEFT JOIN '._DB_PREFIX_.'employee e ON (a.id_employee = e.id_employee)';
 		parent::__construct();
 	}
-	
+
 	public function processDelete()
 	{
-		return PrestaShopLogger::eraseAllLogs();
+		if (PrestaShopLogger::eraseAllLogs())
+			Tools::redirectAdmin(Context::getContext()->link->getAdminLink('AdminLogs'));
 	}
 
 	public function initToolbar()
@@ -112,10 +113,10 @@ class AdminLogsControllerCore extends AdminController
 		);
 		unset($this->toolbar_btn['new']);
 	}
-	
+
 	public function displayEmployee($value, $tr)
 	{
-		$template = $this->context->smarty->createTemplate('controllers/logs/employee_field.tpl', $this->context->smarty);		
+		$template = $this->context->smarty->createTemplate('controllers/logs/employee_field.tpl', $this->context->smarty);
 		$employee = new Employee((int)$tr['id_employee']);
 		$template->assign(array(
 			'employee_image' => $employee->getImage(),
@@ -124,4 +125,3 @@ class AdminLogsControllerCore extends AdminController
 		return $template->fetch();
 	}
 }
-

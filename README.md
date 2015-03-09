@@ -8,7 +8,7 @@ Dockerfile and other files can be found at the github repo: [amatriain/docker-pr
 
 Docker image can be found at the docker-hub repo: [amatriain/prestashop](https://registry.hub.docker.com/u/amatriain/prestashop/). This is not an automated docker-hub build, because automated builds are always tagged as "latest"; this would keep this image from being tagged with the prestashop version.
 
-Tagging both in Github and Docker-hub follows the Prestashop version: i.e. version 1.6.0.9 of this image contains Prestashop 1.6.0.9
+Tagging both in Github and Docker-hub follows the Prestashop version: i.e. version 1.6.0.14 of this image contains Prestashop 1.6.0.14.
 
 ## Using
 

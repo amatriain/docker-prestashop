@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -41,19 +41,19 @@
 			</div>
 
 			{if $show_quantities == true}
-				<div class="form-group" {if $product->is_virtual || $product->cache_is_pack}style="display:none;"{/if} class="row stockForVirtualProduct">
+				<div class="form-group" {if $product->is_virtual}style="display:none;"{/if} class="row stockForVirtualProduct">
 					<div class="col-lg-9 col-lg-offset-3">
 						<p class="checkbox">
 							<label for="advanced_stock_management">
-								<input type="checkbox" id="advanced_stock_management" name="advanced_stock_management" class="advanced_stock_management"  
+								<input type="checkbox" id="advanced_stock_management" name="advanced_stock_management" class="advanced_stock_management"
 									{if $product->advanced_stock_management == 1 && $stock_management_active == 1}
 										value="1" checked="checked"
 									{else}
 										value="0"
-									{/if} 
-									{if $stock_management_active == 0 || $product->cache_is_pack}
-										disabled="disabled" 
-									{/if} 
+									{/if}
+									{if $stock_management_active == 0}
+										disabled="disabled"
+									{/if}
 								/>
 								{l s='I want to use the advanced stock management system for this product.'}
 							</label>
@@ -61,48 +61,92 @@
 							{if $stock_management_active == 0 && !$product->cache_is_pack}
 								<p class="help-block"><i class="icon-warning-sign"></i>&nbsp;{l s='This requires you to enable advanced stock management.'}</p>
 							{else if $product->cache_is_pack}
-								<p class="help-block">{l s='This parameter depends on the product(s) in the pack.'}</p>
+								<p class="help-block">{l s='This parameter depends on the product(s) in the pack if you use an option that decrement product in pack.'}</p>
 							{/if}
 					</div>
 				</div>
 
-				<div {if $product->is_virtual || $product->cache_is_pack}style="display:none;"{/if} class="form-group stockForVirtualProduct">
+				<div {if $product->is_virtual}style="display:none;"{/if} class="form-group stockForVirtualProduct">
 					<label class="control-label col-lg-3" for="depends_on_stock_1">{l s='Available quantities'}</label>
 					<div class="col-lg-9">
 						<p class="radio">
 							<label for="depends_on_stock_1">
 								<input type="radio" id="depends_on_stock_1" name="depends_on_stock" class="depends_on_stock"  value="1"
 									{if $product->depends_on_stock == 1 && $stock_management_active == 1}
-										checked="checked" 
-									{/if} 
-									{if $stock_management_active == 0 || $product->advanced_stock_management == 0 || $product->cache_is_pack}
-										disabled="disabled" 
-									{/if} 
+										checked="checked"
+									{/if}
+									{if $stock_management_active == 0 || $product->advanced_stock_management == 0}
+										disabled="disabled"
+									{/if}
 								/>
-								{l s='The available quantities for the current product and its combinations are based on the stock in your warehouse (using the advanced stock management system). '} 
+								{l s='The available quantities for the current product and its combinations are based on the stock in your warehouse (using the advanced stock management system). '}
 								{if ($stock_management_active == 0 || $product->advanced_stock_management == 0) && !$product->cache_is_pack} &nbsp;-&nbsp;{l s='This requires you to enable advanced stock management globally or for this product.'}
-								{else if $product->cache_is_pack} &nbsp;-&nbsp;{l s='This parameter depends on the product(s) in the pack.'}
 								{/if}
 							</label>
 						</p>
+						{if $product->cache_is_pack}
+							<p class="help-block">
+								{l s='You cannot use advanced stock management for this pack if'}</br>
+								{l s='- advanced stock management is not enabled for these products'}</br>
+								{l s='- you have chosen to decrement products quantities.'}
+							</p>
+						{/if}
 						<p class="radio">
 							<label for="depends_on_stock_0" for="depends_on_stock_0">
 								<input type="radio"  id="depends_on_stock_0" name="depends_on_stock" class="depends_on_stock" value="0"
 									{if $product->depends_on_stock == 0 || $stock_management_active == 0}
-										checked="checked" 
-									{/if} 
+										checked="checked"
+									{/if}
 								/>
 								{l s='I want to specify available quantities manually.'}
 							</label>
 						</p>
 					</div>
 				</div>
-
+				<div class="form-group" {if !$product->cache_is_pack}style="display:none"{/if}>
+					<label class="control-label col-lg-3">{l s='Pack quantities'}</label>
+					<div class="col-lg-9">
+						<p class="radio">
+							<label id="label_pack_stock_1" for="pack_stock_type_1">
+								<input type="radio" class="pack_stock_type" value="0" name="pack_stock_type" id="pack_stock_type_1" {if isset($product->pack_stock_type) && $product->pack_stock_type == 0} checked="checked" {/if}/>
+								{l s='Decrement pack only.'}
+							</label>
+						</p>
+						<p class="radio">
+							<label id="label_pack_stock_2" for="pack_stock_type_2">
+								<input type="radio" class="pack_stock_type" value="1" name="pack_stock_type" id="pack_stock_type_2" {if isset($product->pack_stock_type) && $product->pack_stock_type == 1} checked="checked" {/if}/>
+								{l s='Decrement products in pack only.'}
+							</label>
+						</p>
+						<p class="radio">
+							<label id="label_pack_stock_3" for="pack_stock_type_3">
+								<input type="radio" class="pack_stock_type" value="2" name="pack_stock_type" id="pack_stock_type_3" {if isset($product->pack_stock_type) && $product->pack_stock_type == 2} checked="checked" {/if}/>
+								{l s='Decrement both.'}
+							</label>
+						</p>
+						<p class="radio">
+							<label id="label_pack_stock_4" for="pack_stock_type_4">
+								<input type="radio" class="pack_stock_type" value="3" name="pack_stock_type" id="pack_stock_type_4" {if !isset($product->pack_stock_type) || $product->pack_stock_type == 3} checked="checked" {/if}/>
+								{l s='Default'}:
+								{if $pack_stock_type == 0}
+									{l s='Decrement pack only.'}
+								{elseif $pack_stock_type == 1}
+									{l s='Decrement products in pack only.'}
+								{else}
+									{l s='Decrement both.'}
+								{/if}
+								<a class="confirm_leave" href="index.php?tab=AdminPPreferences&amp;token={$token_preferences}">
+									{l s='as set in the Products Preferences page'}
+								</a>
+							</label>
+						</p>
+					</div>
+				</div>
 				{if isset($pack_quantity)}
 					<div class="alert alert-info">
 						<p>{l s='When a product has combinations, quantities will be based on the default combination.'}</p>
 						<p>{l s='Given the quantities of the products in this pack, the maximum quantity should be:'} {$pack_quantity}</p>
-					</div>	
+					</div>
 				{/if}
 				<div class="form-group">
 					<div class="col-lg-9 col-lg-offset-3">
@@ -148,7 +192,7 @@
 								{l s='Allow orders'}
 								{else}
 								{l s='Deny orders'}
-								{/if} 
+								{/if}
 								<a class="confirm_leave" href="index.php?tab=AdminPPreferences&amp;token={$token_preferences}">
 									{l s='as set in the Products Preferences page'}
 								</a>
@@ -170,8 +214,8 @@
 		{/if}
 		<div class="panel-footer">
 			<a href="{$link->getAdminLink('AdminProducts')|escape:'html':'UTF-8'}" class="btn btn-default"><i class="process-icon-cancel"></i> {l s='Cancel'}</a>
-			<button type="submit" name="submitAddproduct" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save'}</button>
-			<button type="submit" name="submitAddproductAndStay" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save and stay'}</button>
+			<button type="submit" name="submitAddproduct" class="btn btn-default pull-right" disabled="disabled"><i class="process-icon-loading"></i></i> {l s='Save'}</button>
+			<button type="submit" name="submitAddproductAndStay" class="btn btn-default pull-right" disabled="disabled"><i class="process-icon-loading"></i> {l s='Save and stay'}</button>
 		</div>
 	</div>
 	<div class="panel">
@@ -190,7 +234,7 @@
 			</div>
 		{/if}
 
-		{if $ps_stock_management}			
+		{if $ps_stock_management}
 			<div class="form-group">
 				<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="available_now" type="default" multilang="true"}</span></div>
 				<label class="control-label col-lg-2" for="available_now_{$default_language}">
@@ -220,12 +264,12 @@
 						input_name='available_later'}
 				</div>
 			</div>
-			
+
 			{if !$countAttributes}
 			<div class="form-group">
 				<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="available_date" type="default"}</span></div>
 				<label class="control-label col-lg-2" for="available_date">
-					{l s='Available date:'}
+					{l s='Availability date:'}
 				</label>
 				<div class="col-lg-9">
 					<div class="input-group fixed-width-md">
@@ -242,15 +286,16 @@
 		{/if}
 		<div class="panel-footer">
 			<a href="{$link->getAdminLink('AdminProducts')|escape:'html':'UTF-8'}" class="btn btn-default"><i class="process-icon-cancel"></i> {l s='Cancel'}</a>
-			<button type="submit" name="submitAddproduct" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save'}</button>
-			<button type="submit" name="submitAddproductAndStay" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save and stay'}</button>
+			<button type="submit" name="submitAddproduct" class="btn btn-default pull-right" disabled="disabled"><i class="process-icon-loading"></i> {l s='Save'}</button>
+			<button type="submit" name="submitAddproductAndStay" class="btn btn-default pull-right" disabled="disabled"><i class="process-icon-loading"></i> {l s='Save and stay'}</button>
 		</div>
 		<script type="text/javascript">
 			var quantities_ajax_success = '{l s='Data saved' js=1}';
 			var quantities_ajax_waiting = '{l s='Saving data...' js=1}';
 		</script>
 	</div>
+	<script type="text/javascript">
+		if (tabs_manager.allow_hide_other_languages)
+			hideOtherLanguage({$default_form_language});
+	</script>
 {/if}
-<script type="text/javascript">
-	hideOtherLanguage({$default_form_language});
-</script>

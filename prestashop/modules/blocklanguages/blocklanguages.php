@@ -33,13 +33,13 @@ class BlockLanguages extends Module
 	{
 		$this->name = 'blocklanguages';
 		$this->tab = 'front_office_features';
-		$this->version = '1.3.1';
+		$this->version = '1.3.3';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		parent::__construct();
 
-		$this->displayName = $this->l('Language block');
+		$this->displayName = $this->l('Language selector block');
 		$this->description = $this->l('Adds a block allowing customers to select a language for your store\'s content.');
 		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
 	}
@@ -49,7 +49,7 @@ class BlockLanguages extends Module
 		return (parent::install() && $this->registerHook('displayNav') && $this->registerHook('displayHeader'));
 	}
 
-	private function _prepareHook($params)
+	protected function _prepareHook($params)
 	{
 		$languages = Language::getLanguages(true, $this->context->shop->id);
 		if (!count($languages))

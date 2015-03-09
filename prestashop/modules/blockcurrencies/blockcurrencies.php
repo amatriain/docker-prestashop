@@ -33,7 +33,7 @@ class BlockCurrencies extends Module
 	{
 		$this->name = 'blockcurrencies';
 		$this->tab = 'front_office_features';
-		$this->version = '0.3.1';
+		$this->version = '0.3.2';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
@@ -49,7 +49,7 @@ class BlockCurrencies extends Module
 		return parent::install() && $this->registerHook('displayNav') && $this->registerHook('displayHeader');
 	}
 
-	private function _prepareHook($params)
+	protected function _prepareHook($params)
 	{
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return false;

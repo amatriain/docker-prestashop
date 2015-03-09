@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -60,7 +60,7 @@
 	<div class="col-lg-4">
 		{* Choose number of results per page *}
 		<div class="pagination">
-			{l s='Display'} 
+			{l s='Display'}
 			<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
 				{$selected_pagination}
 				<i class="icon-caret-down"></i>
@@ -135,10 +135,9 @@
 {if !$simple_header}
 		<input type="hidden" name="token" value="{$token|escape:'html':'UTF-8'}" />
 	</div>
+	{hook h='displayAdminListAfter'}
 </form>
 {/if}
-
-{hook h='displayAdminListAfter'}
 {if isset($name_controller)}
 	{capture name=hookName assign=hookName}display{$name_controller|ucfirst}ListAfter{/capture}
 	{hook h=$hookName}

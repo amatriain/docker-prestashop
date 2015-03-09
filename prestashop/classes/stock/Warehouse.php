@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -88,19 +88,19 @@ class WarehouseCore extends ObjectModel
  		),
  		'associations' => array(
 			'stocks' => array(
-				'resource' => 'stocks',
+				'resource' => 'stock',
 				'fields' => array(
 					'id' => array(),
 				),
 			),
 			'carriers' => array(
-				'resource' => 'carriers',
+				'resource' => 'carrier',
 				'fields' => array(
 					'id' => array(),
 				),
 			),
 			'shops' => array(
-				'resource' => 'shops',
+				'resource' => 'shop',
 				'fields' => array(
 					'id' => array(),
 					'name' => array(),
@@ -293,14 +293,6 @@ class WarehouseCore extends ObjectModel
 	{
 
 		// if it's a pack, returns warehouses if and only if some products use the advanced stock management
-		if (Pack::isPack($id_product))
-		{
-			$warehouses = Warehouse::getPackWarehouses($id_product);
-			$res = array();
-			foreach ($warehouses as $warehouse)
-				$res[]['id_warehouse'] = $warehouse;
-			return $res;
-		}
 		$share_stock = false;
 		if ($id_shop === null)
 		{
@@ -310,7 +302,7 @@ class WarehouseCore extends ObjectModel
 			{
 				$shop_group = Context::getContext()->shop->getGroup();
 				$id_shop = (int)Context::getContext()->shop->id;
-			}	
+			}
 			$share_stock = $shop_group->share_stock;
 		}
 		else
@@ -536,7 +528,7 @@ class WarehouseCore extends ObjectModel
 			$res = call_user_func_array('array_intersect', $list);
 		return $res;
 	}
-	
+
 	public function resetStockAvailable()
 	{
 		$products = WarehouseProductLocation::getProducts((int)$this->id);

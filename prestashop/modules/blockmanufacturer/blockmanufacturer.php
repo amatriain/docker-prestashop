@@ -33,12 +33,12 @@ class BlockManufacturer extends Module
     {
         $this->name = 'blockmanufacturer';
         $this->tab = 'front_office_features';
-        $this->version = '1.2.1';
+        $this->version = '1.2.2';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
         $this->bootstrap = true;
-		parent::__construct();	
+		parent::__construct();
 
 		$this->displayName = $this->l('Manufacturers block');
         $this->description = $this->l('Displays a block listing product manufacturers and/or brands.');
@@ -51,25 +51,12 @@ class BlockManufacturer extends Module
 		Configuration::updateValue('MANUFACTURER_DISPLAY_TEXT_NB', 5);
 		Configuration::updateValue('MANUFACTURER_DISPLAY_FORM', false);
 		$success = (parent::install() &&
-			$this->registerHook('header') &&
+			$this->registerHook('header') && $this->registerHook('leftColumn') &&
 			$this->registerHook('actionObjectManufacturerDeleteAfter') &&
 			$this->registerHook('actionObjectManufacturerAddAfter') &&
 			$this->registerHook('actionObjectManufacturerUpdateAfter')
 		);
 
-		if ($success)
-		{
-			// Hook the module either on the left or right column
-			$theme = new Theme(Context::getContext()->shop->id_theme);
-			if ((!$theme->default_left_column || !$this->registerHook('leftColumn'))
-				&& (!$theme->default_right_column || !$this->registerHook('rightColumn')))
-			{
-				// If there are no colums implemented by the template, throw an error and uninstall the module
-				$this->_errors[] = $this->l('This module need to be hooked in a column and your theme does not implement one');
-				parent::uninstall();
-				return false;
-			}
-		}
 		return $success;
     }
 
@@ -132,7 +119,7 @@ class BlockManufacturer extends Module
 	{
 		$this->context->controller->addCSS(($this->_path).'blockmanufacturer.css', 'all');
 	}
-	
+
 	public function hookActionObjectManufacturerUpdateAfter($params)
 	{
 		$this->_clearCache('blockmanufacturer.tpl');
@@ -147,7 +134,7 @@ class BlockManufacturer extends Module
 	{
 		$this->_clearCache('blockmanufacturer.tpl');
 	}
-	
+
 	public function renderForm()
 	{
 		$fields_form = array(
@@ -205,7 +192,7 @@ class BlockManufacturer extends Module
 				)
 			),
 		);
-		
+
 		$helper = new HelperForm();
 		$helper->show_toolbar = false;
 		$helper->table =  $this->table;
@@ -224,9 +211,9 @@ class BlockManufacturer extends Module
 
 		return $helper->generateForm(array($fields_form));
 	}
-	
+
 	public function getConfigFieldsValues()
-	{		
+	{
 		return array(
 			'MANUFACTURER_DISPLAY_TEXT' => Tools::getValue('MANUFACTURER_DISPLAY_TEXT', Configuration::get('MANUFACTURER_DISPLAY_TEXT')),
 			'MANUFACTURER_DISPLAY_TEXT_NB' => Tools::getValue('MANUFACTURER_DISPLAY_TEXT_NB', Configuration::get('MANUFACTURER_DISPLAY_TEXT_NB')),

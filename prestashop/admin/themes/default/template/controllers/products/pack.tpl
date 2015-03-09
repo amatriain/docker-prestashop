@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -33,12 +33,12 @@
 		<p class="alert alert-warning pack-empty-warning" {if $pack_items|@count != 0}style="display:none"{/if}>{l s='This pack is empty. You must add at least one product item.'}</p>
 		<ul id="divPackItems" class="list-unstyled">
 			{foreach $pack_items as $pack_item}
-				<li class="product-pack-item media-product-pack" data-product-name="{$curPackItemName}" data-product-qty="{$pack_item.pack_quantity}" data-product-id="{$pack_item.id}">
+				<li class="product-pack-item media-product-pack" data-product-name="{$curPackItemName}" data-product-qty="{$pack_item.pack_quantity}" data-product-id="{$pack_item.id}" data-product-id-attribute="{$pack_item.id_product_attribute}">
 					<img class="media-product-pack-img" src="{$pack_item.image}"/>
 					<span class="media-product-pack-title">{$pack_item.name}</span>
 					<span class="media-product-pack-ref">REF: {$pack_item.reference}</span>
 					<span class="media-product-pack-quantity"><span class="text-muted">x</span>{$pack_item.pack_quantity}</span>
-					<button type="button" class="btn btn-default delPackItem media-product-pack-action" data-delete="{$pack_item.id}" ><i class="icon-trash"></i></button>
+					<button type="button" class="btn btn-default delPackItem media-product-pack-action" data-delete="{$pack_item.id}" data-delete-attr="{$pack_item.id_product_attribute}"><i class="icon-trash"></i></button>
 				</li>
 			{/foreach}
 		</ul>
@@ -54,7 +54,7 @@
 		<div class="row">
 			<div class="col-lg-6">
 				<input type="text" id="curPackItemName" name="curPackItemName" class="form-control" />
-			</div>					
+			</div>
 			<div class="col-lg-2">
 				<div class="input-group">
 					<span class="input-group-addon">&times;</span>
@@ -64,7 +64,7 @@
 			<div class="col-lg-2">
 				<button type="button" id="add_pack_item" class="btn btn-default">
 					<i class="icon-plus-sign-alt"></i> {l s='Add this product'}
-				</button>	
+				</button>
 			</div>
 		</div>
 	</div>

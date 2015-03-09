@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -84,8 +84,8 @@ class ProfileCore extends ObjectModel
 			$result = Db::getInstance()->execute('INSERT INTO '._DB_PREFIX_.'access (SELECT '.(int)$this->id.', id_tab, 0, 0, 0, 0 FROM '._DB_PREFIX_.'tab)');
 			$result &= Db::getInstance()->execute('
 				INSERT INTO '._DB_PREFIX_.'module_access
-				(`id_profile`, `id_module`, `configure`, `view`)
-				(SELECT '.(int)$this->id.', id_module, 0, 1 FROM '._DB_PREFIX_.'module)
+				(`id_profile`, `id_module`, `configure`, `view`, `uninstall`)
+				(SELECT '.(int)$this->id.', id_module, 0, 1, 0 FROM '._DB_PREFIX_.'module)
 			');
 			return $result;
 		}
@@ -116,7 +116,7 @@ class ProfileCore extends ObjectModel
 
 		if (!isset(self::$_cache_accesses[$id_profile]))
 			self::$_cache_accesses[$id_profile] = array();
-			
+
 		if (!isset(self::$_cache_accesses[$id_profile][$type]))
 		{
 			self::$_cache_accesses[$id_profile][$type] = array();

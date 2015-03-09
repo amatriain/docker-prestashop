@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -50,7 +50,7 @@
 					<td class="logo">
 						{if $store.has_picture}
 							<div class="store-image">
-								<img src="{$img_store_dir}{$store.id_store}.jpg" alt="" />
+								<img src="{$img_store_dir}{$store.id_store}-medium_default.jpg" alt="{$store.name|escape:'html':'UTF-8'}" width="{$mediumSize.width}" height="{$mediumSize.height}"/>
 							</div>
 						{/if}
 					</td>
@@ -93,7 +93,7 @@
             <input class="form-control grey" type="text" name="location" id="addressInput" value="{l s='Address, zip / postal code, city, state or country'}" />
         </div>
         <div class="radius-input">
-            <label for="radiusSelect">{l s='Radius:'}</label> 
+            <label for="radiusSelect">{l s='Radius:'}</label>
             <select name="radius" id="radiusSelect" class="form-control">
                 <option value="15">15</option>
                 <option value="25">25</option>
@@ -123,7 +123,7 @@
                 <th>{l s='Store'}</th>
                 <th>{l s='Address'}</th>
                 <th>{l s='Distance'}</th>
-            </tr>		
+            </tr>
         </thead>
         <tbody>
         </tbody>

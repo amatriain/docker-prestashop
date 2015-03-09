@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,12 +18,12 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
-{assign var=module_name value='<strong><span class="module-name-placeholder"></span></strong>'}
+{assign var=module_name value='<strong><span class="module-display-name-placeholder"></span></strong>'}
 
 <div class="modal-body">
 	<div class="alert alert-warning">
@@ -40,11 +40,15 @@
 	</p>
 	<p>
 		{l s='If you are unsure about this module, you can look for similar modules on the official marketplace.'}
-		<a target="_blank" href="http://addons.prestashop.com/">{l s='Click here to browse PrestaShop Addons.'}</a>
+		<a class="_blank" href="http://addons.prestashop.com/">{l s='Click here to browse PrestaShop Addons.'}</a>
 	</p>
 </div>
 
 <div class="modal-footer">
-	<button type="button" class="btn btn-default" data-dismiss="modal">{l s='Back to the module list'}</button>
-	<a id="proceed-install-anyway" href="#" class="btn btn-warning">{l s='Proceed with the installation'}</a>
+	<div class="row">
+		<div class="col-sm-12 text-center">
+			<a id="proceed-install-anyway" href="#" class="btn btn-warning">{l s='Proceed with the installation'}</a>
+			<button type="button" class="btn btn-default" data-dismiss="modal">{l s='Back to modules list'}</button>
+		</div>
+	</div>
 </div>

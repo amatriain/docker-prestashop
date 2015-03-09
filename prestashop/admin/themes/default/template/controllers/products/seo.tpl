@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -44,7 +44,7 @@
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="meta_description" type="default" multilang="true"}</span></div>		
+		<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="meta_description" type="default" multilang="true"}</span></div>
 		<label class="control-label col-lg-2" for="meta_description_{$id_lang}">
 			<span class="label-tooltip" data-toggle="tooltip"
 				title="{l s='This description will appear in search engines. You need a single sentence, shorter than 160 characters (including spaces).'}">
@@ -62,7 +62,7 @@
 	</div>
 	{* Removed for simplicity *}
 	<div class="form-group hide">
-		<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="meta_keywords" type="default" multilang="true"}</span></div>	
+		<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="meta_keywords" type="default" multilang="true"}</span></div>
 		<label class="control-label col-lg-2" for="meta_keywords_{$id_lang}">
 			<span class="label-tooltip" data-toggle="tooltip"
 				title="{l s='Keywords for search engines, separated by commas.'}">
@@ -76,7 +76,7 @@
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="link_rewrite" type="seo_friendly_url" multilang="true"}</span></div>	
+		<div class="col-lg-1"><span class="pull-right">{include file="controllers/products/multishop/checkbox.tpl" field="link_rewrite" type="seo_friendly_url" multilang="true"}</span></div>
 		<label class="control-label col-lg-2" for="link_rewrite_{$id_lang}">
 			<span class="label-tooltip" data-toggle="tooltip"
 				title="{l s='This is the human-readable URL, as generated from the product\'s name. You can change it if you want.'}">
@@ -99,17 +99,18 @@
 			{foreach from=$languages item=language}
 			<div class="alert alert-warning translatable-field lang-{$language.id_lang}">
 				<i class="icon-link"></i> {l s='The product link will look like this:'}<br/>
-				<strong>{$curent_shop_url|escape:'html':'UTF-8'}lang/{if isset($product->id)}{$product->id}{else}id_product{/if}-<span id="friendly-url_{$language.id_lang}">{$product->link_rewrite[$default_language]|escape:'html':'UTF-8'}</span>.html</strong>
+				<strong>{if isset($rewritten_links[$language.id_lang][0])}{$rewritten_links[$language.id_lang][0]|escape:'html':'UTF-8'}{/if}<span id="friendly-url_{$language.id_lang}">{$product->link_rewrite[$language.id_lang]|escape:'html':'UTF-8'}</span>{if isset($rewritten_links[$language.id_lang][1])}{$rewritten_links[$language.id_lang][1]|escape:'html':'UTF-8'}{/if}</strong>
 			</div>
 			{/foreach}
 		</div>
 	</div>
 	<div class="panel-footer">
 		<a href="{$link->getAdminLink('AdminProducts')|escape:'html':'UTF-8'}" class="btn btn-default"><i class="process-icon-cancel"></i> {l s='Cancel'}</a>
-		<button type="submit" name="submitAddproduct" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save'}</button>
-		<button type="submit" name="submitAddproductAndStay" class="btn btn-default pull-right"><i class="process-icon-save"></i> {l s='Save and stay'}</button>
+		<button type="submit" name="submitAddproduct" class="btn btn-default pull-right" disabled="disabled"><i class="process-icon-loading"></i> {l s='Save'}</button>
+		<button type="submit" name="submitAddproductAndStay" class="btn btn-default pull-right" disabled="disabled"><i class="process-icon-loading"></i> {l s='Save and stay'}</button>
 	</div>
 </div>
 <script type="text/javascript">
-	hideOtherLanguage({$default_form_language});
+	if (tabs_manager.allow_hide_other_languages)
+		hideOtherLanguage({$default_form_language});
 </script>

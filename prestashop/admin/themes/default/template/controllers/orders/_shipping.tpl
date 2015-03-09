@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -44,6 +44,7 @@
 				<th>
 					<span class="title_box ">{l s='Tracking number'}</span>
 				</th>
+				<th></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -60,8 +61,10 @@
 						{displayPrice price=$line.shipping_cost_tax_excl currency=$currency->id}
 					{/if}
 				</td>
-				<td class="actions">
-					<span id="shipping_number_show">{if $line.url && $line.tracking_number}<a target="_blank" href="{$line.url|replace:'@':$line.tracking_number}">{$line.tracking_number}</a>{else}{$line.tracking_number}{/if}</span>
+				<td>
+					<span class="shipping_number_show">{if $line.url && $line.tracking_number}<a class="_blank" href="{$line.url|replace:'@':$line.tracking_number}">{$line.tracking_number}</a>{else}{$line.tracking_number}{/if}</span>
+				</td>
+				<td>
 					{if $line.can_edit}
 						<form method="post" action="{$link->getAdminLink('AdminOrders')|escape:'html':'UTF-8'}&amp;vieworder&amp;id_order={$order->id|intval}">
 							<span class="shipping_number_edit" style="display:none;">

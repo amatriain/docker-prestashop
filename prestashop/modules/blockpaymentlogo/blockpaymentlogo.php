@@ -33,14 +33,14 @@ class BlockPaymentLogo extends Module
 	{
 		$this->name = 'blockpaymentlogo';
 		$this->tab = 'front_office_features';
-		$this->version = '0.3.1';
+		$this->version = '0.3.3';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		$this->bootstrap = true;
-		parent::__construct();	
+		parent::__construct();
 
-		$this->displayName = $this->l('Payment logos block.');
+		$this->displayName = $this->l('Payment logos block');
 		$this->description = $this->l('Adds a block which displays all of your payment logos.');
 		$this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
 	}
@@ -48,22 +48,7 @@ class BlockPaymentLogo extends Module
 	public function install()
 	{
 		Configuration::updateValue('PS_PAYMENT_LOGO_CMS_ID', 0);
-		$success = (parent::install() && $this->registerHook('header'));
-
-		if ($success)
-		{
-			// Hook the module either on the left or right column
-			$theme = new Theme(Context::getContext()->shop->id_theme);
-			if ((!$theme->default_left_column || !$this->registerHook('leftColumn'))
-				&& (!$theme->default_right_column || !$this->registerHook('rightColumn')))
-			{
-				// If there are no colums implemented by the template, throw an error and uninstall the module
-				$this->_errors[] = $this->l('This module need to be hooked in a column and your theme does not implement one');
-				parent::uninstall();
-				return false;
-			}
-		}
-		return $success;
+		return (parent::install() && $this->registerHook('header') && $this->registerHook('leftColumn'));
 	}
 
 	public function uninstall()
@@ -133,7 +118,7 @@ class BlockPaymentLogo extends Module
 			return;
 		$this->context->controller->addCSS(($this->_path).'blockpaymentlogo.css', 'all');
 	}
-	
+
 	public function renderForm()
 	{
 		$fields_form = array(
@@ -161,7 +146,7 @@ class BlockPaymentLogo extends Module
 				)
 			),
 		);
-		
+
 		$helper = new HelperForm();
 		$helper->show_toolbar = false;
 		$helper->table =  $this->table;
@@ -180,9 +165,9 @@ class BlockPaymentLogo extends Module
 
 		return $helper->generateForm(array($fields_form));
 	}
-	
+
 	public function getConfigFieldsValues()
-	{		
+	{
 		return array(
 			'PS_PAYMENT_LOGO_CMS_ID' => Tools::getValue('PS_PAYMENT_LOGO_CMS_ID', Configuration::get('PS_PAYMENT_LOGO_CMS_ID')),
 		);

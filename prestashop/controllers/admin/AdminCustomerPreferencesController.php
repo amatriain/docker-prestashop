@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -92,6 +92,20 @@ class AdminCustomerPreferencesControllerCore extends AdminController
 					'PS_B2B_ENABLE' => array(
 						'title' => $this->l('Enable B2B mode'),
 						'hint' => $this->l('Activate or deactivate B2B mode. When this option is enabled, B2B features will be made available.'),
+						'validation' => 'isBool',
+						'cast' => 'intval',
+						'type' => 'bool'
+					),
+					'PS_CUSTOMER_NWSL' => array(
+						'title' => $this->l('Enable newsletter registration'),
+						'hint' => $this->l('Display or not the newsletter registration tick box.'),
+						'validation' => 'isBool',
+						'cast' => 'intval',
+						'type' => 'bool'
+					),
+					'PS_CUSTOMER_OPTIN' => array(
+						'title' => $this->l('Enable opt-in'),
+						'hint' => $this->l('Display or not opt-in tick box.'),
 						'validation' => 'isBool',
 						'cast' => 'intval',
 						'type' => 'bool'

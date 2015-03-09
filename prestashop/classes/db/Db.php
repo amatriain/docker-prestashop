@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -138,6 +138,14 @@ abstract class DbCore
 	abstract public function nextRow($result = false);
 
 	/**
+	 * Get all rows for a query which return an array
+	 *
+	 * @param mixed $result
+	 */
+
+	abstract protected function getAll($result = false);
+
+	/**
 	 * Get database version
 	 *
 	 * @return string
@@ -164,7 +172,7 @@ abstract class DbCore
 
 	/* do not remove, useful for some modules */
 	abstract public function set_db($db_name);
-	
+
 	abstract public function getBestEngine();
 
 	/**
@@ -231,7 +239,7 @@ abstract class DbCore
 		$class = 'MySQL';
 		if (PHP_VERSION_ID >= 50200 && extension_loaded('pdo_mysql'))
 			$class = 'DbPDO';
-		else if (extension_loaded('mysqli'))
+		elseif (extension_loaded('mysqli'))
 			$class = 'DbMySQLi';
 		return $class;
 	}
@@ -321,6 +329,13 @@ abstract class DbCore
 			$sql = $sql->build();
 
 		$this->result = $this->_query($sql);
+
+		if (!$this->result && $this->getNumberError() == 2006)
+		{
+			if ($this->connect())
+				$this->result = $this->_query($sql);
+		}
+
 		if (_PS_DEBUG_SQL_)
 			$this->displayError($sql);
 		return $this->result;
@@ -347,9 +362,9 @@ abstract class DbCore
 
 		if ($type == Db::INSERT)
 			$insert_keyword = 'INSERT';
-		else if ($type == Db::INSERT_IGNORE)
+		elseif ($type == Db::INSERT_IGNORE)
 			$insert_keyword = 'INSERT IGNORE';
-		else if ($type == Db::REPLACE)
+		elseif ($type == Db::REPLACE)
 			$insert_keyword = 'REPLACE';
 		else
 			throw new PrestaShopDatabaseException('Bad keyword, must be Db::INSERT or Db::INSERT_IGNORE or Db::REPLACE');
@@ -416,7 +431,7 @@ abstract class DbCore
 			if ($value['type'] == 'sql')
 				$sql .= '`'.bqSQL($key)."` = {$value['value']},";
 			else
-				$sql .= ($null_values && ($value['value'] === '' || is_null($value['value']))) ? '`'.bqSQL($key)."` = NULL," : '`'.bqSQL($key)."` = '{$value['value']}',";
+				$sql .= ($null_values && ($value['value'] === '' || is_null($value['value']))) ? '`'.bqSQL($key).'` = NULL,' : '`'.bqSQL($key)."` = '{$value['value']}',";
 		}
 
 		$sql = rtrim($sql, ',');
@@ -510,11 +525,7 @@ abstract class DbCore
 				$result = $this->result;
 			}
 			else
-			{
-				$result = array();
-				while ($row = $this->nextRow($this->result))
-					$result[] = $row;
-			}
+				$result = $this->getAll($this->result);
 		}
 
 		$this->last_cached = false;
@@ -536,7 +547,7 @@ abstract class DbCore
 		if ($sql instanceof DbQuery)
 			$sql = $sql->build();
 
-		$sql .= ' LIMIT 1';
+		$sql = rtrim($sql, " \t\n\r\0\x0B;").' LIMIT 1';
 		$this->result = false;
 		$this->last_query = $sql;
 		if ($use_cache && $this->is_cache_enabled && ($result = Cache::getInstance()->get(Tools::encryptIV($sql))) !== false)
@@ -549,7 +560,7 @@ abstract class DbCore
 			$result = false;
 		else
 			$result = $this->nextRow($this->result);
-		$this->last_cached = false;		
+		$this->last_cached = false;
 		if (is_null($result))
 			$result = false;
 		if ($use_cache && $this->is_cache_enabled)
@@ -588,7 +599,7 @@ abstract class DbCore
 				Cache::getInstance()->set(Tools::encryptIV($this->last_query).'_nrows', $nrows);
 			return $nrows;
 		}
-		else if ($this->is_cache_enabled && $this->last_cached)
+		elseif ($this->is_cache_enabled && $this->last_cached)
 			return Cache::getInstance()->get(Tools::encryptIV($this->last_query).'_nrows');
 	}
 
@@ -629,7 +640,7 @@ abstract class DbCore
 			$dbg = debug_backtrace();
 			WebserviceRequest::getInstance()->setError(500, '[SQL Error] '.$this->getMsgError().'. From '.(isset($dbg[3]['class']) ? $dbg[3]['class'] : '').'->'.$dbg[3]['function'].'() Query was : '.$sql, 97);
 		}
-		else if (_PS_DEBUG_SQL_ && $errno && !defined('PS_INSTALLATION_IN_PROGRESS'))
+		elseif (_PS_DEBUG_SQL_ && $errno && !defined('PS_INSTALLATION_IN_PROGRESS'))
 		{
 			if ($sql)
 				throw new PrestaShopDatabaseException($this->getMsgError().'<br /><br /><pre>'.$sql.'</pre>');
@@ -707,6 +718,11 @@ abstract class DbCore
 		return call_user_func_array(array(Db::getClass(), 'checkCreatePrivilege'), array($server, $user, $pwd, $db, $prefix, $engine));
 	}
 
+	public static function checkAutoIncrement($server, $user, $pwd)
+	{
+		return call_user_func_array(array(Db::getClass(), 'checkAutoIncrement'), array($server, $user, $pwd));
+	}
+
 	/**
 	 * @deprecated 1.5.0
 	 */
@@ -723,7 +739,6 @@ abstract class DbCore
 	{
 		Tools::displayAsDeprecated();
 		$ret = Db::s($sql, $use_cache);
-		p($ret);
 		return $ret;
 	}
 

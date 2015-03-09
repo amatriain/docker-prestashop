@@ -34,7 +34,7 @@ class GraphNvD3 extends ModuleGraphEngine
 	private $_values;
 	private $_legend;
 	private $_titles;
-	
+
     function __construct($type = null)
     {
 		if ($type !== null)
@@ -42,12 +42,12 @@ class GraphNvD3 extends ModuleGraphEngine
 
 		$this->name = 'graphnvd3';
 		$this->tab = 'administration';
-		$this->version = '1.3';
+		$this->version = '1.4';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		Module::__construct();
-			
+
 		$this->displayName = $this->l('NVD3 Charts');
 		$this->description = '';
     }
@@ -73,6 +73,11 @@ class GraphNvD3 extends ModuleGraphEngine
 	{
 		static $divid = 1;
 
+		if (strpos($params['width'], '%') !== false)
+			$params['width'] = (int)preg_replace('/\s*%\s*/', '', $params['width']).'%';
+		else
+			$params['width'] = (int)$params['width'].'px';
+
 		$nvd3_func = array(
 			'line' => '
 				nv.models.lineChart()',
@@ -86,7 +91,7 @@ class GraphNvD3 extends ModuleGraphEngine
 
 		return '
 		<div id="nvd3_chart_'.$divid.'" class="chart with-transitions">
-			<svg style="width:'.(int)$params['width'].'px;height:'.(int)$params['height'].'px"></svg>
+			<svg style="width:'.$params['width'].';height:'.(int)$params['height'].'px"></svg>
 		</div>
 		<script>
 			$.ajax({
@@ -119,16 +124,16 @@ class GraphNvD3 extends ModuleGraphEngine
 	}
 
 	public function createValues($values)
-	{		
+	{
 		$this->_values = $values;
 	}
-	
+
 	public function setSize($width, $height)
 	{
 		$this->_width = $width;
 		$this->_height = $height;
 	}
-	
+
 	public function setLegend($legend)
 	{
 		$this->_legend = $legend;

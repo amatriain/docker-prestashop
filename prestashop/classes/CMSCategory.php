@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -76,6 +76,7 @@ class CMSCategoryCore extends ObjectModel
 		'table' => 'cms_category',
 		'primary' => 'id_cms_category',
 		'multilang' => true,
+		'multilang_shop' => true,
 		'fields' => array(
 			'active' => 			array('type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true),
 			'id_parent' => 			array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt', 'required' => true),
@@ -246,8 +247,18 @@ class CMSCategoryCore extends ObjectModel
 
 		// Delete CMS Category and its child from database
 		$list = count($to_delete) > 1 ? implode(',', $to_delete) : (int)$this->id;
-		Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'cms_category` WHERE `id_cms_category` IN ('.$list.')');
-		Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'cms_category_lang` WHERE `id_cms_category` IN ('.$list.')');
+		$id_shop_list = Shop::getContextListShopID();
+		if (count($this->id_shop_list))
+				$id_shop_list = $this->id_shop_list;
+
+		Db::getInstance()->delete($this->def['table'].'_shop', '`'.$this->def['primary'].'` IN ('.$list.') AND id_shop IN ('.implode(', ', $id_shop_list).')');
+
+		$has_multishop_entries = $this->hasMultishopEntries();
+		if (!$hasMultishopEntries)
+		{
+			Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'cms_category` WHERE `id_cms_category` IN ('.$list.')');
+			Db::getInstance()->execute('DELETE FROM `'._DB_PREFIX_.'cms_category_lang` WHERE `id_cms_category` IN ('.$list.')');
+		}
 
 		CMSCategory::cleanPositions($this->id_parent);
 

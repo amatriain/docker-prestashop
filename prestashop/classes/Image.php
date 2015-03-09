@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -258,6 +258,9 @@ class ImageCore extends ObjectModel
 						$image_new->createImgFolder();
 						copy(_PS_PROD_IMG_DIR_.$image_old->getExistingImgPath().'-'.$image_type['name'].'.jpg',
 						$new_path.'-'.$image_type['name'].'.jpg');
+						if (Configuration::get('WATERMARK_HASH'))
+							copy(_PS_PROD_IMG_DIR_.$image_old->getExistingImgPath().'-'.$image_type['name'].'-'.Configuration::get('WATERMARK_HASH').'.jpg',
+							$new_path.'-'.$image_type['name'].'-'.Configuration::get('WATERMARK_HASH').'.jpg');
 					}
 				}
 
@@ -431,7 +434,11 @@ class ImageCore extends ObjectModel
 		// Delete auto-generated images
 		$image_types = ImageType::getImagesTypes();
 		foreach ($image_types as $image_type)
+		{
 			$files_to_delete[] = $this->image_dir.$this->getExistingImgPath().'-'.$image_type['name'].'.'.$this->image_format;
+			if (Configuration::get('WATERMARK_HASH'))
+				$files_to_delete[] = $this->image_dir.$this->getExistingImgPath().'-'.$image_type['name'].'-'.Configuration::get('WATERMARK_HASH').'.'.$this->image_format;
+		}
 
 		// Delete watermark image
 		$files_to_delete[] = $this->image_dir.$this->getExistingImgPath().'-watermark.'.$this->image_format;
@@ -477,7 +484,7 @@ class ImageCore extends ObjectModel
 		{
 			if (preg_match('/^[0-9]+(\-(.*))?\.'.$format.'$/', $file))
 				unlink($path.$file);
-			else if (is_dir($path.$file) && (preg_match('/^[0-9]$/', $file)))
+			elseif (is_dir($path.$file) && (preg_match('/^[0-9]$/', $file)))
 				Image::deleteAllImages($path.$file.'/', $format);
 		}
 

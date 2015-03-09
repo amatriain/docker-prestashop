@@ -33,6 +33,7 @@ class HomeSlide extends ObjectModel
 	public $image;
 	public $active;
 	public $position;
+	public $id_shop;
 
 	/**
 	 * @see ObjectModel::$definition
@@ -126,6 +127,25 @@ class HomeSlide extends ObjectModel
 		}
 
 		return true;
+	}
+
+	public static function getAssociatedIdsShop($id_slide)
+	{
+		$result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+			SELECT hs.`id_shop`
+			FROM `'._DB_PREFIX_.'homeslider` hs
+			WHERE hs.`id_homeslider_slides` = '.(int)$id_slide
+		);
+
+		if (!is_array($result))
+			return false;
+
+		$return = array();
+
+		foreach ($result as $id_shop)
+			$return[] = (int)$id_shop['id_shop'];
+
+		return $return;
 	}
 
 }

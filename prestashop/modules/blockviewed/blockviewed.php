@@ -34,12 +34,12 @@ class BlockViewed extends Module
 	{
 		$this->name = 'blockviewed';
 		$this->tab = 'front_office_features';
-		$this->version = '1.2';
+		$this->version = '1.2.3';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 
 		$this->bootstrap = true;
-		parent::__construct();	
+		parent::__construct();
 
 		$this->displayName = $this->l('Viewed products block');
 		$this->description = $this->l('Adds a block displaying recently viewed products.');
@@ -48,22 +48,8 @@ class BlockViewed extends Module
 
 	public function install()
 	{
-		$success = parent::install() && $this->registerHook('header') && Configuration::updateValue('PRODUCTS_VIEWED_NBR', 2);
+		return (parent::install() && $this->registerHook('header') && $this->registerHook('leftColumn') && Configuration::updateValue('PRODUCTS_VIEWED_NBR', 2));
 
-		if ($success)
-		{
-			// Hook the module either on the left or right column
-			$theme = new Theme((int)Context::getContext()->shop->id_theme);
-			if ((!$theme->default_left_column || !$this->registerHook('leftColumn'))
-				&& (!$theme->default_right_column || !$this->registerHook('rightColumn')))
-			{
-				// If there are no colums implemented by the template, throw an error and uninstall the module
-				$this->_errors[] = $this->l('This module need to be hooked in a column and your theme does not implement one');
-				parent::uninstall();
-				return false;
-			}
-		}
-		return $success;
 	}
 
 	public function getContent()
@@ -100,7 +86,7 @@ class BlockViewed extends Module
 			LEFT JOIN '._DB_PREFIX_.'product_lang pl ON (pl.id_product = p.id_product'.Shop::addSqlRestrictionOnLang('pl').')
 			LEFT JOIN '._DB_PREFIX_.'image i ON (i.id_product = p.id_product)'.
 			Shop::addSqlAssociation('image', 'i', false, 'image_shop.cover=1').'
-			LEFT JOIN '._DB_PREFIX_.'image_lang il ON (il.id_image = image_shop.id_image)
+			LEFT JOIN '._DB_PREFIX_.'image_lang il ON (il.id_image = image_shop.id_image AND il.id_lang = '.(int)($params['cookie']->id_lang).')
 			LEFT JOIN '._DB_PREFIX_.'category_lang cl ON (cl.id_category = product_shop.id_category_default'.Shop::addSqlRestrictionOnLang('cl').')
 			WHERE p.id_product IN ('.$productIds.')
 			AND pl.id_lang = '.(int)($params['cookie']->id_lang).'
@@ -180,7 +166,7 @@ class BlockViewed extends Module
 		}
 		$this->context->controller->addCSS(($this->_path).'blockviewed.css', 'all');
 	}
-	
+
 	public function renderForm()
 	{
 		$fields_form = array(
@@ -203,7 +189,7 @@ class BlockViewed extends Module
 				)
 			),
 		);
-			
+
 		$helper = new HelperForm();
 		$helper->show_toolbar = false;
 		$helper->table =  $this->table;
@@ -222,9 +208,9 @@ class BlockViewed extends Module
 
 		return $helper->generateForm(array($fields_form));
 	}
-	
+
 	public function getConfigFieldsValues()
-	{		
+	{
 		return array(
 			'PRODUCTS_VIEWED_NBR' => Tools::getValue('PRODUCTS_VIEWED_NBR', Configuration::get('PRODUCTS_VIEWED_NBR')),
 		);

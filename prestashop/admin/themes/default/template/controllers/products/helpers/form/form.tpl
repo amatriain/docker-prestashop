@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -18,7 +18,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
@@ -33,12 +33,12 @@
 			setup : function(ed) {
 				ed.on('init', function(ed)
 				{
-					if (typeof ProductMultishop.load_tinymce[ed.id] != 'undefined')
+					if (typeof ProductMultishop.load_tinymce[ed.target.id] != 'undefined')
 					{
-						if (typeof ProductMultishop.load_tinymce[ed.id])
-							ed.hide();
+						if (typeof ProductMultishop.load_tinymce[ed.target.id])
+							tinyMCE.get(ed.target.id).hide();
 						else
-							ed.show();
+							tinyMCE.get(ed.target.id).show();
 					}
 				});
 
@@ -63,7 +63,7 @@
 
 {block name="defaultForm"}
 	<div class="row">
-		<div class="productTabs col-lg-2">
+		<div class="productTabs col-lg-2 col-md-3">
 			<div class="list-group">
 			{foreach $product_tabs key=numStep item=tab}
 				{if $tab.name != "Pack"}
@@ -101,6 +101,11 @@
 			{else}
 				var display_multishop_checkboxes = false;
 			{/if}
+
+			var tabs_preloaded = new Array();
+			var tabs_to_preload = new Array();
+			var mod_evasive = {if isset($mod_evasive) && $mod_evasive}true{else}false{/if};
+			var mod_security = {if isset($mod_security) && $mod_security}true{else}false{/if};
 
 			$(document).ready(function()
 			{
@@ -208,13 +213,10 @@
 
 			});
 
-			var tabs_preloaded = new Array();
-
 			// Listen to the load event that is fired each time an ajax call to load a tab has completed
 			$(window).bind("load", function() {
 				{* Fill an array with tabs that need to be preloaded *}
 				var tabs_to_preload = new Array();
-
 				{foreach $tabs_preloaded as $tab_name => $value}
 					{* If the tab was not given a loading priority number it will not be preloaded *}
 					{if (is_numeric($value))}
@@ -289,7 +291,7 @@
 			<div id="loading"><i class="icon-refresh icon-spin"></i>&nbsp;{l s='Loading...'}</div>
 		</div>
 
-		<form id="product_form" class="form-horizontal col-lg-10" action="{$form_action|escape:'html':'UTF-8'}" method="post" enctype="multipart/form-data" name="product" novalidate>
+		<form id="product_form" class="form-horizontal col-lg-10 col-md-9" action="{$form_action|escape:'html':'UTF-8'}" method="post" enctype="multipart/form-data" name="product" novalidate>
 			<input type="hidden" name="id_product" value="{$id_product}" />
 			<input type="hidden" id="is_virtual" name="is_virtual" value="{$product->is_virtual|escape:'html':'UTF-8'}" />
 
@@ -316,3 +318,4 @@
 	</div>
 
 {/block}
+

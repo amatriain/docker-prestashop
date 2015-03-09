@@ -34,7 +34,7 @@ class ProductsCategory extends Module
 	public function __construct()
 	{
 		$this->name = 'productscategory';
-		$this->version = '1.6.2';
+		$this->version = '1.6.3';
 		$this->author = 'PrestaShop';
 		$this->tab = 'front_office_features';
 		$this->need_instance = 0;
@@ -109,7 +109,7 @@ class ProductsCategory extends Module
 		$id_product = (int)$params['product']->id;
 		$product = $params['product'];
 
-		$cache_id = 'productscategory|'.$id_product.'|'.(isset($params['category']->id_category) ? (int)$params['category']->id_category : $product->id_category_default);
+		$cache_id = 'productscategory|'.$id_product.'|'.(isset($params['category']->id_category) ? (int)$params['category']->id_category : (int)$product->id_category_default);
 
 		if (!$this->isCached('productscategory.tpl', $this->getCacheId($cache_id)))
 		{
@@ -215,17 +215,29 @@ class ProductsCategory extends Module
 
 	public function hookAddProduct($params)
 	{
-		$this->_clearCache('productscategory.tpl');
+		$id_product = (int)$params['product']->id;
+		$product = $params['product'];
+
+		$cache_id = 'productscategory|'.$id_product.'|'.(isset($params['category']->id_category) ? (int)$params['category']->id_category : (int)$product->id_category_default);
+		$this->_clearCache('productscategory.tpl', $this->getCacheId($cache_id));
 	}
 
 	public function hookUpdateProduct($params)
 	{
-		$this->_clearCache('productscategory.tpl');
+		$id_product = (int)$params['product']->id;
+		$product = $params['product'];
+
+		$cache_id = 'productscategory|'.$id_product.'|'.(isset($params['category']->id_category) ? (int)$params['category']->id_category : (int)$product->id_category_default);
+		$this->_clearCache('productscategory.tpl', $this->getCacheId($cache_id));
 	}
 
 	public function hookDeleteProduct($params)
 	{
-		$this->_clearCache('productscategory.tpl');
+		$id_product = (int)$params['product']->id;
+		$product = $params['product'];
+
+		$cache_id = 'productscategory|'.$id_product.'|'.(isset($params['category']->id_category) ? (int)$params['category']->id_category : (int)$product->id_category_default);
+		$this->_clearCache('productscategory.tpl', $this->getCacheId($cache_id));
 	}
 
 	public function renderForm()

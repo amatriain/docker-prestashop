@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -28,6 +28,7 @@ class UploaderCore
 {
 	const DEFAULT_MAX_SIZE = 10485760;
 
+	private $_check_file_size;
 	private $_accept_types;
 	private $_files;
 	private $_max_size;
@@ -37,6 +38,7 @@ class UploaderCore
 	public function __construct($name = null)
 	{
 		$this->setName($name);
+		$this->setCheckFileSize(true);
 		$this->files = array();
 	}
 
@@ -49,6 +51,12 @@ class UploaderCore
 	public function getAcceptTypes()
 	{
 		return $this->_accept_types;
+	}
+
+	public function setCheckFileSize($value)
+	{
+		$this->_check_file_size = $value;
+		return $this;
 	}
 
 	public function getFilePath($file_name = null)
@@ -75,7 +83,7 @@ class UploaderCore
 
 	public function getMaxSize()
 	{
-		if (!isset($this->_max_size))
+		if (!isset($this->_max_size) || empty($this->_max_size))
 			$this->setMaxSize(self::DEFAULT_MAX_SIZE);
 
 		return $this->_max_size;
@@ -98,7 +106,8 @@ class UploaderCore
 		return $this;
 	}
 
-	public function getPostMaxSizeBytes() {
+	public function getPostMaxSizeBytes()
+	{
 		$post_max_size = ini_get('post_max_size');
 		$bytes         = trim($post_max_size);
 		$last          = strtolower($post_max_size[strlen($post_max_size) - 1]);
@@ -112,7 +121,6 @@ class UploaderCore
 
 		if ($bytes == '')
 			$bytes = null;
-
 		return $bytes;
 	}
 
@@ -129,6 +137,11 @@ class UploaderCore
 		return uniqid($prefix, true);
 	}
 
+	public function checkFileSize()
+	{
+		return (isset($this->_check_file_size) && $this->_check_file_size);
+	}
+
 	public function process($dest = null)
 	{
 		$upload = isset($_FILES[$this->getName()]) ? $_FILES[$this->getName()] : null;
@@ -136,7 +149,6 @@ class UploaderCore
 		if ($upload && is_array($upload['tmp_name']))
 		{
 			$tmp = array();
-
 			foreach ($upload['tmp_name'] as $index => $value)
 			{	$tmp[$index] = array(
 					'tmp_name' => $upload['tmp_name'][$index],
@@ -151,7 +163,6 @@ class UploaderCore
 		}
 		elseif ($upload)
 		{
-
 			$this->files[] = $this->upload($upload, $dest);
 		}
 
@@ -172,7 +183,7 @@ class UploaderCore
 			else
 				// Non-multipart uploads (PUT method support)
 				file_put_contents($file_path, fopen('php://input', 'r'));
-			
+
 			$file_size = $this->_getFileSize($file_path, true);
 
 			if ($file_size === $file['size'])
@@ -196,10 +207,10 @@ class UploaderCore
 		switch ($error_code)
 		{
 			case 1:
-				$error = Tools::displayError(sprintf('The uploaded file exceeds %s', ini_get('post_max_size')));
+				$error = Tools::displayError(sprintf('The uploaded file exceeds %s', ini_get('upload_max_filesize')));
 				break;
 			case 2:
-				$error = Tools::displayError(sprintf('The uploaded file exceeds %s', Tools::formatBytes((int)$_POST['MAX_FILE_SIZE'])));
+				$error = Tools::displayError(sprintf('The uploaded file exceeds %s', ini_get('post_max_size')));
 				break;
 			case 3:
 				$error = Tools::displayError('The uploaded file was only partially uploaded');
@@ -249,9 +260,9 @@ class UploaderCore
 			return false;
 		}
 
-		if ($file['size'] > $this->getMaxSize())
+		if ($this->checkFileSize() && $file['size'] > $this->getMaxSize())
 		{
-			$file['error'] = Tools::displayError('File is too big');
+			$file['error'] = Tools::displayError(sprintf('File (size : %1s) is too big (max : %2s)', $file['size'], $this->getMaxSize()));
 			return false;
 		}
 
@@ -273,12 +284,12 @@ class UploaderCore
 	protected function _normalizeDirectory($directory)
 	{
 		$last = $directory[strlen($directory) - 1];
-		
+
 		if (in_array($last, array('/', '\\'))) {
 			$directory[strlen($directory) - 1] = DIRECTORY_SEPARATOR;
 			return $directory;
 		}
-		
+
 		$directory .= DIRECTORY_SEPARATOR;
 		return $directory;
 	}

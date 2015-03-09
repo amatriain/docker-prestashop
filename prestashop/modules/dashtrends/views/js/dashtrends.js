@@ -3,14 +3,19 @@ var dashtrends_chart;
 
 function line_chart_trends(widget_name, chart_details)
 {
-	nv.addGraph(function() {  
+	if (chart_details.data[0].values.length <= 1)
+		$('#dash_trends_chart1').hide();
+	else
+		$('#dash_trends_chart1').show();
+	nv.addGraph(function() {
 		var chart = nv.models.lineChart()
 			.useInteractiveGuideline(true)
 			.x(function(d) { return (d !== undefined ? d[0] : 0); })
-			.y(function(d) { return (d !== undefined ? d[1] : 0); });
-	
+			.y(function(d) { return (d !== undefined ? parseInt(d[1]) : 0); });
+
 		chart.xAxis.tickFormat(function(d) {
-			return d3.time.format('%m/%d/%y')(new Date(d*1000))
+			date = new Date(d*1000);
+			return date.format(chart_details['date_format']);
 		});
 
 		first_data = new Array();
@@ -19,7 +24,7 @@ function line_chart_trends(widget_name, chart_details)
 			{
 				if (value.id == 'sales')
 					$('#dashtrends_toolbar dl:first').css('background-color', chart_details.data[index].color).addClass('active');
-				first_data.push(chart_details.data[index]); 
+				first_data.push(chart_details.data[index]);
 			}
 		});
 
@@ -51,7 +56,8 @@ function selectDashtrendsChart(element, type)
 				$(element).siblings().css('background-color', 'none').removeClass('active');
 				$(element).css('background-color', dashtrends_data[index].color).addClass('active');
 			}
-			current_charts.push(dashtrends_data[index]); 
+
+			current_charts.push(dashtrends_data[index]);
 			value.disabled = false;
 		}
 	});
@@ -72,3 +78,7 @@ function selectDashtrendsChart(element, type)
 		.datum(current_charts)
 		.call(dashtrends_chart);
 }
+
+$(document).ready(function(){
+    $("dl").tooltip();
+});

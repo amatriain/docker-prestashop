@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -143,13 +143,13 @@ class AdminStockCoverControllerCore extends AdminController
 						  (
 						  	SELECT SUM(s.usable_quantity) as usable_quantity, s.id_product_attribute, s.reference, s.ean13, s.upc
 						   	FROM '._DB_PREFIX_.'stock s
-						   	WHERE s.id_product = '.($id_product).
+						   	WHERE s.id_product = '.(int)$id_product.
 							$where_warehouse.'
 						   	GROUP BY s.id_product_attribute
 						   )
 						   stock_view ON (stock_view.id_product_attribute = a.id_product_attribute)';
-			$this->_where = 'AND a.id_product = '.$id_product;
-			$this->_groupBy = 'a.id_product_attribute';
+			$this->_where = 'AND a.id_product = '.(int)$id_product;
+			$this->_group = 'GROUP BY a.id_product_attribute';
 			return parent::renderList();
 		}
 	}

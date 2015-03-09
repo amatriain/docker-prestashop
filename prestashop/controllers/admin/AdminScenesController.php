@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -216,7 +216,7 @@ class AdminScenesControllerCore extends AdminController
 		{
 			$this->addJqueryPlugin('autocomplete');
 			$this->addJqueryPlugin('imgareaselect');
-			$this->addJs(_PS_JS_DIR_.'admin-scene-cropping.js' );
+			$this->addJs(_PS_JS_DIR_.'admin/scenes.js' );
 			$image_to_map_desc .= '<div class="panel panel-default"><span class="thumbnail row-margin-bottom"><img id="large_scene_image" alt="" src="'.
 				_THEME_SCENE_DIR_.$obj->id.'-scene_default.jpg?rand='.(int)rand().'" /></span>';
 
@@ -260,7 +260,7 @@ class AdminScenesControllerCore extends AdminController
 			if (Tools::isSubmit('categories'))
 				foreach (Tools::getValue('categories') as $row)
 					$selected_cat[] = $row;
-			else if ($obj->id)
+			elseif ($obj->id)
 				foreach (Scene::getIndexedCategories($obj->id) as $row)
 					$selected_cat[] = $row['id_category'];
 
@@ -310,7 +310,7 @@ class AdminScenesControllerCore extends AdminController
 			if (!Tools::isSubmit('zones') || !count(Tools::getValue('zones')))
 				$this->errors[] = Tools::displayError('You should create at least one zone.');
 		}
-		
+
 		if (Tools::isSubmit('delete'.$this->table))
 		{
 			if (Validate::isLoadedObject($object = $this->loadObject()))

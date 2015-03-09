@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -172,7 +172,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 				'icon' => 'process-icon-new'
 			);
 		}
-		
+
 		parent::initPageHeaderToolbar();
 	}
 
@@ -304,7 +304,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 						),
 					),
 				),
-				'submit' => (!$update ? array('title' => $this->l('Save order')) : array()), 
+				'submit' => (!$update ? array('title' => $this->l('Save order')) : array()),
 				'buttons' => (!$update ?
 					array(
 						'save-and-stay' => array(
@@ -418,7 +418,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 				$item = &$this->_list[$i];
 				if ($item['quantity_received'] == $item['quantity_expected'])
 					$item['color'] = '#00bb35';
-				else if ($item['quantity_received'] > $item['quantity_expected'])
+				elseif ($item['quantity_received'] > $item['quantity_expected'])
 					$item['color'] = '#fb0008';
 			}
 		}
@@ -498,7 +498,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 		$this->list_id = 'orders';
 		$this->_filterHaving = null;
 
-		if (Tools::isSubmit('submitFilter'.$this->list_id) 
+		if (Tools::isSubmit('submitFilter'.$this->list_id)
 			|| $this->context->cookie->{'submitFilter'.$this->list_id} !== false
 			|| Tools::getValue($this->list_id.'Orderby')
 			|| Tools::getValue($this->list_id.'Orderway'))
@@ -566,7 +566,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 		$this->list_id = 'templates';
 		$this->_filterHaving = null;
 
-		if (Tools::isSubmit('submitFilter'.$this->list_id) 
+		if (Tools::isSubmit('submitFilter'.$this->list_id)
 			|| $this->context->cookie->{'submitFilter'.$this->list_id} !== false
 			|| Tools::getValue($this->list_id.'Orderby')
 			|| Tools::getValue($this->list_id.'Orderway'))
@@ -672,7 +672,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 
 		$this->context->smarty->assign(array(
 			'content' => $content,
-			'url_post' => self::$currentIndex.'&token='.$this->token,			
+			'url_post' => self::$currentIndex.'&token='.$this->token,
 			'show_page_header_toolbar' => $this->show_page_header_toolbar,
 			'page_header_toolbar_title' => $this->page_header_toolbar_title,
 			'page_header_toolbar_btn' => $this->page_header_toolbar_btn
@@ -919,7 +919,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 		// Manage the add stock form
 		if (Tools::isSubmit('changestate'))
 			$this->initChangeStateContent();
-		elseif (Tools::isSubmit('update_receipt') && Tools::isSubmit('id_supply_order'))
+		elseif (Tools::isSubmit('update_receipt') && Tools::isSubmit('id_supply_order') && !Tools::isSubmit('detailssupply_order_detail'))
 			$this->initUpdateReceiptContent();
 		elseif (Tools::isSubmit('viewsupply_order') && Tools::isSubmit('id_supply_order'))
 		{
@@ -930,7 +930,14 @@ class AdminSupplyOrdersControllerCore extends AdminController
 		elseif (Tools::isSubmit('updatesupply_order'))
 			$this->initUpdateSupplyOrderContent();
 		else
+		{
+			if (Tools::isSubmit('detailssupply_order_detail'))
+			{
+				$this->action = 'details';
+				$this->display = 'details';
+			}
 			parent::initContent();
+		}
 	}
 
 	/**
@@ -1108,7 +1115,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 				if ((int)SupplyOrder::exists($ref) != 0)
 					$this->errors[] = Tools::displayError('The reference has to be unique.');
 			}
-			else if (Tools::getValue('id_supply_order') == 0 && (int)SupplyOrder::exists($ref) != 0)
+			elseif (Tools::getValue('id_supply_order') == 0 && (int)SupplyOrder::exists($ref) != 0)
 				$this->errors[] = Tools::displayError('The reference has to be unique.');
 		}
 
@@ -1221,11 +1228,39 @@ class AdminSupplyOrdersControllerCore extends AdminController
 								$supply_order->id_supply_order_state = $state['id_supply_order_state'];
 								if ($supply_order->save())
 								{
+									if ($new_state->pending_receipt)
+									{
+										$supply_order_details = $supply_order->getEntries();
+										foreach ($supply_order_details as $supply_order_detail)
+										{
+											$is_present = Stock::productIsPresentInStock($supply_order_detail['id_product'], $supply_order_detail['id_product_attribute'], $supply_order->id_warehouse);
+											if (!$is_present)
+											{
+												$stock = new Stock();
+
+												$stock_params = array(
+													'id_product_attribute' => $supply_order_detail['id_product_attribute'],
+													'id_product' => $supply_order_detail['id_product'],
+													'physical_quantity' => 0,
+													'price_te' => $supply_order_detail['price_te'],
+													'usable_quantity' => 0,
+													'id_warehouse' => $supply_order->id_warehouse
+												);
+
+												// saves stock in warehouse
+												$stock->hydrate($stock_params);
+												$stock->add();
+											}
+										}
+									}
+
 									// if pending_receipt,
 									// or if the order is being canceled,
+									// or if the order is received completely
 									// synchronizes StockAvailable
 									if (($new_state->pending_receipt && !$new_state->receipt_state) ||
-										($old_state->receipt_state && $new_state->enclosed && !$new_state->receipt_state))
+										(($old_state->receipt_state || $old_state->pending_receipt) && $new_state->enclosed && !$new_state->receipt_state) ||
+										($new_state->receipt_state && $new_state->enclosed))
 									{
 										$supply_order_details = $supply_order->getEntries();
 										$products_done = array();
@@ -1291,7 +1326,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
     		$csv->export();
 		}
 		// exports details for all orders
-		else if (Tools::isSubmit('csv_orders_details'))
+		elseif (Tools::isSubmit('csv_orders_details'))
 		{
 			// header
 			header('Content-type: text/csv');
@@ -1341,7 +1376,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 
 		}
 		// exports details for the given order
-		else if (Tools::isSubmit('csv_order_details') && Tools::getValue('id_supply_order'))
+		elseif (Tools::isSubmit('csv_order_details') && Tools::getValue('id_supply_order'))
 		{
 			$supply_order = new SupplyOrder((int)Tools::getValue('id_supply_order'));
 			if (Validate::isLoadedObject($supply_order))
@@ -1439,7 +1474,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 
 					$manager = StockManagerFactory::getManager();
 					$res = $manager->addProduct($supply_order_detail->id_product,
-						$supply_order_detail->id_product_attribute,	$warehouse, (int)$quantity, 
+						$supply_order_detail->id_product_attribute,	$warehouse, (int)$quantity,
 						Configuration::get('PS_STOCK_MVT_SUPPLY_ORDER'), $price, true, $supply_order->id);
 
 					$location = Warehouse::getProductLocation($supply_order_detail->id_product,
@@ -1598,7 +1633,7 @@ class AdminSupplyOrdersControllerCore extends AdminController
 
 			return parent::renderList();
 		}
-		else if (Tools::isSubmit('id_supply_order') && Tools::isSubmit('display_product_history'))
+		elseif (Tools::isSubmit('id_supply_order') && Tools::isSubmit('display_product_history'))
 		{
 			$this->identifier = 'id_supply_order_receipt_history';
 			$this->table = 'supply_order_receipt_history';
@@ -2193,6 +2228,6 @@ class AdminSupplyOrdersControllerCore extends AdminController
 				$this->l('You need to activate advanced stock management prior to using this feature.');
 			return false;
 		}
-		parent::initProcess();	
+		parent::initProcess();
 	}
 }

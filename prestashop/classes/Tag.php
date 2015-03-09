@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -58,7 +58,7 @@ class TagCore extends ObjectModel
 
 		if ($id)
 			parent::__construct($id);
-		else if ($name && Validate::isGenericName($name) && $id_lang && Validate::isUnsignedId($id_lang))
+		elseif ($name && Validate::isGenericName($name) && $id_lang && Validate::isUnsignedId($id_lang))
 		{
 			$row = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow('
 			SELECT *
@@ -78,7 +78,7 @@ class TagCore extends ObjectModel
 	{
 		if (!parent::add($autodate, $null_values))
 			return false;
-		else if (isset($_POST['products']))
+		elseif (isset($_POST['products']))
 			return $this->setProducts(Tools::getValue('products'));
 		return true;
 	}
@@ -134,13 +134,9 @@ class TagCore extends ObjectModel
 		if (Group::isFeatureActive())
 		{
 			$groups = FrontController::getCurrentCustomerGroups();
-			$sql_groups = '
-			AND p.`id_product` IN (
-				SELECT cp.`id_product`
-				FROM `'._DB_PREFIX_.'category_product` cp
-				LEFT JOIN `'._DB_PREFIX_.'category_group` cg ON (cp.`id_category` = cg.`id_category`)
-				WHERE cg.`id_group` '.(count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1').'
-			)';
+			$sql_groups .= '
+			JOIN `'._DB_PREFIX_.'category_product` cp ON (pt.id_product = cp.id_product)
+			JOIN `'._DB_PREFIX_.'category_group` cg ON (cp.`id_category` = cg.`id_category` AND cg.`id_group` '.(count($groups) ? 'IN ('.implode(',', $groups).')' : '= 1').')';
 		}
 
 		return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
@@ -149,9 +145,9 @@ class TagCore extends ObjectModel
 		LEFT JOIN `'._DB_PREFIX_.'tag` t ON (t.id_tag = pt.id_tag)
 		LEFT JOIN `'._DB_PREFIX_.'product` p ON (p.id_product = pt.id_product)
 		'.Shop::addSqlAssociation('product', 'p').'
+		'.$sql_groups.'
 		WHERE t.`id_lang` = '.(int)$id_lang.'
 		AND product_shop.`active` = 1
-		'.$sql_groups.'
 		GROUP BY t.id_tag
 		ORDER BY times DESC
 		LIMIT '.(int)$nb);

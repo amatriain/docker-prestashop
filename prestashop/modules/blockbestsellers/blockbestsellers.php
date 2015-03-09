@@ -35,7 +35,7 @@ class BlockBestSellers extends Module
 	{
 		$this->name = 'blockbestsellers';
 		$this->tab = 'front_office_features';
-		$this->version = '1.5.4';
+		$this->version = '1.6.0';
 		$this->author = 'PrestaShop';
 		$this->need_instance = 0;
 		$this->bootstrap = true;
@@ -53,6 +53,7 @@ class BlockBestSellers extends Module
 
 		if (!parent::install()
 			|| !$this->registerHook('header')
+			|| !$this->registerHook('leftColumn')
 			|| !$this->registerHook('actionOrderStatusPostUpdate')
 			|| !$this->registerHook('addproduct')
 			|| !$this->registerHook('updateproduct')
@@ -63,18 +64,7 @@ class BlockBestSellers extends Module
 		)
 			return false;
 
-		// Hook the module either on the left or right column
-		$theme = new Theme(Context::getContext()->shop->id_theme);
-		if ((!$theme->default_left_column || !$this->registerHook('leftColumn'))
-			&& (!$theme->default_right_column || !$this->registerHook('rightColumn'))
-		)
-		{
-			// If there are no colums implemented by the template, throw an error and uninstall the module
-			$this->_errors[] = $this->l('This module need to be hooked in a column and your theme does not implement one');
-			parent::uninstall();
-
-			return false;
-		}
+		Configuration::updateValue('PS_BLOCK_BESTSELLERS_TO_DISPLAY', 10);
 
 		return true;
 	}
@@ -106,9 +96,9 @@ class BlockBestSellers extends Module
 		$this->_clearCache('*');
 	}
 
-	public function _clearCache($template, $cache_id = NULL, $compile_id = NULL)
+	public function _clearCache($template, $cache_id = null, $compile_id = null)
 	{
-		parent::_clearCache('blockbestsellers.tpl');
+		parent::_clearCache('blockbestsellers.tpl', 'blockbestsellers-col');
 		parent::_clearCache('blockbestsellers-home.tpl', 'blockbestsellers-home');
 		parent::_clearCache('tab.tpl', 'blockbestsellers-tab');
 	}
@@ -122,6 +112,8 @@ class BlockBestSellers extends Module
 		if (Tools::isSubmit('submitBestSellers'))
 		{
 			Configuration::updateValue('PS_BLOCK_BESTSELLERS_DISPLAY', (int)Tools::getValue('PS_BLOCK_BESTSELLERS_DISPLAY'));
+			Configuration::updateValue('PS_BLOCK_BESTSELLERS_TO_DISPLAY', (int)Tools::getValue('PS_BLOCK_BESTSELLERS_TO_DISPLAY'));
+			$this->_clearCache('*');
 			$output .= $this->displayConfirmation($this->l('Settings updated'));
 		}
 
@@ -137,6 +129,13 @@ class BlockBestSellers extends Module
 					'icon' => 'icon-cogs'
 				),
 				'input' => array(
+					array(
+						'type' => 'text',
+						'label' => $this->l('Products to display'),
+						'name' => 'PS_BLOCK_BESTSELLERS_TO_DISPLAY',
+						'desc' => $this->l('Determine the number of product to display in this block'),
+						'class' => 'fixed-width-xs',
+					),
 					array(
 						'type' => 'switch',
 						'label' => $this->l('Always display this block'),
@@ -176,12 +175,20 @@ class BlockBestSellers extends Module
 		$helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false).'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
 		$helper->token = Tools::getAdminTokenLite('AdminModules');
 		$helper->tpl_vars = array(
-			'fields_value' => array('PS_BLOCK_BESTSELLERS_DISPLAY' => Tools::getValue('PS_BLOCK_BESTSELLERS_DISPLAY', Configuration::get('PS_BLOCK_BESTSELLERS_DISPLAY'))),
+			'fields_value' => $this->getConfigFieldsValues(),
 			'languages' => $this->context->controller->getLanguages(),
 			'id_language' => $this->context->language->id
 		);
 
 		return $helper->generateForm(array($fields_form));
+	}
+
+	public function getConfigFieldsValues()
+	{
+		return array(
+			'PS_BLOCK_BESTSELLERS_TO_DISPLAY' => (int)Tools::getValue('PS_BLOCK_BESTSELLERS_TO_DISPLAY', Configuration::get('PS_BLOCK_BESTSELLERS_TO_DISPLAY')),
+			'PS_BLOCK_BESTSELLERS_DISPLAY' => (int)Tools::getValue('PS_BLOCK_BESTSELLERS_DISPLAY', Configuration::get('PS_BLOCK_BESTSELLERS_DISPLAY')),
+		);
 	}
 
 	public function hookHeader($params)
@@ -207,7 +214,7 @@ class BlockBestSellers extends Module
 		return $this->display(__FILE__, 'tab.tpl', $this->getCacheId('blockbestsellers-tab'));
 	}
 
-	public function hookdisplayHomeTabContent($params)
+	public function hookDisplayHomeTabContent($params)
 	{
 		if (!$this->isCached('blockbestsellers-home.tpl', $this->getCacheId('blockbestsellers-home')))
 		{
@@ -253,7 +260,7 @@ class BlockBestSellers extends Module
 		if (Configuration::get('PS_CATALOG_MODE'))
 			return false;
 
-		if (!($result = ProductSale::getBestSalesLight((int)$params['cookie']->id_lang, 0, 8)))
+		if (!($result = ProductSale::getBestSalesLight((int)$params['cookie']->id_lang, 0, (int)Configuration::get('PS_BLOCK_BESTSELLERS_TO_DISPLAY'))))
 			return (Configuration::get('PS_BLOCK_BESTSELLERS_DISPLAY') ? array() : false);
 
 		$currency = new Currency($params['cookie']->id_currency);

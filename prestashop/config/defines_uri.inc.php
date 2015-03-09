@@ -1,6 +1,6 @@
 <?php
 /*
-* 2007-2014 PrestaShop
+* 2007-2015 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -19,7 +19,7 @@
 * needs please refer to http://www.prestashop.com for more information.
 *
 *  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
+*  @copyright  2007-2015 PrestaShop SA
 *  @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 */
@@ -54,8 +54,8 @@ define('_THEME_MOBILE_JS_DIR_',          _THEME_MOBILE_DIR_.'js/');
 /* For touch pad devices */
 define('_PS_THEME_TOUCHPAD_DIR_',        _PS_THEME_DIR_.'touchpad/');
 define('_THEME_TOUCHPAD_DIR_',           _THEMES_DIR_._THEME_NAME_.'/touchpad/');
-define('_THEME_TOUCHPAD_CSS_DIR_',       _THEME_MOBILE_DIR_.'css/');
-define('_THEME_TOUCHPAD_JS_DIR_',        _THEME_MOBILE_DIR_.'js/');
+define('_THEME_TOUCHPAD_CSS_DIR_',       _THEME_TOUCHPAD_DIR_.'css/');
+define('_THEME_TOUCHPAD_JS_DIR_',        _THEME_TOUCHPAD_DIR_.'js/');
 
 /* Image URLs */
 define('_PS_IMG_',                       __PS_BASE_URI__.'img/');
