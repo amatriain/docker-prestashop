@@ -1,5 +1,5 @@
 FROM ubuntu:14.04
-MAINTAINER Alfredo Amatriain <geralt@gmail.com>
+MAINTAINER Alfredo Amatriain
 
 # Install packages
 RUN apt-get update 
